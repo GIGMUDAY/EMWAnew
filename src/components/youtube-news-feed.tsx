@@ -1,112 +1,148 @@
-import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { Play, ExternalLink } from "lucide-react";
-import { getWomenNewsVideos, type YoutubeVideo } from "@/lib/youtube.functions";
+import { ArrowUpRight, Play, Radio } from "lucide-react";
 
-function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
-}
+type NewsSource = {
+  name: string;
+  shortName: string;
+  description: string;
+  domain: string;
+  youtubeUrl: string;
+  accentColor?: string; // top border / accent color per card
+  featured?: boolean;
+};
+
+// Edit this list to add, remove, or reorder the news sources shown on the home page.
+const NEWS_SOURCES: NewsSource[] = [
+  {
+    name: "Fana Media Corporation",
+    shortName: "FANA",
+    description: "Ethiopian news and current affairs in Amharic.",
+    domain: "fanamc.com",
+    youtubeUrl: "https://www.youtube.com/@fanamediacorporation",
+    accentColor: "#E5A933",
+  },
+  {
+    name: "CNN",
+    shortName: "CNN",
+    description: "Breaking news, interviews, and international reporting.",
+    domain: "cnn.com",
+    youtubeUrl: "https://www.youtube.com/@CNN",
+    accentColor: "#cc0000",
+  },
+  {
+    name: "Al Jazeera English",
+    shortName: "AJ",
+    description: "Global reporting with extensive coverage across Africa.",
+    domain: "aljazeera.com",
+    youtubeUrl: "https://www.youtube.com/@aljazeeraenglish",
+    accentColor: "#E5A933",
+    featured: true,
+  },
+  {
+    name: "BBC News",
+    shortName: "BBC",
+    description: "International news, analysis, and documentaries.",
+    domain: "bbc.com",
+    youtubeUrl: "https://www.youtube.com/@BBCNews",
+    accentColor: "#E5A933",
+  },
+  {
+    name: "DW News",
+    shortName: "DW",
+    description: "News and perspectives from Germany and around the world.",
+    domain: "dw.com",
+    youtubeUrl: "https://www.youtube.com/@dwnews",
+    accentColor: "#00b5e2",
+  },
+  {
+    name: "Reuters",
+    shortName: "R",
+    description: "Independent global reporting and live news coverage.",
+    domain: "reuters.com",
+    youtubeUrl: "https://www.youtube.com/@Reuters",
+    accentColor: "#ff6600",
+  },
+];
 
 export default function YoutubeNewsFeed() {
-  const fetchFn = useServerFn(getWomenNewsVideos);
-  const { data, isLoading } = useQuery({
-    queryKey: ["women-news-videos"],
-    queryFn: () => fetchFn(),
-    staleTime: 15 * 60 * 1000,
-    refetchInterval: 15 * 60 * 1000,
-  });
-
-  const videos: YoutubeVideo[] = data ?? [];
-
   return (
-    <section className="py-20 md:py-28 border-y border-border bg-background">
-      <div className="max-w-[1400px] mx-auto px-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
-          <div>
-            <p className="label-mono text-primary mb-4">Voices in Motion</p>
-            <h2 className="font-display text-5xl md:text-7xl tracking-tighter leading-none">
-              Women in the news, <br /> right now.
+    <section className="ynf-section">
+      <div className="ynf-container">
+        {/* Header row */}
+        <div className="ynf-header">
+          <div className="ynf-header-left">
+            <h2 className="ynf-headline">
+              Women in the news,{" "}
+              <span className="ynf-headline-accent">right now.</span>
             </h2>
+            <p className="ynf-subtext">
+              Move between Ethiopian and international perspectives. Each
+              newsroom opens directly on YouTube for immersive reporting and
+              global clarity.
+            </p>
           </div>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            A live feed of the latest videos about women journalists, leaders
-            and change-makers — updated automatically from YouTube.
-          </p>
+          <div className="ynf-header-right">
+            <span className="ynf-live-badge">
+              <span className="ynf-live-dot" aria-hidden="true" />
+              Sources live now
+            </span>
+          </div>
         </div>
 
-        {isLoading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="aspect-video bg-muted animate-pulse rounded-md"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {videos.map((v, i) => (
-              <VideoCard key={v.id} v={v} index={i} />
-            ))}
-          </div>
-        )}
+        {/* Card grid */}
+        <div className="ynf-grid">
+          {NEWS_SOURCES.map((source) => (
+            <NewsSourceCard key={source.name} source={source} />
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-function VideoCard({ v, index }: { v: YoutubeVideo; index: number }) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), index * 80);
-    return () => clearTimeout(t);
-  }, [index]);
+function NewsSourceCard({ source }: { source: NewsSource }) {
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${source.domain}&sz=128`;
+  const accent = source.accentColor ?? "#E5A933";
 
   return (
     <a
-      href={v.url}
+      href={source.youtubeUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group block bg-background border border-border overflow-hidden rounded-md transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:border-primary ${
-        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-      }`}
+      aria-label={`Watch ${source.name} on YouTube (opens in a new tab)`}
+      className={`ynf-card${source.featured ? " ynf-card--featured" : ""}`}
+      style={{ "--card-accent": accent } as React.CSSProperties}
     >
-      <div className="relative aspect-video overflow-hidden bg-muted">
-        <img
-          src={v.thumbnail}
-          alt={v.title}
-          loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="size-14 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform">
-            <Play className="size-6 ml-0.5" fill="currentColor" />
-          </div>
+      {/* Faded background short name */}
+      <span className="ynf-card-bg-name" aria-hidden="true">
+        {source.shortName}
+      </span>
+
+      {/* Top row: logo + play button */}
+      <div className="ynf-card-top">
+        <div className="ynf-logo-wrap">
+          <img
+            src={logoUrl}
+            alt=""
+            width={128}
+            height={128}
+            loading="lazy"
+            className="ynf-logo-img"
+          />
         </div>
+        <span className="ynf-play-btn" aria-hidden="true">
+          <Play className="ynf-play-icon" fill="currentColor" />
+        </span>
       </div>
-      <div className="p-5">
-        <div className="flex items-center justify-between label-mono text-muted-foreground mb-3">
-          <span className="text-primary truncate max-w-[60%]">{v.channel}</span>
-          <span>{formatDate(v.publishedAt)}</span>
-        </div>
-        <h3 className="font-display text-xl leading-tight mb-2 group-hover:text-primary transition-colors line-clamp-2">
-          {v.title}
-        </h3>
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-          {v.description}
+
+      {/* Bottom row: meta + title + description + cta */}
+      <div className="ynf-card-body">
+        <p className="ynf-card-meta">
+          {source.shortName} / YouTube
         </p>
-        <span className="label-mono inline-flex items-center gap-1 text-foreground group-hover:text-primary transition-colors">
-          Watch on YouTube <ExternalLink className="size-3" />
+        <h3 className="ynf-card-title">{source.name}</h3>
+        <p className="ynf-card-desc">{source.description}</p>
+        <span className="ynf-card-cta">
+          Watch channel <ArrowUpRight className="ynf-cta-icon" aria-hidden="true" />
         </span>
       </div>
     </a>

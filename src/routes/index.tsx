@@ -1,6 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageShell } from "@/components/page-shell";
 import YoutubeNewsFeed from "@/components/youtube-news-feed";
+import OurMandate from "@/components/our-mandate";
+import OurBlueprint from "@/components/our-blueprint";
+import MembershipCta from "@/components/membership-cta";
+import VoicesSlider from "@/components/voices-slider";
+import StrategicAlliances from "@/components/strategic-alliances";
 import InspirationalQuotes from "@/components/inspirational-quotes";
 import { CountUp } from "@/components/count-up";
 import {
@@ -54,33 +59,6 @@ const STATS = [
   { value: 25, suffix: "+", label: "Year Legacy", color: "" },
 ];
 
-const PROGRAMS = [
-  {
-    n: "01",
-    title: "Leadership Incubator",
-    body: "Accelerating women into editor-in-chief and executive producer roles through executive coaching and residency.",
-    hover: "hover:bg-primary",
-  },
-  {
-    n: "02",
-    title: "Media Safety Protocols",
-    body: "Legal, digital, and physical protection for journalists reporting from the field.",
-    hover: "hover:bg-secondary",
-  },
-  {
-    n: "03",
-    title: "Regional Newsroom Grants",
-    body: "Micro-grants that fund women-led investigative reporting outside Addis Ababa.",
-    hover: "hover:bg-accent hover:text-foreground",
-  },
-  {
-    n: "04",
-    title: "Voice on Air Fellowship",
-    body: "A one-year fellowship pairing early-career broadcasters with senior mentors nationwide.",
-    hover: "hover:bg-primary",
-  },
-];
-
 const EXPERTS = [
   { name: "Soliyana Gebre", field: "Broadcast Strategy", region: "Addis Ababa", image: LANDING_IMAGES.experts[0] },
   { name: "Lidya Tarekegn", field: "Digital Ethics", region: "Bahir Dar", image: LANDING_IMAGES.experts[1] },
@@ -114,16 +92,6 @@ const EVENTS = [
   { day: "18", month: "DEC", title: "Year-end Members Assembly", time: "14:00 EAT" },
 ];
 
-const PARTNERS = [
-  { name: "UNESCO", icon: Globe2 },
-  { name: "UN Women", icon: ShieldCheck },
-  { name: "Ethiopian Press Agency", icon: Newspaper },
-  { name: "Fojo Media Institute", icon: BookOpen },
-  { name: "European Union", icon: Landmark },
-  { name: "DW Akademie", icon: Radio },
-  { name: "Article 19", icon: Signal },
-  { name: "Internews", icon: Tv },
-];
 
 function Home() {
   return (
@@ -184,72 +152,11 @@ function Home() {
         </div>
       </section>
 
-      {/* MISSION */}
-      <section className="py-24 md:py-32">
-        <div className="max-w-[1400px] mx-auto px-6 grid md:grid-cols-12 gap-12">
-          <div className="md:col-span-4">
-            <p className="label-mono text-primary">Our Mandate</p>
-          </div>
-          <div className="md:col-span-8">
-            <h2 className="font-display text-5xl md:text-7xl leading-[0.95] tracking-tighter">
-              We exist so that every Ethiopian woman with a story to tell has
-              the tools, protection, and platform to tell it.
-            </h2>
-            <div className="mt-12 grid sm:grid-cols-3 gap-8">
-              {[
-                { h: "Advocate", b: "For gender-equitable policy in newsrooms, regulators, and broadcasters." },
-                { h: "Equip", b: "Through training, mentorship, and legal support that meet women where they are." },
-                { h: "Connect", b: "Members across twelve regional chapters and the Ethiopian diaspora." },
-              ].map((c) => (
-                <div key={c.h} className="border-t border-foreground pt-6">
-                  <p className="font-display text-2xl mb-3">{c.h}</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{c.b}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* OUR MANDATE */}
+      <OurMandate />
 
-      {/* PROGRAMS */}
-      <section className="py-24 md:py-32 bg-foreground text-background">
-        <div className="max-w-[1400px] mx-auto px-6 grid md:grid-cols-12 gap-8 md:gap-16">
-          <div className="md:col-span-4">
-            <p className="label-mono text-accent mb-6">Our Blueprint</p>
-            <h2 className="font-display text-6xl md:text-7xl leading-none">
-              Four <br />
-              <span className="text-accent">pillars.</span>
-            </h2>
-            <p className="text-background/60 mt-8 text-sm leading-relaxed max-w-xs">
-              Designing structural change through curated initiatives that span
-              policy, safety, funding, and voice.
-            </p>
-            <Link
-              to="/programs"
-              className="mt-8 inline-flex items-center gap-2 label-mono border-b border-accent pb-1 text-accent hover:gap-4 transition-all"
-            >
-              All programs <ArrowUpRight className="size-3" />
-            </Link>
-          </div>
-          <div className="md:col-span-8 grid sm:grid-cols-2 gap-4">
-            {PROGRAMS.map((p) => (
-              <Link
-                to="/programs"
-                key={p.n}
-                className={`bg-background/5 border border-background/10 p-6 md:p-8 transition-all duration-300 group hover:-translate-y-1 hover:shadow-xl ${p.hover}`}
-              >
-                <div className="label-mono text-accent mb-4 group-hover:text-background transition-colors">
-                  {p.n} / Initiative
-                </div>
-                <h4 className="font-display text-3xl mb-4">{p.title}</h4>
-                <p className="text-sm text-background/60 group-hover:text-background transition-colors">
-                  {p.body}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* BLUEPRINT / TIMELINE */}
+      <OurBlueprint />
 
       {/* EXPERTS SPOTLIGHT */}
       <section className="py-24 md:py-32">
@@ -275,7 +182,7 @@ function Home() {
               <Link
                 to="/experts"
                 key={e.name}
-                className="group cursor-pointer block"
+                className="group cursor-pointer block no-underline"
               >
                 <div className="aspect-[4/5] overflow-hidden mb-6 bg-muted">
                   <img
@@ -381,125 +288,76 @@ function Home() {
       </section>
 
       {/* MEMBERSHIP CTA */}
-      <section className="py-24 md:py-32 bg-primary text-primary-foreground">
-        <div className="max-w-[1400px] mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="label-mono text-accent mb-6">Membership</p>
-            <h2 className="font-display text-6xl md:text-8xl leading-none tracking-tighter">
-              Add your voice.
-            </h2>
-          </div>
-          <div>
-            <p className="text-lg leading-relaxed mb-8">
-              EMWA membership is open to Ethiopian women working in journalism,
-              broadcasting, communications, academia, and independent media —
-              from Addis Ababa to Assosa.
-            </p>
-            <ul className="space-y-3 mb-10">
-              {[
-                "Full access to the Experts Directory",
-                "Legal and digital safety support",
-                "Priority for grants, fellowships, and residencies",
-                "Regional chapter membership",
-              ].map((b) => (
-                <li key={b} className="flex gap-3 items-start">
-                  <span className="text-accent">→</span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-            <Link
-              to="/membership"
-              className="inline-flex items-center gap-2 bg-background text-foreground px-6 py-3 label-mono hover:bg-accent transition-colors"
-            >
-              Apply for membership <ArrowUpRight className="size-3" />
-            </Link>
-          </div>
-        </div>
-      </section>
+      <MembershipCta />
 
-      {/* TESTIMONIALS */}
-      <section className="py-24 md:py-32">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <p className="label-mono text-primary mb-6">Voices</p>
-          <div className="grid md:grid-cols-2 gap-16">
-            {[
-              {
-                q: "EMWA didn't just train me. It gave me a peer network of women editors who I still call when I need to check my instincts on a hard story.",
-                a: "Meskerem H.",
-                r: "Senior Editor, Fana Broadcasting",
-              },
-              {
-                q: "The digital safety toolkit and rapid-response legal help arrived within hours of a coordinated harassment campaign against me. That is what real solidarity looks like.",
-                a: "Yordanos M.",
-                r: "Independent Journalist, Mekelle",
-              },
-            ].map((t) => (
-              <figure key={t.a} className="border-t border-foreground pt-8">
-                <blockquote className="font-display text-3xl md:text-4xl leading-tight tracking-tight">
-                  "{t.q}"
-                </blockquote>
-                <figcaption className="mt-6 label-mono">
-                  <span className="text-primary">{t.a}</span> · {t.r}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* TESTIMONIALS SLIDER */}
+      <VoicesSlider />
 
-      {/* PARTNERS */}
-      <section className="py-20 border-y border-border overflow-hidden">
-        <p className="label-mono text-center text-muted-foreground mb-10">
-          Strategic Alliances
-        </p>
-        <div className="flex gap-8 animate-marquee whitespace-nowrap">
-          {[...PARTNERS, ...PARTNERS].map((p, i) => {
-            const Icon = p.icon;
-            return (
-              <div
-                key={i}
-                className="group shrink-0 flex items-center gap-3 border border-border bg-background px-6 py-4 min-w-[220px] transition-all duration-500 hover:border-primary hover:-translate-y-1 hover:shadow-lg hover:bg-primary hover:text-primary-foreground"
-              >
-                <Icon className="size-8 text-primary transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110 group-hover:text-accent" />
-                <span className="font-display text-2xl tracking-tight">
-                  {p.name}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      {/* STRATEGIC ALLIANCES */}
+      <StrategicAlliances />
 
       {/* NEWSLETTER */}
-      <section className="py-24 md:py-32">
-        <div className="max-w-2xl mx-auto px-6 text-center">
-          <p className="label-mono text-primary mb-6">The Narrative Shift</p>
-          <h3 className="font-display text-5xl md:text-6xl tracking-tighter mb-4">
-            Monthly insights from the Horn.
-          </h3>
-          <p className="mb-10 text-muted-foreground">
-            A curated dispatch on media, gender, and policy across Ethiopia
-            and East Africa.
-          </p>
-          <form className="flex flex-col sm:flex-row gap-0 border border-foreground p-1 max-w-md mx-auto">
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              className="flex-1 px-4 py-3 bg-transparent outline-none label-mono"
-            />
-            <button
-              type="submit"
-              className="bg-foreground text-background px-8 py-3 label-mono hover:bg-primary transition-colors"
+      <section className="nl-section" id="newsletter" aria-labelledby="nl-heading">
+        {/* Decorative background word */}
+        <span className="nl-bg-word" aria-hidden="true">DISPATCH</span>
+
+        <div className="nl-inner">
+          {/* Left: copy */}
+          <div className="nl-left">
+            <p className="nl-eyebrow">The Narrative Shift</p>
+            <h2 className="nl-heading" id="nl-heading">
+              Monthly insights<br />from the Horn.
+            </h2>
+            <p className="nl-body">
+              A curated dispatch on media, gender, and policy across
+              Ethiopia and East Africa — straight to your inbox.
+            </p>
+          </div>
+
+          {/* Right: form */}
+          <div className="nl-right">
+            <form
+              className="nl-form"
+              onSubmit={(e) => e.preventDefault()}
+              noValidate
             >
-              Subscribe
-            </button>
-          </form>
-          <p className="label-mono text-muted-foreground mt-4">
-            One dispatch per month. Unsubscribe anytime.
-          </p>
+              <label htmlFor="nl-email" className="nl-label">
+                Your email address
+              </label>
+              <div className="nl-field-row">
+                <input
+                  id="nl-email"
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  className="nl-input"
+                  aria-label="Email address"
+                />
+                <button type="submit" className="nl-btn">
+                  Subscribe
+                  <svg
+                    className="nl-btn-icon"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 8h10M9 4l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <p className="nl-note">
+                One dispatch per month · Unsubscribe anytime · No spam.
+              </p>
+            </form>
+          </div>
         </div>
+
         <InspirationalQuotes />
       </section>
     </PageShell>
