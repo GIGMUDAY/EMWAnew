@@ -1,8 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageShell, PageHero } from "@/components/page-shell";
-import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
-import globalImg from "@/assets/emwa-replace.jpg";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowUpRight, BadgeCheck, ChevronDown, Mail, MapPin, Search, Sparkles, X } from "lucide-react";
+import { PageShell } from "@/components/page-shell";
+import expert1 from "@/assets/expert-1.jpg";
+import expert2 from "@/assets/expert-2.jpg";
+import expert3 from "@/assets/expert-3.jpg";
+import expert4 from "@/assets/value-integrity.png";
+import expert5 from "@/assets/value-independence.png";
+import expert6 from "@/assets/value-excellence.png";
 
 export const Route = createFileRoute("/experts")({
   head: () => ({
@@ -16,165 +21,112 @@ export const Route = createFileRoute("/experts")({
   component: Experts,
 });
 
-const IMGS = [globalImg, globalImg, globalImg];
-
+const IMAGES = [expert1, expert2, expert3, expert4, expert5, expert6];
+const CATEGORIES = ["All", "Journalism", "Broadcasting", "Digital", "Advocacy", "Academic", "Film"];
 const EXPERTS = [
-  { n: "Soliyana Gebre", f: "Broadcast Strategy", r: "Addis Ababa", c: "Broadcasting", bio: "Senior broadcast strategist with 15 years of leadership experience." },
-  { n: "Lidya Tarekegn", f: "Digital Ethics", r: "Bahir Dar", c: "Digital", bio: "Specialist in digital ethics and online safety for journalists." },
-  { n: "Rahel Mesfin", f: "Investigative Reporting", r: "Hawassa", c: "Journalism", bio: "Investigative reporter focusing on environmental and governance issues." },
-  { n: "Hiwot Bekele", f: "Political Analysis", r: "Addis Ababa", c: "Journalism", bio: "Political analyst and columnist with a focus on media policy." },
-  { n: "Zewditu Alemu", f: "Environmental Reporting", r: "Mekelle", c: "Journalism", bio: "Environmental journalist covering climate and water issues." },
-  { n: "Mahder Gezahegn", f: "Digital Media Strategy", r: "Addis Ababa", c: "Digital", bio: "Digital strategist working across NGOs and independent media." },
-  { n: "Selamawit Tadesse", f: "Human Rights", r: "Jimma", c: "Advocacy", bio: "Advocacy specialist supporting gender and human rights reporting." },
-  { n: "Dr. Ayantu Bekele", f: "Media Ethics", r: "Adama", c: "Academic", bio: "Academic researcher in media ethics and journalism education." },
-  { n: "Meskerem Haile", f: "Radio Production", r: "Dire Dawa", c: "Broadcasting", bio: "Radio producer and trainer with expertise in community radio." },
-  { n: "Yordanos Mengesha", f: "Freelance Reporting", r: "Mekelle", c: "Journalism", bio: "Freelance reporter covering conflict and human stories." },
-  { n: "Tigist Wolde", f: "Editorial Leadership", r: "Addis Ababa", c: "Journalism", bio: "Editorial leader with experience in newsroom transformation." },
-  { n: "Bethlehem Girma", f: "Documentary Film", r: "Hawassa", c: "Film", bio: "Documentary filmmaker focused on social justice stories." },
+  { n: "Soliyana Gebre", f: "Broadcast Strategy", r: "Addis Ababa", c: "Broadcasting", bio: "Senior broadcast strategist with 15 years of leadership experience shaping national programming and newsroom transformation." },
+  { n: "Lidya Tarekegn", f: "Digital Ethics", r: "Bahir Dar", c: "Digital", bio: "Specialist in digital ethics, platform accountability, and online safety for journalists working in high-risk environments." },
+  { n: "Rahel Mesfin", f: "Investigative Reporting", r: "Hawassa", c: "Journalism", bio: "Award-winning investigative reporter focusing on environmental accountability, public institutions, and governance." },
+  { n: "Hiwot Bekele", f: "Political Analysis", r: "Addis Ababa", c: "Journalism", bio: "Political analyst and columnist translating complex policy and governance issues for public audiences." },
+  { n: "Zewditu Alemu", f: "Environmental Reporting", r: "Mekelle", c: "Journalism", bio: "Environmental journalist covering climate resilience, agriculture, water access, and community-led adaptation." },
+  { n: "Mahder Gezahegn", f: "Digital Media Strategy", r: "Addis Ababa", c: "Digital", bio: "Digital strategist building audience-first editorial products across nonprofit and independent media organizations." },
+  { n: "Selamawit Tadesse", f: "Human Rights", r: "Jimma", c: "Advocacy", bio: "Advocacy specialist supporting accurate, trauma-informed gender and human-rights reporting." },
+  { n: "Dr. Ayantu Bekele", f: "Media Ethics", r: "Adama", c: "Academic", bio: "Researcher and educator advancing media ethics, journalism curricula, and responsible public communication." },
+  { n: "Meskerem Haile", f: "Radio Production", r: "Dire Dawa", c: "Broadcasting", bio: "Radio producer and trainer specializing in community broadcasting, audio storytelling, and regional audiences." },
+  { n: "Yordanos Mengesha", f: "Freelance Reporting", r: "Mekelle", c: "Journalism", bio: "Independent reporter covering conflict, recovery, displacement, and deeply reported human stories." },
+  { n: "Tigist Wolde", f: "Editorial Leadership", r: "Addis Ababa", c: "Journalism", bio: "Editorial leader experienced in newsroom transformation, team development, standards, and commissioning." },
+  { n: "Bethlehem Girma", f: "Documentary Film", r: "Hawassa", c: "Film", bio: "Documentary filmmaker creating character-led films centered on social justice and overlooked communities." },
 ];
 
+type Expert = (typeof EXPERTS)[number];
 
 function Experts() {
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<"name" | "position" | "field">("name");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("All");
+  const [sort, setSort] = useState<"name" | "field">("name");
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [selected, setSelected] = useState<Expert | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const locked = registerOpen || selected;
+    document.body.style.overflow = locked ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [registerOpen, selected]);
 
   const filtered = useMemo(() => {
-    const res = EXPERTS.filter(e =>
-      (q === "" || e.n.toLowerCase().includes(q.toLowerCase()) || e.f.toLowerCase().includes(q.toLowerCase()))
-    );
-    res.sort((a, b) => {
-      if (sort === "name") return a.n.localeCompare(b.n);
-      if (sort === "position") return a.f.localeCompare(b.f);
-      return a.c.localeCompare(b.c);
-    });
-    return res;
-  }, [q, sort]);
-
-  const [showAdd, setShowAdd] = useState(false);
+    const needle = query.trim().toLowerCase();
+    return EXPERTS.filter((expert) =>
+      (category === "All" || expert.c === category) &&
+      (!needle || [expert.n, expert.f, expert.r, expert.c].some((value) => value.toLowerCase().includes(needle)))
+    ).sort((a, b) => sort === "name" ? a.n.localeCompare(b.n) : a.f.localeCompare(b.f));
+  }, [query, category, sort]);
 
   return (
     <PageShell>
-      <PageHero
-        eyebrow="Experts Directory"
-        title={<>Find an <span className="text-primary">expert.</span></>}
-        lede="A verified directory of 400+ Ethiopian women working across journalism, broadcasting, digital media, film, and academia."
-      />
-
-      {/* Search */}
-      <section className="py-8 border-b border-border sticky top-[73px] bg-background/95 backdrop-blur z-40">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search by name or expertise..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 border border-border bg-background outline-none focus:border-foreground"
-            />
+      <section className="experts-hero">
+        <div className="experts-hero-copy">
+          <p className="experts-eyebrow">The Expertise Archive / EMWA</p>
+          <h1>Knowledge has<br />a <em>voice.</em></h1>
+          <p>A curated, verified network of Ethiopian women ready to inform reporting, shape policy, mentor peers, and lead public conversation.</p>
+          <div className="experts-hero-actions">
+            <a href="#expert-directory">Browse the directory <ArrowUpRight aria-hidden="true" /></a>
+            <button onClick={() => setRegisterOpen(true)}>Submit your profile</button>
           </div>
-          <div className="mt-4 flex items-center justify-between">
-            <div />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSort(s => {
-                  const order = ["name", "position", "field"] as const;
-                  const idx = order.indexOf(s);
-                  return order[(idx + 1) % order.length];
-                })}
-                className="label-mono px-3 py-1 border border-border transition-all bg-background hover:border-foreground"
-              >
-                Sort: {sort === "name" ? "Name" : sort === "position" ? "Position" : "Field"}
-              </button>
-            </div>
-          </div>
+          <div className="experts-hero-proof"><span><strong>400+</strong> verified voices</span><span><strong>12</strong> regions represented</span><span><BadgeCheck aria-hidden="true" /> reviewed by EMWA</span></div>
+        </div>
+        <div className="experts-hero-portrait">
+          <img src={expert4} alt="Ethiopian woman media expert reviewing documents" />
+          <div className="experts-hero-portrait-shade" aria-hidden="true" />
+          <div className="experts-hero-dossier"><span>Featured field</span><strong>Media ethics<br />& accountability</strong><p>Addis Ababa / Ethiopia</p></div>
+          <span className="experts-hero-index" aria-hidden="true">E/01</span>
         </div>
       </section>
 
-      {/* Grid */}
-      <section className="py-16">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="flex items-center justify-between mb-6">
-            <p className="label-mono text-muted-foreground">Showing {filtered.length} of {EXPERTS.length} experts</p>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setShowAdd(true)} className="bg-primary text-primary-foreground px-4 py-2 label-mono rounded">Add Expert</button>
-            </div>
-          </div>
+      <section className="experts-directory" id="expert-directory" aria-labelledby="experts-directory-heading">
+        <header className="experts-directory-header">
+          <div><p className="experts-eyebrow">Verified professionals</p><h2 id="experts-directory-heading">Find the right voice.</h2></div>
+          <p>Search by discipline, name, or region to find a source, speaker, mentor, trainer, or collaborator.</p>
+        </header>
 
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {filtered.map((e, i) => (
-              <div key={e.n} className="group cursor-pointer">
-                <div
-                  onClick={() => {
-                    const el = document.getElementById(`expert-bio-${i}`);
-                    if (!el) return;
-                    el.classList.toggle("max-h-0");
-                    el.classList.toggle("max-h-96");
-                    el.classList.toggle("opacity-0");
-                    el.classList.toggle("opacity-100");
-                    el.classList.toggle("translate-y-2");
-                    el.classList.toggle("translate-y-0");
-                  }}
-                  className="aspect-[4/5] overflow-hidden bg-muted mb-4 cursor-pointer"
-                >
-                  <img
-                    src={IMGS[i % 3]}
-                    alt={e.n}
-                    width={800}
-                    height={1000}
-                    loading="lazy"
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
-                  />
-                </div>
-                <p className="font-display text-2xl group-hover:text-primary transition-colors">{e.n}</p>
-                <p className="label-mono text-primary mt-1">{e.f}</p>
-                <p className="label-mono text-muted-foreground mt-1">{e.r}</p>
+        <div className="experts-toolbar">
+          <label className="experts-search"><Search aria-hidden="true" /><span className="sr-only">Search experts</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, skill, region..." /></label>
+          <label className="experts-sort"><span>Sort by</span><select value={sort} onChange={(event) => setSort(event.target.value as "name" | "field")}><option value="name">Name</option><option value="field">Expertise</option></select><ChevronDown aria-hidden="true" /></label>
+        </div>
 
-                <div id={`expert-bio-${i}`} className="overflow-hidden max-h-0 opacity-0 translate-y-2 transition-all duration-500">
-                  <div className="mt-4 p-4 bg-background border border-border rounded">
-                    <p className="text-sm text-muted-foreground">{e.bio}</p>
+        <div className="experts-categories" role="group" aria-label="Filter by expertise category">
+          {CATEGORIES.map((item) => <button key={item} onClick={() => setCategory(item)} className={category === item ? "is-active" : ""} aria-pressed={category === item}>{item}<span>{item === "All" ? EXPERTS.length : EXPERTS.filter((expert) => expert.c === item).length}</span></button>)}
+        </div>
+
+        <div className="experts-results-bar"><p>Showing <strong>{filtered.length}</strong> verified experts</p><button onClick={() => setRegisterOpen(true)}><Sparkles aria-hidden="true" /> Add your expertise</button></div>
+
+        {filtered.length ? (
+          <div className="experts-grid">
+            {filtered.map((expert) => {
+              const sourceIndex = EXPERTS.indexOf(expert);
+              return (
+                <article className="expert-card" key={expert.n}>
+                  <button className="expert-card-image" onClick={() => setSelected(expert)} aria-label={`View ${expert.n}'s profile`}>
+                    <img src={IMAGES[sourceIndex % IMAGES.length]} alt={expert.n} loading="lazy" />
+                    <span className="expert-card-category">{expert.c}</span><span className="expert-card-open"><ArrowUpRight aria-hidden="true" /></span>
+                  </button>
+                  <div className="expert-card-copy">
+                    <p className="expert-card-verified"><BadgeCheck aria-hidden="true" /> EMWA verified</p>
+                    <h3>{expert.n}</h3><p className="expert-card-field">{expert.f}</p><p className="expert-card-region"><MapPin aria-hidden="true" /> {expert.r}</p>
+                    <button onClick={() => setSelected(expert)}>View expertise <ArrowUpRight aria-hidden="true" /></button>
                   </div>
-                </div>
-              </div>
-            ))}
+                </article>
+              );
+            })}
           </div>
-          {filtered.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <p className="font-display text-3xl">No experts match your filters.</p>
-              <button
-                onClick={() => { setQ(""); setSort("name"); }}
-                className="mt-4 label-mono underline"
-              >
-                Clear filters
-              </button>
-            </div>
-          )}
-
-                  {/* Add Expert Modal */}
-                  {showAdd && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                      <div className="bg-background rounded p-6 w-full max-w-2xl mx-4">
-                        <h3 className="font-display text-2xl mb-4">Add Expert</h3>
-                        <form onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget as HTMLFormElement); console.log(Object.fromEntries(fd)); setShowAdd(false); }}>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input name="fullName" placeholder="Full Name" className="border p-2" required />
-                            <input name="position" placeholder="Position/Title" className="border p-2" required />
-                            <textarea name="bio" placeholder="Biography" className="border p-2 md:col-span-2" rows={4} required />
-                            <input name="photo" type="file" accept="image/*" className="border p-2" />
-                            <input name="email" type="email" placeholder="Email Address" className="border p-2" />
-                            <input name="phone" placeholder="Phone Number" className="border p-2" />
-                            <input name="social" placeholder="Social Media Links (comma-separated)" className="border p-2 md:col-span-2" />
-                          </div>
-                          <div className="mt-4 flex justify-end gap-2">
-                            <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2 border">Cancel</button>
-                            <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground">Submit</button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-                  )}
-        </div>
+        ) : <div className="experts-empty"><Search aria-hidden="true" /><h3>No matching experts.</h3><p>Try another name, field, region, or category.</p><button onClick={() => { setQuery(""); setCategory("All"); }}>Reset directory</button></div>}
       </section>
+
+      <section className="experts-register-cta"><div><p className="experts-eyebrow">Be discoverable</p><h2>Your knowledge belongs<br />in the conversation.</h2></div><button onClick={() => setRegisterOpen(true)}>Join the directory <ArrowUpRight aria-hidden="true" /></button></section>
+
+      {selected && <div className="expert-panel-backdrop" onMouseDown={() => setSelected(null)}><aside className="expert-profile-panel" onMouseDown={(event) => event.stopPropagation()} aria-modal="true" role="dialog" aria-label={`${selected.n}'s expert profile`}><button className="expert-panel-close" onClick={() => setSelected(null)} aria-label="Close profile"><X /></button><div className="expert-panel-photo"><img src={IMAGES[EXPERTS.indexOf(selected) % IMAGES.length]} alt={selected.n} /></div><div className="expert-panel-content"><p className="expert-card-verified"><BadgeCheck /> EMWA verified expert</p><h2>{selected.n}</h2><p className="expert-panel-field">{selected.f}</p><p className="expert-card-region"><MapPin /> {selected.r}</p><div className="expert-panel-rule" /><p className="expert-panel-bio">{selected.bio}</p><div className="expert-panel-tags"><span>{selected.c}</span><span>Available for interviews</span><span>Mentorship</span></div><a href="mailto:experts@emwa.org.et?subject=Expert enquiry"><Mail /> Request an introduction</a></div></aside></div>}
+
+      {registerOpen && <div className="expert-panel-backdrop" onMouseDown={() => setRegisterOpen(false)}><aside className="expert-register-sheet" onMouseDown={(event) => event.stopPropagation()} aria-modal="true" role="dialog" aria-labelledby="register-expert-heading"><button className="expert-panel-close" onClick={() => setRegisterOpen(false)} aria-label="Close registration"><X /></button>{submitted ? <div className="expert-submit-success"><BadgeCheck /><p className="experts-eyebrow">Application received</p><h2>Thank you for adding your voice.</h2><p>EMWA will review your profile and contact you before it appears in the directory.</p><button onClick={() => { setSubmitted(false); setRegisterOpen(false); }}>Close</button></div> : <><header><p className="experts-eyebrow">Expert registration</p><h2 id="register-expert-heading">Join Ethiopia&apos;s trusted media directory.</h2><p>Share enough detail for our team to verify your experience and build a useful public profile.</p></header><form onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}><div className="expert-form-grid"><label><span>Full name *</span><input name="fullName" required placeholder="Your professional name" /></label><label><span>Professional title *</span><input name="position" required placeholder="e.g. Investigative reporter" /></label><label><span>Primary expertise *</span><select name="category" required defaultValue=""><option value="" disabled>Select a field</option>{CATEGORIES.slice(1).map((item) => <option key={item}>{item}</option>)}</select></label><label><span>Location *</span><input name="location" required placeholder="City / Region" /></label><label className="expert-form-wide"><span>Professional biography *</span><textarea name="bio" required rows={5} placeholder="Describe your expertise, experience, and the topics you can speak about." /></label><label><span>Email address *</span><input name="email" type="email" required placeholder="name@example.com" /></label><label><span>Phone number</span><input name="phone" type="tel" placeholder="+251 ..." /></label><label className="expert-form-wide"><span>Profile photo</span><input name="photo" type="file" accept="image/*" /></label><label className="expert-form-consent expert-form-wide"><input type="checkbox" required /><span>I confirm this information is accurate and consent to EMWA reviewing it for publication.</span></label></div><footer><p>Review normally takes 5–7 working days.</p><button type="submit">Submit for review <ArrowUpRight /></button></footer></form></>}</aside></div>}
     </PageShell>
   );
 }

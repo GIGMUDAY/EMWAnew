@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, Moon, Sun, Search, Bell } from "lucide-react";
+import { Menu, X, Moon, Sun, Search } from "lucide-react";
 import logo from "@/assets/emwa-logo-new.png";
 
 const NAV = [
@@ -85,15 +85,6 @@ export function SiteHeader() {
             className="size-10 grid place-items-center border border-border hover:border-primary hover:text-primary transition-colors"
           >
             <Search className="size-4" />
-          </button>
-
-          {/* Notifications Icon */}
-          <button
-            aria-label="Notifications"
-            className="hidden sm:grid size-10 place-items-center border border-border hover:border-primary hover:text-primary transition-colors relative"
-          >
-            <Bell className="size-4" />
-            <span className="absolute top-1 right-1 size-2 bg-primary rounded-full"></span>
           </button>
 
           <ThemeToggle />

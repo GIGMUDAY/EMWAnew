@@ -1,25 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageShell, PageHero } from "@/components/page-shell";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
 import { useState } from "react";
+import { ArrowUpRight, Check, Facebook, Instagram, Linkedin, Send, Youtube } from "lucide-react";
+import { PageShell } from "@/components/page-shell";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
-    meta: [
-      { title: "Contact — EMWA" },
-      { name: "description", content: "Contact the Ethiopian Media Women Association. Office locations, phone, email, and inquiry form." },
-      { property: "og:title", content: "Contact — EMWA" },
-      { property: "og:description", content: "Reach EMWA's Addis Ababa headquarters and regional chapters." },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "Contact — EMWA" },
+    { name: "description", content: "Contact the Ethiopian Media Women Association." },
+    { property: "og:title", content: "Contact — EMWA" },
+  ] }),
   component: Contact,
 });
 
-const OFFICES = [
-  { city: "Addis Ababa", role: "Headquarters", addr: "Kirkos Sub-city, Woreda 08", tel: "+251 11 550 0000" },
-  { city: "Bahir Dar", role: "Amhara Chapter", addr: "Bahir Dar University District", tel: "+251 58 220 0000" },
-  { city: "Hawassa", role: "Sidama Chapter", addr: "Piassa Street, Hawassa", tel: "+251 46 220 0000" },
-  { city: "Mekelle", role: "Tigray Chapter", addr: "Ayder, Mekelle", tel: "+251 34 440 0000" },
+const SOCIALS = [
+  { label: "Facebook", href: "https://www.facebook.com/", icon: Facebook },
+  { label: "Instagram", href: "https://www.instagram.com/", icon: Instagram },
+  { label: "LinkedIn", href: "https://www.linkedin.com/", icon: Linkedin },
+  { label: "YouTube", href: "https://www.youtube.com/", icon: Youtube },
 ];
 
 function Contact() {
@@ -27,110 +24,33 @@ function Contact() {
 
   return (
     <PageShell>
-      <PageHero
-        eyebrow="Contact"
-        title={<>Say <span className="text-primary">hello.</span></>}
-        lede="For membership, partnership, media enquiries, or programme collaboration — reach the team that fits your question."
-      />
+      <section className="contact3-hero">
+        <p className="contact3-eyebrow">Contact / EMWA</p>
+        <h1>Start a <em>conversation.</em></h1>
+        <p>Have a question, an idea, or a reason to work together? Send us a message.</p>
+      </section>
 
-      {/* Quick contact */}
-      <section className="py-16 border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-6 grid sm:grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { i: Mail, l: "Email", v: "info@emwa.org.et", h: "mailto:info@emwa.org.et" },
-            { i: Phone, l: "Phone", v: "+251 11 550 0000", h: "tel:+251115500000" },
-            { i: MapPin, l: "Headquarters", v: "Addis Ababa, ET", h: "#map" },
-            { i: Clock, l: "Hours", v: "Mon–Fri · 09:00–17:00" },
-          ].map(({ i: Icon, l, v, h }) => (
-            <a
-              key={l}
-              href={h || "#"}
-              className="border border-border p-8 hover:border-foreground transition-colors block"
-            >
-              <Icon className="size-6 text-primary mb-4" />
-              <p className="label-mono text-muted-foreground mb-1">{l}</p>
-              <p className="font-display text-2xl">{v}</p>
-            </a>
-          ))}
+      <section className="contact3-main">
+        <form onSubmit={(event) => { event.preventDefault(); setSent(true); }}>
+          <header><p className="contact3-eyebrow">Write to us</p><h2>Send a message.</h2></header>
+          <div className="contact3-fields">
+            <label><span>Your name</span><input name="name" autoComplete="name" placeholder="Full name" required /></label>
+            <label><span>Email address</span><input name="email" type="email" autoComplete="email" placeholder="you@example.com" required /></label>
+            <label className="is-wide"><span>Subject</span><select name="subject" defaultValue=""><option value="" disabled>Select a subject</option><option>Membership</option><option>Partnership</option><option>Media enquiry</option><option>Programme collaboration</option><option>Other</option></select></label>
+            <label className="is-wide"><span>Message</span><textarea name="message" rows={5} placeholder="How can we help?" required /></label>
+          </div>
+          <button type="submit" className={sent ? "is-sent" : ""}>{sent ? <><Check /> Message sent</> : <>Send message <Send /></>}</button>
+        </form>
+
+        <div className="contact3-map-wrap">
+          <div className="contact3-map"><iframe title="EMWA headquarters in Addis Ababa" src="https://www.openstreetmap.org/export/embed.html?bbox=38.74%2C9.00%2C38.78%2C9.03&layer=mapnik" loading="lazy" /></div>
+          <div className="contact3-map-caption"><div><p className="contact3-eyebrow">Our location</p><strong>Kirkos, Addis Ababa</strong></div><a href="https://www.openstreetmap.org/?mlat=9.015&mlon=38.76#map=15/9.015/38.76" target="_blank" rel="noreferrer">Directions <ArrowUpRight /></a></div>
         </div>
       </section>
 
-      {/* Form + map */}
-      <section className="py-24">
-        <div className="max-w-[1400px] mx-auto px-6 grid md:grid-cols-2 gap-16">
-          <form
-            onSubmit={(e) => { e.preventDefault(); setSent(true); }}
-            className="space-y-6"
-          >
-            <p className="label-mono text-primary">Enquiry Form</p>
-            <h2 className="font-display text-5xl">Get in touch.</h2>
-
-            <div>
-              <label className="label-mono block mb-2">Your name</label>
-              <input required className="w-full border-b border-foreground bg-transparent py-3 outline-none focus:border-primary" />
-            </div>
-            <div>
-              <label className="label-mono block mb-2">Email</label>
-              <input type="email" required className="w-full border-b border-foreground bg-transparent py-3 outline-none focus:border-primary" />
-            </div>
-            <div>
-              <label className="label-mono block mb-2">Subject</label>
-              <select className="w-full border-b border-foreground bg-transparent py-3 outline-none focus:border-primary">
-                <option>Membership</option>
-                <option>Partnership</option>
-                <option>Media enquiry</option>
-                <option>Programme collaboration</option>
-                <option>Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="label-mono block mb-2">Message</label>
-              <textarea required rows={5} className="w-full border-b border-foreground bg-transparent py-3 outline-none focus:border-primary resize-none" />
-            </div>
-
-            <button
-              type="submit"
-              className="bg-foreground text-background px-8 py-4 label-mono hover:bg-primary transition-colors"
-            >
-              {sent ? "Message sent ✓" : "Send message →"}
-            </button>
-          </form>
-
-          <div id="map">
-            <p className="label-mono text-primary mb-4">Headquarters</p>
-            <h3 className="font-display text-4xl mb-6">Kirkos, Addis Ababa</h3>
-            <div className="aspect-[4/3] overflow-hidden border border-border">
-              <iframe
-                title="EMWA location"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=38.74%2C9.00%2C38.78%2C9.03&layer=mapnik"
-                className="w-full h-full grayscale"
-                loading="lazy"
-              />
-            </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Visitor entrance on the ground floor. Please register at
-              reception. Wheelchair accessible.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Offices */}
-      <section className="py-24 bg-muted/40 border-y border-border">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <p className="label-mono text-primary mb-4">Regional Chapters</p>
-          <h2 className="font-display text-5xl md:text-6xl mb-16">Twelve offices. One association.</h2>
-          <div className="grid md:grid-cols-4 gap-6">
-            {OFFICES.map(o => (
-              <div key={o.city} className="border border-border bg-background p-8">
-                <p className="label-mono text-primary mb-3">{o.role}</p>
-                <p className="font-display text-3xl mb-3">{o.city}</p>
-                <p className="text-sm text-muted-foreground mb-2">{o.addr}</p>
-                <a href={`tel:${o.tel.replace(/\s/g, "")}`} className="label-mono hover:text-primary">{o.tel}</a>
-              </div>
-            ))}
-          </div>
-        </div>
+      <section className="contact3-socials">
+        <div><p className="contact3-eyebrow">Follow our work</p><h2>Stay connected.</h2></div>
+        <nav aria-label="Social media links">{SOCIALS.map(({ label, href, icon: Icon }) => <a key={label} href={href} target="_blank" rel="noreferrer"><Icon /><span>{label}</span><ArrowUpRight /></a>)}</nav>
       </section>
     </PageShell>
   );

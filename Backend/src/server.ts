@@ -1,0 +1,1 @@
+import {app} from './app.js';import {env} from './config/env.js';import {pool} from './db/index.js';const server=app.listen(env.PORT,()=>console.log(`API listening on http://localhost:${env.PORT}`));const stop=()=>server.close(()=>pool.end().finally(()=>process.exit(0)));process.on('SIGTERM',stop);process.on('SIGINT',stop);
