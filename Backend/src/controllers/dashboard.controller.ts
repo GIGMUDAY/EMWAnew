@@ -1,7 +1,7 @@
 import {Router} from 'express';
-import {pool} from '../../db/index.js';
-import {asyncHandler,listResponse,pageSchema} from '../../shared/http.js';
-import {validate,requireSuper} from '../../middleware/core.js';
+import {pool} from '../db/index.js';
+import {asyncHandler,listResponse,pageSchema} from '../utils/http.js';
+import {validate} from '../middleware/core.js';
 export const dashboard=Router();
 dashboard.get('/dashboard',asyncHandler(async(_q,res)=>{const [counts,apps,msgs]=await Promise.all([pool.query("SELECT (SELECT count(*) FROM expert_applications WHERE status='PENDING') pending_experts,(SELECT count(*) FROM membership_applications WHERE status='PENDING') pending_memberships,(SELECT count(*) FROM contact_messages WHERE status='NEW') new_contacts,(SELECT count(*) FROM resources WHERE is_published) published_resources,(SELECT count(*) FROM membership_types WHERE is_active) active_membership_types"),pool.query("(SELECT id,full_name,email,status,created_at,'expert' kind FROM expert_applications) UNION ALL (SELECT id,full_name,email,status,created_at,'membership' kind FROM membership_applications) ORDER BY created_at DESC LIMIT 10"),pool.query('SELECT id,full_name,email,subject,status,created_at FROM contact_messages ORDER BY created_at DESC LIMIT 10')]);res.json({success:true,data:{...counts.rows[0],recentApplications:apps.rows,recentContactMessages:msgs.rows}})}));
-dashboard.get('/audit-logs',requireSuper,validate(pageSchema,'query'),asyncHandler(async(req,res)=>{const q:any=req.query,total=Number((await pool.query('SELECT count(*) FROM audit_logs')).rows[0].count),rows=(await pool.query('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2',[q.limit,(q.page-1)*q.limit])).rows;listResponse(res,rows,total,q.page,q.limit)}));
+dashboard.get('/audit-logs',validate(pageSchema,'query'),asyncHandler(async(req,res)=>{const q:any=req.query,total=Number((await pool.query('SELECT count(*) FROM audit_logs')).rows[0].count),rows=(await pool.query('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2',[q.limit,(q.page-1)*q.limit])).rows;listResponse(res,rows,total,q.page,q.limit)}));
