@@ -1,6 +1,6 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Menu, X, Moon, Sun, Search } from "lucide-react";
+import { Heart, Menu, X, Moon, Sun } from "lucide-react";
 import logo from "@/assets/emwa-logo-new.png";
 
 const NAV = [
@@ -45,8 +45,6 @@ function ThemeToggle() {
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const navigate = useNavigate();
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-xl border-b border-border shadow-[0_1px_0_rgba(0,0,0,0.02)]">
@@ -57,12 +55,18 @@ export function SiteHeader() {
             alt="EMWA logo"
             className="h-11 w-11 object-contain transition-transform duration-500 group-hover:rotate-[8deg] group-hover:scale-110"
           />
-          <span className="font-display text-2xl tracking-tighter hidden sm:inline transition-colors group-hover:text-primary" aria-hidden="true">
+          <span
+            className="font-display text-2xl tracking-tighter hidden sm:inline transition-colors group-hover:text-primary"
+            aria-hidden="true"
+          >
             <span className="text-primary">E</span>MWA
           </span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-5 xl:gap-7 label-mono">
+        <nav
+          aria-label="Primary navigation"
+          className="hidden lg:flex items-center gap-5 xl:gap-7 label-mono"
+        >
           {NAV.map((item) => (
             <Link
               key={item.to}
@@ -77,17 +81,15 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {/* Search Icon */}
-          <button
-            onClick={() => setSearchOpen(!searchOpen)}
-            aria-label={searchOpen ? "Close search" : "Open search"}
-            aria-expanded={searchOpen}
-            className="size-10 grid place-items-center border border-border hover:border-primary hover:text-primary transition-colors"
-          >
-            <Search className="size-4" />
-          </button>
-
           <ThemeToggle />
+          <Link
+            to="/contact"
+            hash="donate"
+            className="group hidden min-h-10 items-center gap-2 border border-[#dca332] bg-[#e5a933] px-4 label-mono !text-[8px] text-[#171513] shadow-[0_6px_18px_rgba(229,169,51,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f0b83f] hover:shadow-[0_10px_24px_rgba(229,169,51,.28)] sm:inline-flex"
+          >
+            <Heart className="size-3.5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-current" />
+            Donate
+          </Link>
           <Link
             to="/membership"
             className="hidden md:inline-block bg-foreground text-background px-5 py-2 label-mono transition-all duration-300 hover:bg-primary hover:-translate-y-0.5 hover:shadow-lg"
@@ -106,34 +108,15 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      {searchOpen && (
-        <form
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const form = new FormData(event.currentTarget);
-            const q = String(form.get("q") ?? "").trim();
-            navigate({ to: "/search", search: { q } });
-            setSearchOpen(false);
-          }}
-          className="site-container py-3 animate-reveal"
-        >
-          <label htmlFor="site-search" className="sr-only">Search the EMWA website</label>
-          <input
-            id="site-search"
-            name="q"
-            type="text"
-            placeholder="Search articles, experts, programs..."
-            className="w-full bg-transparent border border-border px-4 py-3 label-mono placeholder:text-muted-foreground focus:border-primary transition-colors"
-            autoFocus
-          />
-        </form>
-      )}
-
       {open && (
-        <div id="mobile-navigation" className="lg:hidden border-t border-border bg-background animate-reveal">
-          <nav aria-label="Mobile navigation" className="site-container flex flex-col py-4 gap-1 max-h-[calc(100dvh-4rem)] overflow-y-auto">
+        <div
+          id="mobile-navigation"
+          className="lg:hidden border-t border-border bg-background animate-reveal"
+        >
+          <nav
+            aria-label="Mobile navigation"
+            className="site-container flex flex-col py-4 gap-1 max-h-[calc(100dvh-4rem)] overflow-y-auto"
+          >
             {NAV.map((item) => (
               <Link
                 key={item.to}
@@ -146,9 +129,17 @@ export function SiteHeader() {
               </Link>
             ))}
             <Link
+              to="/contact"
+              hash="donate"
+              onClick={() => setOpen(false)}
+              className="mt-2 flex items-center justify-center gap-2 bg-[#e5a933] px-5 py-3 label-mono text-[#171513]"
+            >
+              <Heart className="size-3.5" /> Donate
+            </Link>
+            <Link
               to="/membership"
               onClick={() => setOpen(false)}
-              className="bg-foreground text-background px-5 py-3 label-mono text-center mt-2"
+              className="bg-foreground text-background px-5 py-3 label-mono text-center"
             >
               Join Association
             </Link>

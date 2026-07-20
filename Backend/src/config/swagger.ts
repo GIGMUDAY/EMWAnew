@@ -1,7 +1,7 @@
 import swaggerJSDoc from 'swagger-jsdoc';
 const operations:Record<string,string[]>= {
   '/auth/login':['post'],'/auth/refresh':['post'],'/auth/logout':['post'],'/auth/me':['get'],
-  '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],
+  '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],
   '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get'],'/admin/expert-applications/{id}/status':['patch'],
   '/admin/membership-applications':['get'],'/admin/membership-applications/{id}':['get'],'/admin/membership-applications/{id}/status':['patch'],
   '/admin/membership-types':['post'],'/admin/membership-types/{id}':['patch','delete'],
@@ -178,6 +178,33 @@ paths['/public/resources']!.get = {
   security: [],
   responses: {
     '200': { description: 'Published resources' },
+  },
+};
+
+paths['/public/newsletter-subscriptions']!.post = {
+  tags: ['Public Workflows'],
+  summary: 'Subscribe an email address to The Narrative Shift',
+  description: 'Creates or reactivates a newsletter subscription. Email addresses are normalized and never duplicated.',
+  security: [],
+  requestBody: {
+    required: true,
+    content: {
+      'application/json': {
+        schema: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: { type: 'string', format: 'email', maxLength: 320 },
+          },
+        },
+        example: { email: 'reader@example.com' },
+      },
+    },
+  },
+  responses: {
+    '201': { description: 'Subscription confirmed' },
+    '400': { description: 'Invalid email address' },
+    '429': { description: 'Too many requests' },
   },
 };
 

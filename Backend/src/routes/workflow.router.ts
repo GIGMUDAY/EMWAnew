@@ -10,6 +10,7 @@ import {
   adminResources,
   publicResources,
 } from '../controllers/resources.controller.js';
+import { publicNewsletter } from '../controllers/newsletter.controller.js';
 import { authenticate } from '../middleware/core.js';
 
 const workflowRouter = Router();
@@ -21,6 +22,7 @@ workflowRouter.use(
   publicApplications,
   publicContent,
   publicResources,
+  publicNewsletter,
 );
 
 // Authenticated administration workflows.
