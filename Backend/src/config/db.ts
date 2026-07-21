@@ -2,14 +2,23 @@ import pg from 'pg';
 import { env } from './env.js';
 
 const databaseHost = new URL(env.DATABASE_URL).hostname;
+const isLocalDatabase = ['localhost', '127.0.0.1', '::1'].includes(databaseHost);
+const databaseSsl =
+  env.DATABASE_SSL === 'require' || (env.DATABASE_SSL === 'auto' && !isLocalDatabase)
+    ? { rejectUnauthorized: false }
+    : false;
 
 export const pool = new pg.Pool({
   connectionString: env.DATABASE_URL,
-  ssl: false,
+  ssl: databaseSsl,
   max: 10,
   connectionTimeoutMillis: 10_000,
   idleTimeoutMillis: 30_000,
   application_name: 'charity-center-api',
+});
+
+pool.on('error', (error) => {
+  console.error('Unexpected PostgreSQL pool error:', error);
 });
 
 // Alias used by service modules that prefer the `db.query(...)` naming style.
@@ -19,7 +28,7 @@ export async function connectDatabase() {
   const client = await pool.connect();
   try {
     await client.query('SELECT 1');
-    console.log(`Local PostgreSQL connected successfully (${databaseHost})`);
+    console.log(`PostgreSQL connected successfully (${databaseHost}, SSL: ${databaseSsl ? 'on' : 'off'})`);
   } finally {
     client.release();
   }

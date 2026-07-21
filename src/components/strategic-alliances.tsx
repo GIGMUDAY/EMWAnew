@@ -19,7 +19,7 @@ const PARTNERS_LIST: Partner[] = [
   },
   {
     name: "Ethiopian Press Agency",
-    logoUrl: "https://www.press.et/wp-content/uploads/2023/12/EPA_logo.png",
+    logoUrl: "",
     abbr: "EPA",
   },
   {
@@ -55,7 +55,7 @@ function PartnerLogo({ partner }: { partner: Partner }) {
   return (
     <div className="alliance-card">
       <div className="alliance-logo-container">
-        {!failed ? (
+        {!failed && partner.logoUrl ? (
           <img
             src={partner.logoUrl}
             alt={`${partner.name} logo`}

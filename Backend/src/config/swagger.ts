@@ -1,12 +1,15 @@
 import swaggerJSDoc from 'swagger-jsdoc';
 const operations:Record<string,string[]>= {
   '/auth/login':['post'],'/auth/refresh':['post'],'/auth/logout':['post'],'/auth/me':['get'],
-  '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],
+  '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],'/public/updates':['get'],'/public/updates/{slug}':['get'],'/public/events':['get'],'/public/events/{id}':['get'],
   '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get'],'/admin/expert-applications/{id}/status':['patch'],
   '/admin/membership-applications':['get'],'/admin/membership-applications/{id}':['get'],'/admin/membership-applications/{id}/status':['patch'],
   '/admin/membership-types':['post'],'/admin/membership-types/{id}':['patch','delete'],
   '/admin/contact-messages':['get'],'/admin/contact-messages/{id}':['get'],'/admin/contact-messages/{id}/status':['patch'],
+  '/admin/newsletter-subscribers':['get'],
   '/admin/resources':['get','post'],'/admin/resources/{id}':['patch','delete'],
+  '/admin/updates':['get','post'],'/admin/updates/{id}':['get','patch','delete'],
+  '/admin/events':['get','post'],'/admin/events/{id}':['get','patch','delete'],
   '/admin/admins':['get','post'],'/admin/admins/{id}':['get','patch'],'/admin/admins/{id}/status':['patch'],
   '/admin/dashboard':['get'],'/admin/audit-logs':['get']
 };
@@ -208,6 +211,80 @@ paths['/public/newsletter-subscriptions']!.post = {
   },
 };
 
+paths['/admin/newsletter-subscribers']!.get = {
+  tags: ['Admin Workflows'],
+  summary: 'List newsletter subscribers',
+  description: 'Returns paginated newsletter subscribers from PostgreSQL with optional status and email filters.',
+  security: [{ bearerAuth: [] }],
+  parameters: [
+    ...paginationParameters,
+    { name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } },
+    {
+      name: 'status',
+      in: 'query',
+      schema: { type: 'string', enum: ['ACTIVE', 'UNSUBSCRIBED'] },
+    },
+  ],
+  responses: {
+    '200': { description: 'Paginated newsletter subscribers' },
+    '401': { description: 'Authentication required' },
+  },
+};
+
+const publishingListParameters = [
+  { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+  { name: 'limit', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 } },
+  { name: 'search', in: 'query', schema: { type: 'string', maxLength: 100 } },
+  { name: 'type', in: 'query', schema: { type: 'string' } },
+  { name: 'order', in: 'query', schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' } },
+];
+const updateFormSchema = {
+  type: 'object',
+  required: ['title', 'excerpt', 'content', 'contentType', 'authorName'],
+  properties: {
+    title: { type: 'string', example: 'Regional newsrooms welcome new leadership cohort' },
+    slug: { type: 'string', example: 'regional-newsrooms-leadership-cohort' },
+    excerpt: { type: 'string', example: 'Editors from across Ethiopia begin a six-month leadership program.' },
+    content: { type: 'string', example: 'The full article content goes here. Separate paragraphs with blank lines.' },
+    contentType: { type: 'string', enum: ['NEWS', 'PRESS', 'ARTICLE', 'PHOTO', 'VIDEO'] },
+    videoUrl: { type: 'string', format: 'uri' },
+    authorName: { type: 'string', example: 'EMWA Editorial Desk' },
+    status: { type: 'string', enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'], default: 'DRAFT' },
+    isFeatured: { type: 'boolean', default: false },
+    featuredImage: { type: 'string', format: 'binary' },
+  },
+};
+const eventFormSchema = {
+  type: 'object',
+  required: ['title', 'description', 'eventType', 'location', 'startsAt'],
+  properties: {
+    title: { type: 'string', example: 'Regional Chapter Convening' },
+    slug: { type: 'string', example: 'regional-chapter-convening' },
+    description: { type: 'string', example: 'A gathering for members and regional media leaders.' },
+    eventType: { type: 'string', example: 'Convening' },
+    location: { type: 'string', example: 'Hawassa University' },
+    startsAt: { type: 'string', format: 'date-time' },
+    endsAt: { type: 'string', format: 'date-time' },
+    registrationUrl: { type: 'string', format: 'uri' },
+    capacityStatus: { type: 'string', enum: ['AVAILABLE', 'AT_CAPACITY', 'CANCELLED'] },
+    status: { type: 'string', enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'], default: 'DRAFT' },
+    featuredImage: { type: 'string', format: 'binary' },
+  },
+};
+
+paths['/public/updates']!.get = { tags: ['Public Publishing'], summary: 'List published updates', security: [], parameters: [...publishingListParameters, { name: 'featured', in: 'query', schema: { type: 'boolean' } }], responses: { '200': { description: 'Published updates' }, '400': { description: 'Invalid filters' } } };
+paths['/public/updates/{slug}']!.get = { tags: ['Public Publishing'], summary: 'Read a published update by slug', security: [], parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string' } }], responses: { '200': { description: 'Complete article' }, '404': { description: 'Article not found' } } };
+paths['/public/events']!.get = { tags: ['Public Publishing'], summary: 'List published events', security: [], parameters: publishingListParameters, responses: { '200': { description: 'Published events' } } };
+paths['/public/events/{id}']!.get = { tags: ['Public Publishing'], summary: 'Get a published event', security: [], parameters: [idParameter], responses: { '200': { description: 'Event details' }, '404': { description: 'Event not found' } } };
+
+for (const resource of ['updates', 'events'] as const) {
+  paths[`/admin/${resource}`]!.get = { tags: ['Admin Publishing'], summary: `List all ${resource}`, security: [{ bearerAuth: [] }], parameters: [...publishingListParameters, { name: 'status', in: 'query', schema: { type: 'string', enum: ['DRAFT', 'PUBLISHED', 'ARCHIVED'] } }], responses: { '200': { description: `Paginated ${resource}` }, '401': { description: 'Authentication required' } } };
+  paths[`/admin/${resource}`]!.post = { tags: ['Admin Publishing'], summary: `Create ${resource === 'updates' ? 'an update' : 'an event'}`, security: [{ bearerAuth: [] }], requestBody: { required: true, content: { 'multipart/form-data': { schema: resource === 'updates' ? updateFormSchema : eventFormSchema } } }, responses: { '201': { description: 'Created' }, '400': { description: 'Validation error' }, '401': { description: 'Authentication required' } } };
+  paths[`/admin/${resource}/{id}`]!.get = { tags: ['Admin Publishing'], summary: `Get ${resource.slice(0, -1)} by ID`, security: [{ bearerAuth: [] }], parameters: [idParameter], responses: { '200': { description: 'Details' }, '404': { description: 'Not found' } } };
+  paths[`/admin/${resource}/{id}`]!.patch = { tags: ['Admin Publishing'], summary: `Edit, publish, or archive ${resource.slice(0, -1)}`, security: [{ bearerAuth: [] }], parameters: [idParameter], requestBody: { required: true, content: { 'multipart/form-data': { schema: resource === 'updates' ? updateFormSchema : eventFormSchema } } }, responses: { '200': { description: 'Updated' }, '400': { description: 'Validation error' }, '404': { description: 'Not found' } } };
+  paths[`/admin/${resource}/{id}`]!.delete = { tags: ['Admin Publishing'], summary: `Delete ${resource.slice(0, -1)}`, security: [{ bearerAuth: [] }], parameters: [idParameter], responses: { '204': { description: 'Deleted' }, '404': { description: 'Not found' } } };
+}
+
 paths['/admin/expert-applications']!.get = {
   tags: ['Admin Workflows'],
   summary: 'List all expert applications',
@@ -330,6 +407,7 @@ paths['/public/contact-messages']!.post = {
     {
       fullName: 'Mary Visitor',
       email: 'mary@example.com',
+      companyName: 'Horn Media Network',
       subject: 'Partnership',
       message: 'I would like to discuss a possible partnership with your organization.',
     },
@@ -523,6 +601,7 @@ export const swaggerSpec = swaggerJSDoc({
             membershipTypeId: { type: 'string', format: 'uuid' },
             fullName: { type: 'string', minLength: 2, maxLength: 150 },
             email: { type: 'string', format: 'email' },
+            companyName: { type: 'string', maxLength: 200, example: 'Horn Media Network' },
             phone: { type: 'string', minLength: 5, maxLength: 40 },
             outletOrInstitution: {
               type: 'string',

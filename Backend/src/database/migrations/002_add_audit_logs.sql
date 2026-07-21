@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS audit_logs (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   administrator_id uuid NOT NULL REFERENCES admins(id),
   action varchar(100) NOT NULL,
   entity_type varchar(80) NOT NULL,

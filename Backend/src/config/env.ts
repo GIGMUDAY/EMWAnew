@@ -5,7 +5,12 @@ const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid PostgreSQL URL'),
+  DATABASE_SSL: z.enum(['auto', 'require', 'disable']).default('auto'),
   JWT_ACCESS_SECRET: z.string().min(32),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(32)
+    .default('development_refresh_secret_change_me_1234567890'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),

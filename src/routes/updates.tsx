@@ -18,6 +18,44 @@ export const Route = createFileRoute("/updates")({
 });
 
 const TABS = ["All", "News", "Press", "Articles", "Photos", "Video"] as const;
+type Story = {
+  d: string;
+  t: (typeof TABS)[number];
+  h: string;
+  e: string;
+  img: string;
+  read: string;
+  slug?: string;
+  content?: string;
+  featured?: boolean;
+};
+type PublicEvent = {
+  id?: string;
+  day: string;
+  month: string;
+  year?: string;
+  title: string;
+  type: string;
+  loc: string;
+  time: string;
+  full: boolean;
+  registrationUrl?: string;
+};
+const API_BASE = import.meta.env.VITE_API_URL ?? "https://emwa.mudaymarketing.com/api/v1";
+const API_ORIGIN = new URL(API_BASE).origin;
+
+const resolveMediaUrl = (value: unknown, fallback: string) => {
+  if (!value) return fallback;
+  try {
+    const url = new URL(String(value), API_ORIGIN);
+    // Uploaded files may have been saved with the development host. Always serve
+    // them from the same backend currently configured for the frontend.
+    if (url.pathname.startsWith("/uploads/")) return `${API_ORIGIN}${url.pathname}`;
+    return url.toString();
+  } catch {
+    return fallback;
+  }
+};
 const PHOTOS = {
   conference:
     "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1800&q=85",
@@ -29,7 +67,7 @@ const PHOTOS = {
     "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1600&q=85",
 } as const;
 
-const STORIES = [
+const FALLBACK_STORIES: Story[] = [
   {
     d: "12 Nov 2026",
     t: "News",
@@ -78,7 +116,7 @@ const STORIES = [
     img: PHOTOS.conference,
     read: "06:42",
   },
-] as const;
+];
 
 const STORY_DETAILS: Record<string, string[]> = {
   "EMWA submits gender-equity brief to Parliament": [
@@ -113,7 +151,7 @@ const STORY_DETAILS: Record<string, string[]> = {
   ],
 };
 
-const EVENTS = [
+const FALLBACK_EVENTS: PublicEvent[] = [
   {
     day: "22",
     month: "NOV",
@@ -150,22 +188,115 @@ const EVENTS = [
     time: "14:00 EAT",
     full: true,
   },
-] as const;
+];
 
 function Updates() {
+  const [stories, setStories] = useState<Story[]>(FALLBACK_STORIES);
+  const [events, setEvents] = useState<PublicEvent[]>(FALLBACK_EVENTS);
+  const [feedError, setFeedError] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]>("All");
   const [query, setQuery] = useState("");
-  const [selectedStory, setSelectedStory] = useState<(typeof STORIES)[number] | null>(null);
-  const lead = STORIES[0];
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const lead = stories.find((story) => story.featured) ?? stories[0];
   const filtered = useMemo(
     () =>
-      STORIES.slice(1).filter(
-        (story) =>
-          (tab === "All" || story.t === tab) &&
-          (!query.trim() || `${story.h} ${story.e}`.toLowerCase().includes(query.toLowerCase())),
-      ),
-    [tab, query],
+      stories
+        .filter((story) => stories.length === 1 || story !== lead)
+        .filter(
+          (story) =>
+            (tab === "All" || story.t === tab) &&
+            (!query.trim() || `${story.h} ${story.e}`.toLowerCase().includes(query.toLowerCase())),
+        ),
+    [tab, query, stories, lead],
   );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const [updatesResult, eventsResult] = await Promise.allSettled([
+          fetch(`${API_BASE}/public/updates?page=1&limit=100`, { signal: controller.signal }),
+          fetch(`${API_BASE}/public/events?page=1&limit=100&order=asc`, { signal: controller.signal }),
+        ]);
+
+        if (updatesResult.status === "fulfilled" && updatesResult.value.ok) {
+          const updatesPayload = await updatesResult.value.json();
+          if (updatesPayload.data?.length) {
+          const labels: Record<string, Story["t"]> = {
+            NEWS: "News",
+            PRESS: "Press",
+            ARTICLE: "Articles",
+            PHOTO: "Photos",
+            VIDEO: "Video",
+          };
+          setStories(
+            updatesPayload.data.map((row: Record<string, unknown>) => ({
+              d: new Intl.DateTimeFormat("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              }).format(new Date(String(row.published_at ?? row.created_at))),
+              t: labels[String(row.content_type)] ?? "News",
+              h: String(row.title),
+              e: String(row.excerpt),
+              img: resolveMediaUrl(row.featured_image_url, PHOTOS.newsroom),
+              read: row.content_type === "VIDEO" ? "Video" : "Read",
+              slug: String(row.slug),
+              featured: Boolean(row.is_featured),
+            })),
+          );
+          }
+        } else {
+          setFeedError("Showing saved newsroom content while the live updates reconnect.");
+        }
+
+        if (eventsResult.status === "fulfilled" && eventsResult.value.ok) {
+          const eventsPayload = await eventsResult.value.json();
+          if (eventsPayload.data?.length) {
+          setEvents(
+            eventsPayload.data.map((row: Record<string, unknown>) => {
+              const starts = new Date(String(row.starts_at));
+              return {
+                id: String(row.id),
+                day: String(starts.getDate()).padStart(2, "0"),
+                month: starts.toLocaleString("en", { month: "short" }).toUpperCase(),
+                year: String(starts.getFullYear()),
+                title: String(row.title),
+                type: String(row.event_type),
+                loc: String(row.location),
+                time: starts.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" }),
+                full: row.capacity_status !== "AVAILABLE",
+                registrationUrl: row.registration_url ? String(row.registration_url) : undefined,
+              };
+            }),
+          );
+          }
+        }
+        if (updatesResult.status === "fulfilled" && updatesResult.value.ok) setFeedError("");
+      } catch (error) {
+        if (error instanceof Error && error.name !== "AbortError")
+          setFeedError("Showing saved newsroom content while the live feed reconnects.");
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, []);
+
+  const openStory = async (story: Story) => {
+    setSelectedStory(story);
+    if (!story.slug || story.content) return;
+    try {
+      const response = await fetch(`${API_BASE}/public/updates/${encodeURIComponent(story.slug)}`);
+      if (!response.ok) return;
+      const payload = await response.json();
+      setSelectedStory((current) => {
+        if (!current || current.slug !== story.slug) return current;
+        return { ...current, content: String(payload.data?.content ?? "") };
+      });
+    } catch {
+      // Keep the summary reader available if the article detail request fails.
+    }
+  };
 
   useEffect(() => {
     document.body.style.overflow = selectedStory ? "hidden" : "";
@@ -195,10 +326,10 @@ function Updates() {
           </p>
           <div className="updates2-hero-meta">
             <span>
-              <strong>06</strong> latest stories
+              <strong>{String(stories.length).padStart(2, "0")}</strong> latest stories
             </span>
             <span>
-              <strong>04</strong> upcoming events
+              <strong>{String(events.length).padStart(2, "0")}</strong> upcoming events
             </span>
             <span>Updated 12 Nov 2026</span>
           </div>
@@ -217,7 +348,7 @@ function Updates() {
             </div>
             <h2>{lead.h}</h2>
             <p>{lead.e}</p>
-            <button onClick={() => setSelectedStory(lead)}>
+            <button onClick={() => void openStory(lead)}>
               Read story <ArrowUpRight />
             </button>
           </div>
@@ -242,6 +373,11 @@ function Updates() {
             />
           </label>
         </header>
+        {feedError && (
+          <p className="updates2-feed-note" role="status">
+            {feedError}
+          </p>
+        )}
         <div className="updates2-tabs" role="group" aria-label="Filter stories">
           {TABS.map((item) => (
             <button
@@ -277,7 +413,7 @@ function Updates() {
                   </div>
                   <h3>{story.h}</h3>
                   <p>{story.e}</p>
-                  <button onClick={() => setSelectedStory(story)}>
+                  <button onClick={() => void openStory(story)}>
                     Continue reading <ArrowRight />
                   </button>
                 </div>
@@ -311,14 +447,14 @@ function Updates() {
           </p>
         </header>
         <div className="updates2-event-grid">
-          {EVENTS.map((event, index) => (
+          {events.map((event, index) => (
             <article className={index === 0 ? "is-next" : ""} key={event.title}>
               <div className="updates2-event-date">
                 <strong>{event.day}</strong>
                 <span>
                   {event.month}
                   <br />
-                  2026
+                  {event.year ?? "2026"}
                 </span>
               </div>
               <p>{index === 0 ? "Next event" : event.type}</p>
@@ -336,7 +472,12 @@ function Updates() {
               {event.full ? (
                 <b>At capacity</b>
               ) : (
-                <button>
+                <button
+                  onClick={() =>
+                    event.registrationUrl &&
+                    window.open(event.registrationUrl, "_blank", "noopener,noreferrer")
+                  }
+                >
                   View details <ArrowUpRight />
                 </button>
               )}
@@ -396,7 +537,10 @@ function Updates() {
               <h2 id="updates-story-title">{selectedStory.h}</h2>
               <p className="updates-story-intro">{selectedStory.e}</p>
               <div className="updates-story-body">
-                {(STORY_DETAILS[selectedStory.h] ?? [selectedStory.e]).map((paragraph) => (
+                {(selectedStory.content
+                  ? selectedStory.content.split(/\n{2,}/).filter(Boolean)
+                  : (STORY_DETAILS[selectedStory.h] ?? [selectedStory.e])
+                ).map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
               </div>

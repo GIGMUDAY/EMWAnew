@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, Check, Globe2, Handshake, Landmark, Mail } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Mail } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 
 export const Route = createFileRoute("/partners")({
@@ -22,12 +22,7 @@ const LOGO_PARTNERS = [
   { name: "Partner Eight", abbr: "P8", focus: "Public-interest journalism", tone: "red" },
 ] as const;
 
-const GROUPS = [
-  { title: "Media partners", icon: Globe2, items: ["Ethiopian Broadcasting Corporation", "Fana Broadcasting", "Walta Media", "Addis Standard", "Reporter Newspaper"] },
-  { title: "Public institutions", icon: Landmark, items: ["Ministry of Women and Social Affairs", "Ethiopian Media Authority", "House of Peoples' Representatives", "Addis Ababa City Administration"] },
-  { title: "International allies", icon: Handshake, items: ["UNESCO", "UN Women", "European Union Delegation", "DW Akademie", "Fojo Media Institute", "Internews", "ARTICLE 19"] },
-  { title: "Civil society & academia", icon: Check, items: ["African Media Women Alliance", "Ethiopian Human Rights Commission", "Addis Ababa University School of Journalism", "Media Council of Ethiopia"] },
-] as const;
+const STRATEGIC_PARTNERS = ["Government institutions", "Media organizations", "Development partners and donors", "Civil Society Organizations (CSOs)", "National and international media associations", "Universities and research institutions", "Women's organizations", "Professional associations", "Media coalitions and networks"];
 
 function PartnerLogo({ partner, compact = false }: { partner: (typeof LOGO_PARTNERS)[number]; compact?: boolean }) {
   return <div className={`partners-logo-card${compact ? " is-compact" : ""}`}><div className={`partners-placeholder-logo is-${partner.tone}`} aria-hidden="true"><i /><strong>{partner.abbr}</strong></div><div className="partners-placeholder-copy"><strong>{partner.name}</strong><span>{partner.focus}</span></div></div>;
@@ -58,9 +53,9 @@ function Partners() {
         <div><article><span>01</span><h3>Knowledge</h3><p>Research, training, and practical expertise shaped around real newsroom conditions.</p></article><article><span>02</span><h3>Access</h3><p>Pathways into leadership, regional networks, funding, platforms, and public influence.</p></article><article><span>03</span><h3>Accountability</h3><p>Clear outcomes, transparent roles, and institutional changes that last beyond a grant.</p></article></div>
       </section>
 
-      <section className="partners2-network" id="partner-network">
-        <header><div><p className="partners-eyebrow">The partner network</p><h2>Many sectors.<br />One direction.</h2></div><p>Each relationship contributes a different kind of leverage—from public reach and policy access to technical expertise and long-term funding.</p></header>
-        <div className="partners2-group-list">{GROUPS.map(({ title, icon: Icon, items }, index) => <article key={title}><div className="partners2-group-title"><span>0{index + 1}</span><Icon /><h3>{title}</h3><strong>{items.length}</strong></div><div className="partners2-group-names">{items.map((item) => <span key={item}>{item}</span>)}</div></article>)}</div>
+      <section className="about2-partners" id="partner-network">
+        <header><p className="about2-eyebrow">Strategic partners</p><h2>Progress is built<br />in partnership.</h2><p>EMWA collaborates across public institutions, civil society, education, media, and development networks.</p></header>
+        <div>{STRATEGIC_PARTNERS.map((item, index) => <article key={item}><span>{String(index + 1).padStart(2, "0")}</span><p>{item}</p></article>)}</div>
       </section>
 
       <section className="partners2-story">

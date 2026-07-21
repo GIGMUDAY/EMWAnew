@@ -3,6 +3,7 @@ import {
   Archive,
   ArrowRight,
   BookOpen,
+  CalendarDays,
   Check,
   ChevronRight,
   CircleUserRound,
@@ -14,17 +15,27 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Newspaper,
   RefreshCw,
   Search,
   ShieldCheck,
   UploadCloud,
   UserRoundCheck,
   UsersRound,
+  Trash2,
   X,
 } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import logo from "@/assets/emwa-logo-new.png";
-import { adminApi, ApiError, listData, type ApplicationStatus } from "@/lib/admin-api";
+import {
+  adminApi,
+  API_BASE,
+  ApiError,
+  listData,
+  loginAdmin,
+  logoutAdmin,
+  type ApplicationStatus,
+} from "@/lib/admin-api";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -34,7 +45,16 @@ export const Route = createFileRoute("/admin")({
 });
 
 type Section =
-  "overview" | "experts" | "memberships" | "membership-types" | "resources" | "messages";
+  | "overview"
+  | "updates"
+  | "events"
+  | "experts"
+  | "memberships"
+  | "membership-types"
+  | "resources"
+  | "messages"
+  | "subscribers"
+  | "administrators";
 type AdminSession = {
   token: string;
   refreshToken: string;
@@ -54,6 +74,7 @@ type Expert = {
   status: ApplicationStatus;
   created_at: string;
   biography?: string;
+  profile_photo_url?: string;
 };
 type Membership = {
   id: string;
@@ -90,19 +111,74 @@ type Contact = {
   id: string;
   full_name: string;
   email: string;
+  company_name?: string;
   subject: string;
   message: string;
   status: "NEW" | "READ" | "ARCHIVED";
   created_at: string;
 };
+type PublishStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+type UpdatePost = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  content_type: "NEWS" | "PRESS" | "ARTICLE" | "PHOTO" | "VIDEO";
+  featured_image_url?: string;
+  video_url?: string;
+  author_name: string;
+  status: PublishStatus;
+  is_featured: boolean;
+  published_at?: string;
+  created_at: string;
+};
+type AdminEvent = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  event_type: string;
+  location: string;
+  starts_at: string;
+  ends_at?: string;
+  registration_url?: string;
+  capacity_status: "AVAILABLE" | "AT_CAPACITY" | "CANCELLED";
+  featured_image_url?: string;
+  status: PublishStatus;
+  created_at: string;
+};
+type Administrator = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: "ADMIN" | "SUPER_ADMIN";
+  is_active: boolean;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+};
+type NewsletterSubscriber = {
+  id: string;
+  email: string;
+  status: "ACTIVE" | "UNSUBSCRIBED";
+  subscribed_at: string;
+  unsubscribed_at?: string;
+  created_at: string;
+  updated_at: string;
+};
 
 const navItems: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "updates", label: "Updates", icon: Newspaper },
+  { id: "events", label: "Events", icon: CalendarDays },
   { id: "experts", label: "Expert applications", icon: UserRoundCheck },
   { id: "memberships", label: "Membership requests", icon: UsersRound },
   { id: "membership-types", label: "Membership types", icon: BookOpen },
   { id: "resources", label: "Resources", icon: FileText },
   { id: "messages", label: "Contact messages", icon: MessageSquare },
+  { id: "subscribers", label: "Email subscribers", icon: Inbox },
+  { id: "administrators", label: "Administrators", icon: ShieldCheck },
 ];
 
 const fmtDate = (value: string) =>
@@ -110,8 +186,34 @@ const fmtDate = (value: string) =>
     new Date(value),
   );
 
+const uploadUrl = (value?: string) => {
+  if (!value) return "";
+  try {
+    const path = new URL(value).pathname;
+    return `${new URL(API_BASE).origin}${path}`;
+  } catch {
+    return value;
+  }
+};
+
 function AdminPage() {
   const [session, setSession] = useState<AdminSession | null>(null);
+
+  const logAdminButtonClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    const button = (event.target as HTMLElement).closest("button");
+    if (!button) return;
+
+    const label =
+      button.getAttribute("aria-label") ||
+      button.getAttribute("title") ||
+      button.textContent?.replace(/\s+/g, " ").trim() ||
+      "Unlabelled button";
+
+    console.info("[EMWA Admin] Button clicked", {
+      action: label,
+      timestamp: new Date().toISOString(),
+    });
+  }, []);
 
   const handleLogin = useCallback((next: AdminSession) => {
     window.localStorage.setItem("emwa_admin_session", JSON.stringify(next));
@@ -119,23 +221,52 @@ function AdminPage() {
   }, []);
 
   const handleLogout = useCallback(() => {
+    if (session?.refreshToken && session.token !== "frontend-demo-session") {
+      void logoutAdmin(session.refreshToken).catch(() => undefined);
+    }
     window.localStorage.removeItem("emwa_admin_session");
     setSession(null);
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("emwa_admin_session");
     if (saved) {
       try {
-        setSession(JSON.parse(saved));
+        const parsed = JSON.parse(saved) as AdminSession;
+        if (!parsed.token || parsed.token === "frontend-demo-session") {
+          window.localStorage.removeItem("emwa_admin_session");
+          return;
+        }
+        setSession(parsed);
       } catch {
         window.localStorage.removeItem("emwa_admin_session");
       }
     }
   }, []);
 
-  if (!session) return <AdminLogin onLogin={handleLogin} />;
-  return <AdminWorkspace session={session} onLogout={handleLogout} />;
+  useEffect(() => {
+    const expireSession = () => setSession(null);
+    window.addEventListener("emwa-admin-session-expired", expireSession);
+    return () => window.removeEventListener("emwa-admin-session-expired", expireSession);
+  }, []);
+
+  useEffect(() => {
+    const updateSession = (event: Event) => {
+      setSession((event as CustomEvent<AdminSession>).detail);
+    };
+    window.addEventListener("emwa-admin-session-updated", updateSession);
+    return () => window.removeEventListener("emwa-admin-session-updated", updateSession);
+  }, []);
+
+  return (
+    <div onClickCapture={logAdminButtonClick}>
+      {!session ? (
+        <AdminLogin onLogin={handleLogin} />
+      ) : (
+        <AdminWorkspace session={session} onLogout={handleLogout} />
+      )}
+    </div>
+  );
 }
 
 function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
@@ -148,17 +279,18 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
     event.preventDefault();
     setLoading(true);
     setError("");
-    onLogin({
-      token: "frontend-demo-session",
-      refreshToken: "frontend-demo-refresh",
-      admin: {
-        id: "demo-super-admin",
-        fullName: "Demo Super Admin",
-        email: email || "superadmin@emwa.org",
-        role: "SUPER_ADMIN",
-      },
-    });
-    setLoading(false);
+    try {
+      const response = await loginAdmin(email, password);
+      onLogin({
+        token: response.data.accessToken,
+        refreshToken: response.data.refreshToken,
+        admin: response.data.admin,
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to sign in");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -199,8 +331,7 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
           <p className="label-mono text-[#8c2d3c]">Administrator access</p>
           <h2 className="mt-4 text-5xl font-black tracking-[-.04em] sm:text-6xl">Welcome back.</h2>
           <p className="mt-4 font-[var(--font-body)] text-sm leading-6 text-black/55">
-            This is a frontend demo. Enter any details or leave the fields empty, then continue to
-            preview the administration dashboard.
+            Sign in with your EMWA administrator account to access the secure command desk.
           </p>
           <form onSubmit={submit} className="mt-12 space-y-7">
             <AdminInput
@@ -208,16 +339,18 @@ function AdminLogin({ onLogin }: { onLogin: (session: AdminSession) => void }) {
               type="email"
               value={email}
               onChange={setEmail}
-              placeholder="Optional in demo mode"
+              placeholder="admin@emwa.org.et"
               autoComplete="email"
+              required
             />
             <AdminInput
               label="Password"
               type="password"
               value={password}
               onChange={setPassword}
-              placeholder="Optional in demo mode"
+              placeholder="Enter your password"
               autoComplete="current-password"
+              required
             />
             {error && (
               <div className="border-l-4 border-[#8c2d3c] bg-[#8c2d3c]/8 px-4 py-3 font-[var(--font-body)] text-sm text-[#6f1f2c]">
@@ -279,6 +412,10 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
   const [types, setTypes] = useState<MembershipType[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [updates, setUpdates] = useState<UpdatePost[]>([]);
+  const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [administrators, setAdministrators] = useState<Administrator[]>([]);
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -349,26 +486,76 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
           created_at: now,
         },
       ]);
+      setUpdates([
+        {
+          id: "demo-update-1",
+          title: "EMWA submits gender-equity brief to Parliament",
+          slug: "emwa-submits-gender-equity-brief-to-parliament",
+          excerpt: "A policy agenda for measurable representation and safer newsrooms.",
+          content:
+            "EMWA has submitted a new policy brief calling for measurable representation, safer working environments, and transparent leadership pathways across Ethiopia's public media institutions.",
+          content_type: "NEWS",
+          author_name: "EMWA Editorial Desk",
+          status: "PUBLISHED",
+          is_featured: true,
+          published_at: now,
+          created_at: now,
+        },
+      ]);
+      setEvents([
+        {
+          id: "demo-event-1",
+          title: "Regional Chapter Convening",
+          slug: "regional-chapter-convening",
+          description: "A gathering for regional members, editors, and program partners.",
+          event_type: "Convening",
+          location: "Hawassa University",
+          starts_at: now,
+          capacity_status: "AVAILABLE",
+          status: "PUBLISHED",
+          created_at: now,
+        },
+      ]);
       setLoading(false);
       return;
     }
     try {
-      const [dash, expertList, memberList, typeList, resourceList, contactList] = await Promise.all(
-        [
-          adminApi<Dashboard>("/admin/dashboard", session.token),
-          listData<Expert>("/admin/expert-applications?page=1&limit=100", session.token),
-          listData<Membership>("/admin/membership-applications?page=1&limit=100", session.token),
-          adminApi<MembershipType[]>("/public/membership-types", session.token),
-          listData<Resource>("/admin/resources?page=1&limit=100", session.token),
-          listData<Contact>("/admin/contact-messages?page=1&limit=100", session.token),
-        ],
-      );
+      const [
+        dash,
+        expertList,
+        memberList,
+        typeList,
+        resourceList,
+        contactList,
+        updateList,
+        eventList,
+        administratorList,
+        subscriberList,
+      ] = await Promise.all([
+        adminApi<Dashboard>("/admin/dashboard", session.token),
+        listData<Expert>("/admin/expert-applications?page=1&limit=100", session.token),
+        listData<Membership>("/admin/membership-applications?page=1&limit=100", session.token),
+        adminApi<MembershipType[]>("/public/membership-types", session.token),
+        listData<Resource>("/admin/resources?page=1&limit=100", session.token),
+        listData<Contact>("/admin/contact-messages?page=1&limit=100", session.token),
+        listData<UpdatePost>("/admin/updates?page=1&limit=100", session.token),
+        listData<AdminEvent>("/admin/events?page=1&limit=100&order=asc", session.token),
+        listData<Administrator>("/admin/admins?page=1&limit=100", session.token),
+        listData<NewsletterSubscriber>(
+          "/admin/newsletter-subscribers?page=1&limit=100",
+          session.token,
+        ),
+      ]);
       setDashboard(dash.data);
       setExperts(expertList.rows);
       setMemberships(memberList.rows);
       setTypes(typeList.data);
       setResources(resourceList.rows);
       setContacts(contactList.rows);
+      setUpdates(updateList.rows);
+      setEvents(eventList.rows);
+      setAdministrators(administratorList.rows);
+      setSubscribers(subscriberList.rows);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) return onLogout();
       setError(cause instanceof Error ? cause.message : "Unable to load administration data");
@@ -481,6 +668,22 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
                   navigate={navigate}
                 />
               )}
+              {section === "updates" && (
+                <UpdatesPanel
+                  rows={updates}
+                  token={session.token}
+                  reload={load}
+                  setRows={setUpdates}
+                />
+              )}
+              {section === "events" && (
+                <EventsPanel
+                  rows={events}
+                  token={session.token}
+                  reload={load}
+                  setRows={setEvents}
+                />
+              )}
               {section === "experts" && (
                 <ApplicationsPanel
                   title="Expert applications"
@@ -508,11 +711,184 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
               {section === "messages" && (
                 <MessagesPanel rows={contacts} token={session.token} reload={load} />
               )}
+              {section === "subscribers" && <SubscribersPanel rows={subscribers} />}
+              {section === "administrators" && (
+                <AdministratorsPanel
+                  rows={administrators}
+                  token={session.token}
+                  currentAdmin={session.admin}
+                  reload={load}
+                />
+              )}
             </>
           )}
         </div>
       </main>
     </div>
+  );
+}
+
+function AdministratorsPanel({
+  rows,
+  token,
+  currentAdmin,
+  reload,
+}: {
+  rows: Administrator[];
+  token: string;
+  currentAdmin: AdminSession["admin"];
+  reload: () => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [created, setCreated] = useState("");
+  const isSuperAdmin = currentAdmin.role === "SUPER_ADMIN";
+
+  const createAdministrator = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    setBusy(true);
+    setError("");
+    setCreated("");
+    try {
+      const fullName = String(values.get("fullName"));
+      await adminApi<Administrator>("/admin/admins", token, {
+        method: "POST",
+        body: JSON.stringify({
+          fullName,
+          email: String(values.get("email")),
+          password: String(values.get("password")),
+          role: String(values.get("role")),
+        }),
+      });
+      form.reset();
+      setCreated(`${fullName} can now sign in to the EMWA administration dashboard.`);
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to create administrator");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <PagePanel
+      title="Administrators"
+      subtitle="View the people with access to the EMWA command desk and create secure accounts."
+    >
+      <div
+        className={`grid gap-7 ${isSuperAdmin ? "xl:grid-cols-[minmax(320px,.72fr)_minmax(0,1.28fr)]" : ""}`}
+      >
+        {isSuperAdmin && (
+          <form
+            onSubmit={createAdministrator}
+            className="h-fit rounded-2xl bg-[#191715] p-6 text-white shadow-xl"
+          >
+            <p className="label-mono text-[#e4ab3a]">Super-admin control</p>
+            <h3 className="mt-3 text-3xl font-black">Create an administrator</h3>
+            <p className="mt-3 font-[var(--font-body)] text-sm leading-6 text-white/50">
+              Create a named account with its own password and access level.
+            </p>
+            <div className="mt-7 grid gap-4">
+              <PublicationInput
+                name="fullName"
+                label="Full name"
+                minLength={2}
+                maxLength={150}
+                required
+              />
+              <PublicationInput
+                name="email"
+                label="Email address"
+                type="email"
+                maxLength={320}
+                autoComplete="off"
+                required
+              />
+              <PublicationInput
+                name="password"
+                label="Temporary password"
+                type="password"
+                minLength={12}
+                maxLength={128}
+                autoComplete="new-password"
+                required
+              />
+              <p className="-mt-2 font-[var(--font-body)] text-xs leading-5 text-white/40">
+                At least 12 characters with uppercase, lowercase, number, and symbol.
+              </p>
+              <PublicationSelect
+                name="role"
+                label="Access level"
+                defaultValue="ADMIN"
+                options={["ADMIN", "SUPER_ADMIN"]}
+              />
+            </div>
+            {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+            {created && <p className="mt-4 text-sm text-emerald-300">{created}</p>}
+            <button
+              disabled={busy}
+              className="mt-6 flex w-full items-center justify-between bg-[#8c2d3c] px-5 py-4 font-[var(--font-body)] text-sm font-bold hover:bg-[#a53b4d] disabled:opacity-50"
+            >
+              {busy ? "Creating accountâ€¦" : "Create administrator"}
+              {busy ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <ArrowRight className="size-4" />
+              )}
+            </button>
+          </form>
+        )}
+
+        <div className="overflow-hidden rounded-2xl border border-black/10 bg-[#fbf9f4] shadow-sm">
+          <PanelHeader
+            eyebrow="Access directory"
+            title={`${rows.length} administrator${rows.length === 1 ? "" : "s"}`}
+          />
+          {rows.length ? (
+            <div className="divide-y divide-black/8">
+              {rows.map((row) => (
+                <article
+                  key={row.id}
+                  className="grid gap-4 p-5 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center"
+                >
+                  <span className="grid size-12 place-items-center rounded-full bg-[#eadfd3] font-black text-[#8c2d3c]">
+                    {row.full_name
+                      .split(" ")
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-[var(--font-body)] text-sm font-bold">{row.full_name}</h3>
+                      {row.id === currentAdmin.id && (
+                        <span className="bg-[#e4ab3a]/20 px-2 py-1 label-mono text-[#7a5310]">
+                          You
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 truncate font-[var(--font-body)] text-sm text-black/50">
+                      {row.email}
+                    </p>
+                    <p className="mt-2 label-mono text-black/35">Added {fmtDate(row.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-2 sm:justify-end">
+                    <span className="bg-[#ece5da] px-2.5 py-1 label-mono text-black/55">
+                      {row.role}
+                    </span>
+                    <StatusBadge value={row.is_active ? "ACTIVE" : "INACTIVE"} />
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <EmptyState text="No administrator accounts found" />
+          )}
+        </div>
+      </div>
+    </PagePanel>
   );
 }
 
@@ -705,9 +1081,12 @@ function EmptyState({ text }: { text: string }) {
 }
 function StatusBadge({ value }: { value: string }) {
   const style =
-    value === "APPROVED" || value === "READ"
+    value === "APPROVED" || value === "READ" || value === "ACTIVE"
       ? "bg-emerald-100 text-emerald-800"
-      : value === "REJECTED" || value === "ARCHIVED"
+      : value === "REJECTED" ||
+          value === "ARCHIVED" ||
+          value === "INACTIVE" ||
+          value === "UNSUBSCRIBED"
         ? "bg-stone-200 text-stone-600"
         : "bg-amber-100 text-amber-800";
   return (
@@ -768,6 +1147,24 @@ function ApplicationsPanel({
               key={row.id}
               className="rounded-2xl border border-black/10 bg-[#fbf9f4] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/8"
             >
+              <div className="relative mb-6 grid aspect-[16/8] overflow-hidden rounded-xl bg-[linear-gradient(135deg,#e8ded1,#d7c5b3)]">
+                <span className="m-auto text-5xl font-black text-[#8c2d3c]/45">
+                  {row.full_name
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join("")}
+                </span>
+                {row.profile_photo_url && (
+                  <img
+                    src={uploadUrl(row.profile_photo_url)}
+                    alt={`${row.full_name}'s uploaded profile`}
+                    loading="lazy"
+                    className="absolute inset-0 size-full object-cover object-center transition duration-500 hover:scale-[1.03]"
+                    onError={(event) => event.currentTarget.remove()}
+                  />
+                )}
+              </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="label-mono text-[#8c2d3c]">
@@ -1032,6 +1429,608 @@ function MembershipTypesPanel({
   );
 }
 
+function UpdatesPanel({
+  rows,
+  token,
+  reload,
+  setRows,
+}: {
+  rows: UpdatePost[];
+  token: string;
+  reload: () => Promise<void>;
+  setRows: React.Dispatch<React.SetStateAction<UpdatePost[]>>;
+}) {
+  const [editing, setEditing] = useState<UpdatePost | null>(null);
+  const [preview, setPreview] = useState<UpdatePost | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const demo = token === "frontend-demo-session";
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    data.set("isFeatured", data.has("isFeatured") ? "true" : "false");
+    try {
+      if (demo) {
+        const now = new Date().toISOString();
+        const next: UpdatePost = {
+          id: editing?.id ?? crypto.randomUUID(),
+          title: String(data.get("title")),
+          slug: String(data.get("slug") || data.get("title"))
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, ""),
+          excerpt: String(data.get("excerpt")),
+          content: String(data.get("content")),
+          content_type: String(data.get("contentType")) as UpdatePost["content_type"],
+          video_url: String(data.get("videoUrl") || "") || undefined,
+          author_name: String(data.get("authorName")),
+          status: String(data.get("status")) as PublishStatus,
+          is_featured: data.get("isFeatured") === "true",
+          published_at: data.get("status") === "PUBLISHED" ? now : undefined,
+          created_at: editing?.created_at ?? now,
+        };
+        setRows((current) =>
+          [next, ...current.filter((row) => row.id !== next.id)].map((row) =>
+            next.is_featured && next.status === "PUBLISHED" && row.id !== next.id
+              ? { ...row, is_featured: false }
+              : row,
+          ),
+        );
+      } else {
+        await adminApi(editing ? `/admin/updates/${editing.id}` : "/admin/updates", token, {
+          method: editing ? "PATCH" : "POST",
+          body: data,
+        });
+        await reload();
+      }
+      form.reset();
+      setEditing(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to save update");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changeStatus = async (row: UpdatePost, status: PublishStatus) => {
+    if (demo) {
+      setRows((current) =>
+        current.map((item) =>
+          item.id === row.id
+            ? {
+                ...item,
+                status,
+                published_at: status === "PUBLISHED" ? new Date().toISOString() : undefined,
+              }
+            : item,
+        ),
+      );
+      return;
+    }
+    const data = new FormData();
+    data.set("status", status);
+    await adminApi(`/admin/updates/${row.id}`, token, { method: "PATCH", body: data });
+    await reload();
+  };
+
+  const remove = async (row: UpdatePost) => {
+    if (!window.confirm(`Delete “${row.title}”?`)) return;
+    if (demo) setRows((current) => current.filter((item) => item.id !== row.id));
+    else {
+      await adminApi(`/admin/updates/${row.id}`, token, { method: "DELETE" });
+      await reload();
+    }
+  };
+
+  return (
+    <PagePanel
+      title="Updates"
+      subtitle="Write, preview, and publish newsroom content for the public Updates page."
+    >
+      <div className="grid gap-7 xl:grid-cols-[minmax(320px,.72fr)_minmax(0,1.28fr)]">
+        <form
+          key={editing?.id ?? "new"}
+          onSubmit={submit}
+          className="h-fit rounded-2xl bg-[#191715] p-6 text-white shadow-xl"
+        >
+          <p className="label-mono text-[#e4ab3a]">{editing ? "Edit story" : "New story"}</p>
+          <h3 className="mt-3 text-3xl font-black">
+            {editing ? editing.title : "Publish an update"}
+          </h3>
+          <div className="mt-7 grid gap-4">
+            <PublicationInput
+              name="title"
+              label="Title"
+              defaultValue={editing?.title}
+              minLength={3}
+              maxLength={220}
+              required
+            />
+            <PublicationInput
+              name="slug"
+              label="Custom slug (optional)"
+              defaultValue={editing?.slug}
+              minLength={3}
+              maxLength={240}
+            />
+            <PublicationTextarea
+              name="excerpt"
+              label="Short excerpt"
+              defaultValue={editing?.excerpt}
+              rows={3}
+              minLength={10}
+              maxLength={1000}
+              required
+            />
+            <PublicationTextarea
+              name="content"
+              label="Full article"
+              defaultValue={editing?.content}
+              rows={8}
+              minLength={30}
+              maxLength={100000}
+              required
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <PublicationSelect
+                name="contentType"
+                label="Content type"
+                defaultValue={editing?.content_type ?? "NEWS"}
+                options={["NEWS", "PRESS", "ARTICLE", "PHOTO", "VIDEO"]}
+              />
+              <PublicationSelect
+                name="status"
+                label="Status"
+                defaultValue={editing?.status ?? "DRAFT"}
+                options={["DRAFT", "PUBLISHED", "ARCHIVED"]}
+              />
+              <PublicationInput
+                name="authorName"
+                label="Author"
+                defaultValue={editing?.author_name ?? "EMWA Editorial Desk"}
+                minLength={2}
+                maxLength={150}
+                required
+              />
+              <PublicationInput
+                name="videoUrl"
+                label="Video URL (optional)"
+                defaultValue={editing?.video_url}
+                type="url"
+              />
+            </div>
+            <label className="flex items-center gap-3 font-[var(--font-body)] text-sm text-white/75">
+              <input
+                name="isFeatured"
+                type="checkbox"
+                defaultChecked={editing?.is_featured}
+                className="accent-[#e4ab3a]"
+              />{" "}
+              Lead story
+            </label>
+            <label className="block">
+              <span className="label-mono text-white/45">Featured image</span>
+              <input
+                name="featuredImage"
+                type="file"
+                accept="image/jpeg,image/png"
+                className="mt-2 w-full text-sm file:mr-3 file:border-0 file:bg-[#8c2d3c] file:px-3 file:py-2 file:text-white"
+              />
+            </label>
+          </div>
+          {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+          <div className="mt-6 flex gap-2">
+            <button
+              disabled={busy}
+              className="flex-1 bg-[#8c2d3c] px-4 py-3 font-bold hover:bg-[#a53b4d] disabled:opacity-50"
+            >
+              {busy ? "Saving…" : editing ? "Save changes" : "Create story"}
+            </button>
+            {editing && (
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="border border-white/20 px-4"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+        <div className="space-y-3">
+          {rows.length ? (
+            rows.map((row) => (
+              <article
+                key={row.id}
+                className="rounded-2xl border border-black/10 bg-[#fbf9f4] p-5 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="label-mono text-[#8c2d3c]">
+                      {row.content_type}
+                      {row.is_featured ? " · Lead story" : ""}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black">{row.title}</h3>
+                    <p className="mt-2 font-[var(--font-body)] text-sm leading-6 text-black/55">
+                      {row.excerpt}
+                    </p>
+                  </div>
+                  <StatusBadge value={row.status} />
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2 border-t border-black/10 pt-4">
+                  <ActionButton label="Preview" onClick={() => setPreview(row)} variant="outline" />
+                  <ActionButton label="Edit" onClick={() => setEditing(row)} variant="outline" />
+                  {row.status !== "PUBLISHED" && (
+                    <ActionButton
+                      label="Publish"
+                      onClick={() => void changeStatus(row, "PUBLISHED")}
+                    />
+                  )}
+                  {row.status === "PUBLISHED" && (
+                    <ActionButton
+                      label="Archive"
+                      onClick={() => void changeStatus(row, "ARCHIVED")}
+                      variant="outline"
+                    />
+                  )}
+                  <button
+                    onClick={() => void remove(row)}
+                    aria-label={`Delete ${row.title}`}
+                    className="ml-auto grid size-9 place-items-center border border-red-200 text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <EmptyState text="No updates have been created" />
+          )}
+        </div>
+      </div>
+      {preview && (
+        <ContentPreview
+          title={preview.title}
+          image={preview.featured_image_url}
+          eyebrow={preview.content_type}
+          body={preview.content}
+          onClose={() => setPreview(null)}
+        />
+      )}
+    </PagePanel>
+  );
+}
+
+function EventsPanel({
+  rows,
+  token,
+  reload,
+  setRows,
+}: {
+  rows: AdminEvent[];
+  token: string;
+  reload: () => Promise<void>;
+  setRows: React.Dispatch<React.SetStateAction<AdminEvent[]>>;
+}) {
+  const [editing, setEditing] = useState<AdminEvent | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const demo = token === "frontend-demo-session";
+  const localDate = (value?: string) => (value ? new Date(value).toISOString().slice(0, 16) : "");
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      if (demo) {
+        const now = new Date().toISOString();
+        const next: AdminEvent = {
+          id: editing?.id ?? crypto.randomUUID(),
+          title: String(data.get("title")),
+          slug: String(data.get("slug") || data.get("title"))
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, ""),
+          description: String(data.get("description")),
+          event_type: String(data.get("eventType")),
+          location: String(data.get("location")),
+          starts_at: new Date(String(data.get("startsAt"))).toISOString(),
+          ends_at: data.get("endsAt")
+            ? new Date(String(data.get("endsAt"))).toISOString()
+            : undefined,
+          registration_url: String(data.get("registrationUrl") || "") || undefined,
+          capacity_status: String(data.get("capacityStatus")) as AdminEvent["capacity_status"],
+          status: String(data.get("status")) as PublishStatus,
+          created_at: editing?.created_at ?? now,
+        };
+        setRows((current) => [next, ...current.filter((row) => row.id !== next.id)]);
+      } else {
+        await adminApi(editing ? `/admin/events/${editing.id}` : "/admin/events", token, {
+          method: editing ? "PATCH" : "POST",
+          body: data,
+        });
+        await reload();
+      }
+      form.reset();
+      setEditing(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to save event");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (row: AdminEvent) => {
+    if (!window.confirm(`Delete “${row.title}”?`)) return;
+    if (demo) setRows((current) => current.filter((item) => item.id !== row.id));
+    else {
+      await adminApi(`/admin/events/${row.id}`, token, { method: "DELETE" });
+      await reload();
+    }
+  };
+  const changeStatus = async (row: AdminEvent, status: PublishStatus) => {
+    if (demo) {
+      setRows((current) =>
+        current.map((item) => (item.id === row.id ? { ...item, status } : item)),
+      );
+      return;
+    }
+    const data = new FormData();
+    data.set("status", status);
+    await adminApi(`/admin/events/${row.id}`, token, { method: "PATCH", body: data });
+    await reload();
+  };
+
+  return (
+    <PagePanel
+      title="Events"
+      subtitle="Create gatherings, registration opportunities, and public calendar entries."
+    >
+      <div className="grid gap-7 xl:grid-cols-[minmax(320px,.72fr)_minmax(0,1.28fr)]">
+        <form
+          key={editing?.id ?? "new-event"}
+          onSubmit={submit}
+          className="h-fit rounded-2xl bg-[#191715] p-6 text-white shadow-xl"
+        >
+          <p className="label-mono text-[#e4ab3a]">{editing ? "Edit event" : "New event"}</p>
+          <h3 className="mt-3 text-3xl font-black">
+            {editing ? editing.title : "Add to the calendar"}
+          </h3>
+          <div className="mt-7 grid gap-4">
+            <PublicationInput name="title" label="Title" defaultValue={editing?.title} required />
+            <PublicationInput
+              name="slug"
+              label="Custom slug (optional)"
+              defaultValue={editing?.slug}
+            />
+            <PublicationTextarea
+              name="description"
+              label="Description"
+              defaultValue={editing?.description}
+              rows={5}
+              required
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <PublicationInput
+                name="eventType"
+                label="Event type"
+                defaultValue={editing?.event_type}
+                required
+              />
+              <PublicationInput
+                name="location"
+                label="Location"
+                defaultValue={editing?.location}
+                required
+              />
+              <PublicationInput
+                name="startsAt"
+                label="Starts"
+                type="datetime-local"
+                defaultValue={localDate(editing?.starts_at)}
+                required
+              />
+              <PublicationInput
+                name="endsAt"
+                label="Ends (optional)"
+                type="datetime-local"
+                defaultValue={localDate(editing?.ends_at)}
+              />
+              <PublicationSelect
+                name="capacityStatus"
+                label="Capacity"
+                defaultValue={editing?.capacity_status ?? "AVAILABLE"}
+                options={["AVAILABLE", "AT_CAPACITY", "CANCELLED"]}
+              />
+              <PublicationSelect
+                name="status"
+                label="Status"
+                defaultValue={editing?.status ?? "DRAFT"}
+                options={["DRAFT", "PUBLISHED", "ARCHIVED"]}
+              />
+            </div>
+            <PublicationInput
+              name="registrationUrl"
+              label="Registration URL (optional)"
+              type="url"
+              defaultValue={editing?.registration_url}
+            />
+            <label>
+              <span className="label-mono text-white/45">Featured image</span>
+              <input
+                name="featuredImage"
+                type="file"
+                accept="image/jpeg,image/png"
+                className="mt-2 w-full text-sm file:mr-3 file:border-0 file:bg-[#8c2d3c] file:px-3 file:py-2 file:text-white"
+              />
+            </label>
+          </div>
+          {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
+          <div className="mt-6 flex gap-2">
+            <button
+              disabled={busy}
+              className="flex-1 bg-[#8c2d3c] px-4 py-3 font-bold disabled:opacity-50"
+            >
+              {busy ? "Saving…" : editing ? "Save changes" : "Create event"}
+            </button>
+            {editing && (
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                className="border border-white/20 px-4"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+        <div className="space-y-3">
+          {rows.length ? (
+            rows.map((row) => (
+              <article
+                key={row.id}
+                className="rounded-2xl border border-black/10 bg-[#fbf9f4] p-5 shadow-sm"
+              >
+                <div className="flex flex-wrap justify-between gap-4">
+                  <div>
+                    <p className="label-mono text-[#8c2d3c]">{row.event_type}</p>
+                    <h3 className="mt-2 text-2xl font-black">{row.title}</h3>
+                    <p className="mt-2 font-[var(--font-body)] text-sm text-black/55">
+                      {fmtDate(row.starts_at)} · {row.location}
+                    </p>
+                  </div>
+                  <StatusBadge value={row.status} />
+                </div>
+                <p className="mt-4 font-[var(--font-body)] text-sm leading-6 text-black/55">
+                  {row.description}
+                </p>
+                <div className="mt-5 flex gap-2 border-t border-black/10 pt-4">
+                  <ActionButton label="Edit" onClick={() => setEditing(row)} variant="outline" />
+                  {row.status !== "PUBLISHED" && (
+                    <ActionButton
+                      label="Publish"
+                      onClick={() => void changeStatus(row, "PUBLISHED")}
+                    />
+                  )}
+                  {row.status === "PUBLISHED" && (
+                    <ActionButton
+                      label="Archive"
+                      onClick={() => void changeStatus(row, "ARCHIVED")}
+                      variant="outline"
+                    />
+                  )}
+                  <button
+                    onClick={() => void remove(row)}
+                    className="ml-auto grid size-9 place-items-center border border-red-200 text-red-700"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <EmptyState text="No events have been created" />
+          )}
+        </div>
+      </div>
+    </PagePanel>
+  );
+}
+
+function PublicationInput({
+  label,
+  ...props
+}: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label className="block">
+      <span className="label-mono text-white/45">{label}</span>
+      <input
+        {...props}
+        className="mt-2 w-full border border-white/15 bg-white/5 px-3 py-2.5 font-[var(--font-body)] text-sm text-white outline-none placeholder:text-white/25 focus:border-[#e4ab3a]"
+      />
+    </label>
+  );
+}
+function PublicationTextarea({
+  label,
+  ...props
+}: { label: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <label className="block">
+      <span className="label-mono text-white/45">{label}</span>
+      <textarea
+        {...props}
+        className="mt-2 w-full resize-y border border-white/15 bg-white/5 px-3 py-2.5 font-[var(--font-body)] text-sm leading-6 text-white outline-none focus:border-[#e4ab3a]"
+      />
+    </label>
+  );
+}
+function PublicationSelect({
+  label,
+  options,
+  ...props
+}: { label: string; options: string[] } & React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <label className="block">
+      <span className="label-mono text-white/45">{label}</span>
+      <select
+        {...props}
+        className="mt-2 w-full border border-white/15 bg-[#211f1d] px-3 py-2.5 font-[var(--font-body)] text-sm text-white outline-none focus:border-[#e4ab3a]"
+      >
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+function ContentPreview({
+  title,
+  eyebrow,
+  body,
+  image,
+  onClose,
+}: {
+  title: string;
+  eyebrow: string;
+  body: string;
+  image?: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur"
+      onMouseDown={onClose}
+    >
+      <article
+        className="max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-[#fbf9f4] shadow-2xl"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        {image && <img src={image} alt="" className="h-64 w-full object-cover" />}
+        <div className="p-7 md:p-10">
+          <div className="flex justify-between gap-4">
+            <p className="label-mono text-[#8c2d3c]">{eyebrow} · Preview</p>
+            <button onClick={onClose}>
+              <X />
+            </button>
+          </div>
+          <h2 className="mt-5 text-4xl font-black md:text-6xl">{title}</h2>
+          <div className="mt-7 whitespace-pre-wrap font-[var(--font-body)] leading-8 text-black/65">
+            {body}
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
 function ResourcesPanel({
   rows,
   token,
@@ -1043,14 +2042,22 @@ function ResourcesPanel({
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const upload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const form = event.currentTarget;
     setUploading(true);
     setError("");
+    setSuccess("");
     try {
-      const data = new FormData(event.currentTarget);
+      const data = new FormData(form);
+      const file = data.get("file");
+      if (!(file instanceof File) || !file.size) throw new Error("Please choose a resource file.");
       await adminApi("/admin/resources", token, { method: "POST", body: data });
-      event.currentTarget.reset();
+      form.reset();
+      setSuccess(
+        "Resource uploaded successfully. Publish it when it is ready for the public library.",
+      );
       await reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Upload failed");
@@ -1059,11 +2066,22 @@ function ResourcesPanel({
     }
   };
   const publish = async (row: Resource) => {
-    await adminApi(`/admin/resources/${row.id}`, token, {
-      method: "PATCH",
-      body: JSON.stringify({ isPublished: !row.is_published }),
-    });
-    await reload();
+    setError("");
+    setSuccess("");
+    try {
+      await adminApi(`/admin/resources/${row.id}`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ isPublished: !row.is_published }),
+      });
+      setSuccess(
+        row.is_published
+          ? "Resource removed from the public library."
+          : "Resource published successfully.",
+      );
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to update the resource");
+    }
   };
   return (
     <PagePanel
@@ -1095,6 +2113,7 @@ function ResourcesPanel({
           {uploading ? "Uploading…" : "Upload"}
         </button>
         {error && <p className="md:col-span-full text-sm text-[#8c2d3c]">{error}</p>}
+        {success && <p className="md:col-span-full text-sm text-emerald-700">{success}</p>}
       </form>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {rows.map((row) => (
@@ -1112,7 +2131,7 @@ function ResourcesPanel({
             </p>
             <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-4">
               <a
-                href={row.file_url}
+                href={uploadUrl(row.file_url)}
                 target="_blank"
                 rel="noreferrer"
                 className="label-mono text-black/45 hover:text-[#8c2d3c]"
@@ -1199,6 +2218,11 @@ function MessagesPanel({
                 >
                   {selected.email}
                 </a>
+                {selected.company_name && (
+                  <p className="mt-2 font-[var(--font-body)] text-sm font-semibold text-black/60">
+                    {selected.company_name}
+                  </p>
+                )}
               </div>
               <StatusBadge value={selected.status} />
             </div>
@@ -1219,6 +2243,144 @@ function MessagesPanel({
         )}
       </div>
     </PagePanel>
+  );
+}
+
+function SubscribersPanel({ rows }: { rows: NewsletterSubscriber[] }) {
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"ALL" | NewsletterSubscriber["status"]>("ALL");
+  const visible = rows.filter(
+    (row) =>
+      (status === "ALL" || row.status === status) &&
+      row.email.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  const downloadCsv = () => {
+    const csv = [
+      ["Email", "Status", "Subscribed at", "Unsubscribed at"],
+      ...visible.map((row) => [
+        row.email,
+        row.status,
+        row.subscribed_at,
+        row.unsubscribed_at ?? "",
+      ]),
+    ]
+      .map((cells) => cells.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(","))
+      .join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "emwa-newsletter-subscribers.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <PagePanel
+      title="Email subscribers"
+      subtitle="View the audience subscribed to The Narrative Shift newsletter directly from PostgreSQL."
+    >
+      <div className="mb-6 grid gap-3 rounded-2xl bg-[#e9e3d9] p-4 md:grid-cols-[minmax(0,1fr)_220px_auto]">
+        <label className="flex items-center gap-3 rounded-xl bg-[#fbf9f4] px-4">
+          <Search className="size-4 text-black/35" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search subscriber email"
+            className="w-full bg-transparent py-3 font-[var(--font-body)] text-sm outline-none"
+          />
+        </label>
+        <Select
+          value={status}
+          onChange={(value) => setStatus(value as typeof status)}
+          options={[
+            { value: "ALL", label: "All statuses" },
+            { value: "ACTIVE", label: "Active" },
+            { value: "UNSUBSCRIBED", label: "Unsubscribed" },
+          ]}
+        />
+        <button
+          type="button"
+          onClick={downloadCsv}
+          disabled={!visible.length}
+          className="border border-black/15 bg-[#fbf9f4] px-5 py-3 label-mono hover:border-[#8c2d3c] hover:text-[#8c2d3c] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Export CSV
+        </button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <SubscriberMetric label="All subscribers" value={rows.length} icon={Inbox} />
+        <SubscriberMetric
+          label="Active"
+          value={rows.filter((row) => row.status === "ACTIVE").length}
+          icon={Check}
+        />
+        <SubscriberMetric
+          label="Unsubscribed"
+          value={rows.filter((row) => row.status === "UNSUBSCRIBED").length}
+          icon={Archive}
+        />
+      </div>
+
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-black/10 bg-[#fbf9f4] shadow-sm">
+        {visible.length ? (
+          <table className="w-full min-w-[680px]">
+            <thead>
+              <tr className="border-b border-black/12 text-left">
+                <Th>Email address</Th>
+                <Th>Status</Th>
+                <Th>Subscribed</Th>
+                <Th>Last updated</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((row) => (
+                <tr key={row.id} className="border-b border-black/8 last:border-0">
+                  <Td>
+                    <a href={`mailto:${row.email}`} className="font-semibold hover:text-[#8c2d3c]">
+                      {row.email}
+                    </a>
+                  </Td>
+                  <Td>
+                    <StatusBadge value={row.status} />
+                  </Td>
+                  <Td>{fmtDate(row.subscribed_at)}</Td>
+                  <Td>{fmtDate(row.updated_at)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <EmptyState
+            text={rows.length ? "No subscribers match these filters" : "No email subscribers yet"}
+          />
+        )}
+      </div>
+    </PagePanel>
+  );
+}
+
+function SubscriberMetric({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: number;
+  icon: typeof Inbox;
+}) {
+  return (
+    <article className="flex items-center justify-between rounded-2xl border border-black/10 bg-[#fbf9f4] p-5 shadow-sm">
+      <div>
+        <p className="label-mono text-black/40">{label}</p>
+        <strong className="mt-2 block text-3xl font-black">{value}</strong>
+      </div>
+      <span className="grid size-11 place-items-center rounded-full bg-[#8c2d3c]/10 text-[#8c2d3c]">
+        <Icon className="size-5" />
+      </span>
+    </article>
   );
 }
 

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email varchar(320) NOT NULL UNIQUE,
   status varchar(20) NOT NULL DEFAULT 'ACTIVE' CHECK (
     status IN ('ACTIVE', 'UNSUBSCRIBED')

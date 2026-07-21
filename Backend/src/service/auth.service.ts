@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db/index.js';
 import { hashToken, generateTokens } from '../utils/auth.utils.js';
+import { env } from '../config/env.js';
 
 export class AuthService {
   private async issueSession(admin: any) {
@@ -60,11 +61,10 @@ export class AuthService {
   }
 
   public async refreshSession(oldRefreshToken: string) {
-    const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'super_secret_refresh_key_456';
     let payload: any;
 
     try {
-      payload = jwt.verify(oldRefreshToken, REFRESH_SECRET);
+      payload = jwt.verify(oldRefreshToken, env.JWT_REFRESH_SECRET);
     } catch {
       throw new Error('Invalid or expired refresh token token signature.');
     }

@@ -1,234 +1,109 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, Check, Users } from "lucide-react";
 import { PageShell, PageHero } from "@/components/page-shell";
 import globalImg from "@/assets/emwa-replace.jpg";
-import solidarityImg from "@/assets/value-solidarity.png";
 import integrityImg from "@/assets/value-integrity.png";
+import solidarityImg from "@/assets/value-solidarity.png";
 import independenceImg from "@/assets/value-independence.png";
 import excellenceImg from "@/assets/value-excellence.png";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({
-    meta: [
-      { title: "About EMWA — Ethiopian Media Women Association" },
-      { name: "description", content: "History, vision, mission, leadership, and structure of Ethiopia's leading professional association for women in media." },
-      { property: "og:title", content: "About EMWA" },
-      { property: "og:description", content: "History, vision, mission, and leadership of the Ethiopian Media Women Association." },
-    ],
-  }),
+  head: () => ({ meta: [
+    { title: "About EMWA — Ethiopian Media Women Association" },
+    { name: "description", content: "Learn about EMWA's mission, vision, values, strategic programs, services, and commitment to women in Ethiopian media." },
+    { property: "og:title", content: "About EMWA" },
+    { property: "og:description", content: "Empowering women in and through the media since 1999." },
+  ] }),
   component: About,
 });
 
-const TIMELINE = [
-  { year: "1998", title: "Founded in Addis Ababa", body: "Twelve women journalists convene to establish a formal association for women in Ethiopian media." },
-  { year: "2004", title: "First regional chapter", body: "The Amhara chapter opens in Bahir Dar, followed by Oromia and Tigray within eighteen months." },
-  { year: "2011", title: "Digital Safety Program launches", body: "In response to growing online harassment, EMWA formalizes rapid-response support." },
-  { year: "2016", title: "Leadership Incubator", body: "A structured pathway for women moving into editorial leadership begins its first cohort." },
-  { year: "2020", title: "Pandemic mutual-aid fund", body: "EMWA distributes emergency grants to 200+ freelance women journalists nationwide." },
-  { year: "2024", title: "Twelfth chapter opens", body: "The Sidama chapter formalizes EMWA's presence in every regional state." },
-  { year: "2026", title: "Policy brief submitted", body: "First formal gender-equity brief submitted to Parliament on public broadcasting." },
-];
-
 const VALUES = [
-  { h: "Solidarity", b: "We move as one across region, language, and outlet." },
-  { h: "Integrity", b: "We hold our members and ourselves to the highest ethical standard." },
-  { h: "Independence", b: "Our advocacy is not for sale. We refuse funding that compromises voice." },
-  { h: "Excellence", b: "We invest in craft — training, mentorship, and rigor." },
+  ["Integrity", "Upholding honesty, transparency, and ethical conduct."],
+  ["Solidarity", "Promoting unity, collaboration, and mutual support."],
+  ["Inclusiveness", "Ensuring diversity, equal opportunity, and meaningful participation."],
+  ["Professionalism", "Maintaining excellence, competence, and ethical standards."],
+  ["Accountability & Transparency", "Taking responsibility and promoting openness in decision-making."],
 ];
 
-const LEADERS = [
-  { name: "Bethlehem Tadesse", role: "President", img: globalImg },
-  { name: "Selamawit Alemu", role: "Vice President", img: globalImg },
-  { name: "Hiwot Kebede", role: "Executive Director", img: globalImg },
+const WORK = [
+  "Empower women journalists and media professionals",
+  "Promote gender equality and women's leadership in media",
+  "Advocate for safe, ethical, and gender-sensitive journalism",
+  "Build professional capacity through training, mentoring, and coaching",
+  "Conduct research on gender and media",
+  "Support policy advocacy and media-sector reform",
+  "Strengthen networking and collaboration among media professionals",
+  "Increase women's participation in leadership and decision-making",
+  "Promote media freedom, professionalism, and ethical standards",
 ];
 
-const VALUE_IMAGES = [solidarityImg, integrityImg, independenceImg, excellenceImg];
+const SERVICES = ["Professional training", "Capacity-building workshops", "Research and publications", "Policy advocacy", "Networking opportunities", "Media development initiatives", "Mentorship programs", "Resource center", "Knowledge sharing", "Consultation on gender and media"];
+const BENEFICIARIES = ["Women journalists", "Media professionals", "Young journalists", "Journalism students", "Media organizations", "Civil society organizations", "Government institutions", "Researchers", "Development partners"];
+const STAKEHOLDERS = ["EMWA Members", "Media Houses", "Government Agencies", "Donors", "Peer Associations", "Board of Directors", "EMWA Management", "EMWA Staff"];
+const VALUE_IMAGES = [integrityImg, solidarityImg, independenceImg, excellenceImg, globalImg];
 
-function TimelineItem({ item, index }: { item: (typeof TIMELINE)[number]; index: number }) {
-  const ref = useRef<HTMLLIElement>(null);
+function ValueStory({ value, index }: { value: string[]; index: number }) {
+  const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3, rootMargin: "0px 0px -10% 0px" },
-    );
-
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.18, rootMargin: "0px 0px -8% 0px" });
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
 
-  return (
-    <li
-      ref={ref}
-      className={`about-timeline-item${index % 2 ? " about-timeline-item--right" : ""}${visible ? " is-visible" : ""}`}
-    >
-      <span className="about-timeline-node" aria-hidden="true">
-        <span />
-      </span>
-      <article className="about-timeline-card">
-        <p className="about-timeline-index">Milestone / 0{index + 1}</p>
-        <time className="about-timeline-year">{item.year}</time>
-        <h3 className="about-timeline-name">{item.title}</h3>
-        <p className="about-timeline-body">{item.body}</p>
-      </article>
-    </li>
-  );
+  return <article ref={ref} className={`about-manifesto-item about-scroll-reveal${index % 2 ? " about-manifesto-item--reverse" : ""}${visible ? " is-visible" : ""}`}>
+    <span className="about-manifesto-number" aria-hidden="true">0{index + 1}</span>
+    <div className="about-manifesto-image-wrap"><img src={VALUE_IMAGES[index]} alt="" loading="lazy" className="about-manifesto-image" /><span className="about-manifesto-image-shade" aria-hidden="true" /></div>
+    <div className="about-manifesto-panel"><p className="about-manifesto-kicker">Commitment 0{index + 1}</p><h3 className="about-manifesto-name">{value[0]}</h3><p className="about-manifesto-body">{value[1]}</p><span className="about-manifesto-rule" aria-hidden="true" /></div>
+  </article>;
 }
 
 function About() {
-  return (
-    <PageShell>
-      <PageHero
-        eyebrow="About the Association"
-        title={<>Twenty-five years <br /><span className="text-primary">of collective voice.</span></>}
-        lede="EMWA is a legally registered, member-led professional association for women working across Ethiopia's media landscape — from national broadcasters and legacy newspapers to independent digital outlets and regional radio."
-      />
+  return <PageShell>
+    <PageHero
+      eyebrow="About the Association / Since 1999"
+      title={<>Women shaping media.<br /><span className="text-primary">Media shaping equality.</span></>}
+      lede="The Ethiopia Media Women Association is a non-partisan, non-profit civil society organization advancing gender equality, professional excellence, media freedom, and safety."
+    />
 
-      <section className="py-24">
-        <div className="max-w-[1400px] mx-auto px-6 grid md:grid-cols-2 gap-16">
-          <div>
-            <img src={globalImg} alt="EMWA members in a working session" width={1600} height={1000} loading="lazy" className="w-full aspect-[4/3] object-cover" />
-          </div>
-          <div>
-            <p className="label-mono text-primary mb-4">Origin</p>
-            <h2 className="font-display text-5xl leading-none mb-6">A room. Twelve women. One conviction.</h2>
-            <p className="text-muted-foreground leading-relaxed mb-4">
-              EMWA was founded in 1998 in a rented conference room in Addis
-              Ababa by twelve women journalists who were tired of being the
-              only woman in every editorial meeting. Their conviction was
-              simple: professional solidarity would produce better journalism
-              and a safer profession.
-            </p>
-            <p className="text-muted-foreground leading-relaxed">
-              A quarter-century later, EMWA counts 1,200+ active members
-              across twelve regional chapters, runs four flagship programs,
-              and formally advises regulators and public broadcasters on
-              gender equity.
-            </p>
-          </div>
-        </div>
-      </section>
+    <section className="about2-intro">
+      <div className="about2-image"><img src={globalImg} alt="Women media professionals working together" loading="eager" /><span>Established / 1999</span></div>
+      <div className="about2-story">
+        <p className="about2-eyebrow">Who we are</p>
+        <h2>Built by women journalists.<br />Driven by lasting change.</h2>
+        <p>Founded in 1999 by women journalists and media professionals, EMWA empowers women in and through the media by promoting gender equality, strengthening professional capacity, advocating for media freedom and safety, and supporting ethical journalism.</p>
+        <p>Over the years, EMWA has expanded women's participation and leadership, strengthened gender-sensitive reporting, and created opportunities for professional development. Following its re-registration under Ethiopia's revised CSO legislation in 2019, the Association renewed its commitment to strategic partnerships, research, advocacy, and capacity building.</p>
+        <blockquote><span>Our motto</span>“Empowering Women in and Through the Media!”</blockquote>
+      </div>
+    </section>
 
-      {/* Vision / Mission */}
-      <section className="about-vmr-section">
-        <div className="about-vmr-container">
-          <div className="about-vmr-grid">
-            {[
-              { h: "Vision", b: "An Ethiopian media landscape where women's voices, leadership, and safety are non-negotiable." },
-              { h: "Mission", b: "To advance the professional standing, safety, and leadership of women in Ethiopian media through advocacy, training, and network." },
-              { h: "Reach", b: "Twelve regional chapters, 1,200+ members, and formal partnerships with Ethiopia's leading broadcasters and universities." },
-            ].map((c) => (
-              <article key={c.h} className="about-vmr-card">
-                <p className="about-vmr-badge">{c.h}</p>
-                <p className="about-vmr-body">{c.b}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+    <section className="about-vmr-section">
+      <div className="about-vmr-container"><div className="about-vmr-grid">
+        <article className="about-vmr-card"><p className="about-vmr-badge">Vision</p><h2 className="about-vmr-heading">A secure, inclusive and vibrant media sector.</h2><p className="about-vmr-body">To see a vibrant media profession and media sector that is secure, inclusive, and conducive for women media professionals.</p></article>
+        <article className="about-vmr-card"><p className="about-vmr-badge">Mission</p><h2 className="about-vmr-heading">Capacity. Equality. Positive change.</h2><p className="about-vmr-body">To empower women media professionals through continuous capacity building, advocacy for gender equality and equity, and positive change that advances ethical, safe, and professional media development.</p></article>
+        <article className="about-vmr-card about-vmr-card--statement"><p className="about-vmr-badge">Our mandate</p><h2 className="about-vmr-heading">In media and through media.</h2><p className="about-vmr-body">We connect professional empowerment with the wider transformation of how women are represented, heard, protected, and supported across the media sector.</p></article>
+      </div></div>
+    </section>
 
-      {/* Values */}
-      <section className="about-values-section" aria-labelledby="about-values-heading">
-        <div className="about-values-container">
-          <header className="about-values-header">
-            <div>
-              <p className="about-values-eyebrow">Core Values</p>
-              <h2 className="about-values-title" id="about-values-heading">
-                Four <span>commitments.</span>
-              </h2>
-            </div>
-            <p className="about-values-intro">
-              The principles that shape how we advocate, collaborate, and
-              serve women working across Ethiopia's media landscape.
-            </p>
-          </header>
+    <section className="about-values-section" aria-labelledby="values-heading"><div className="about-values-container">
+      <header className="about-values-header"><div><p className="about-values-eyebrow">Core values</p><h2 className="about-values-title" id="values-heading">Principles that guide <span>the work.</span></h2></div><p className="about-values-intro">Five commitments shape how EMWA governs, collaborates, advocates, and serves its community.</p></header>
+      <div className="about-values-manifesto">{VALUES.map((value, index) => <ValueStory value={value} index={index} key={value[0]} />)}</div>
+    </div></section>
 
-          <div className="about-values-manifesto">
-            {VALUES.slice(0, 3).map((v, i) => (
-              <article key={v.h} className={`about-manifesto-item${i % 2 ? " about-manifesto-item--reverse" : ""}`}>
-                <span className="about-manifesto-number" aria-hidden="true">0{i + 1}</span>
-                <div className="about-manifesto-image-wrap">
-                  <img src={VALUE_IMAGES[i]} alt="" loading="lazy" className="about-manifesto-image" />
-                  <span className="about-manifesto-image-shade" aria-hidden="true" />
-                </div>
-                <div className="about-manifesto-panel">
-                  <p className="about-manifesto-kicker">Commitment 0{i + 1}</p>
-                  <h3 className="about-manifesto-name">{v.h}</h3>
-                  <p className="about-manifesto-body">{v.b}</p>
-                  <span className="about-manifesto-rule" aria-hidden="true" />
-                </div>
-              </article>
-            ))}
+    <section className="about2-work"><header><p className="about2-eyebrow">What we do</p><h2>Turning commitment<br />into sector-wide action.</h2><p>EMWA works across professional development, evidence, advocacy, safety, leadership, and collective action.</p></header><div className="about2-work-list">{WORK.map((item, index) => <article key={item}><span>{String(index + 1).padStart(2, "0")}</span><p>{item}</p><Check aria-hidden="true" /></article>)}</div></section>
 
-            <article className="about-manifesto-finale">
-              <span className="about-manifesto-number about-manifesto-number--final" aria-hidden="true">04</span>
-              <h3 className="about-manifesto-finale-title">{VALUES[3].h}</h3>
-              <div className="about-manifesto-finale-grid">
-                <blockquote className="about-manifesto-quote">
-                  “{VALUES[3].b}”
-                  <span aria-hidden="true" />
-                </blockquote>
-                <div className="about-manifesto-image-wrap about-manifesto-image-wrap--square">
-                  <img src={VALUE_IMAGES[3]} alt="" loading="lazy" className="about-manifesto-image" />
-                </div>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
+    <section className="about2-services"><div className="about2-services-intro"><p className="about2-eyebrow">Our services</p><h2>Practical support for a stronger profession.</h2><p>Programs and services designed to build knowledge, capability, connection, and influence.</p><Link to="/programs">Explore our programs <ArrowUpRight /></Link></div><div className="about2-tag-cloud">{SERVICES.map((item) => <span key={item}>{item}</span>)}</div></section>
 
-      {/* Timeline */}
-      <section className="about-timeline-section" aria-labelledby="about-timeline-heading">
-        <div className="about-timeline-container">
-          <header className="about-timeline-header">
-            <div>
-              <p className="about-timeline-eyebrow">Timeline</p>
-              <h2 className="about-timeline-title" id="about-timeline-heading">
-                A generational <span>arc.</span>
-              </h2>
-            </div>
-            <p className="about-timeline-intro">
-              From twelve determined founders to a nationwide movement—scroll
-              through the moments that shaped EMWA.
-            </p>
-          </header>
+    <section className="about2-community"><div><p className="about2-eyebrow">Who we serve</p><h2>Our beneficiaries.</h2><div className="about2-people-grid">{BENEFICIARIES.map((item) => <span key={item}><Users />{item}</span>)}</div></div><aside><p className="about2-eyebrow">Key stakeholders</p><h2>Accountability starts with relationship.</h2><ul>{STAKEHOLDERS.map((item) => <li key={item}>{item}</li>)}</ul></aside></section>
 
-          <ol className="about-timeline-list">
-            <span className="about-timeline-track" aria-hidden="true" />
-            {TIMELINE.map((item, index) => (
-              <TimelineItem key={item.year} item={item} index={index} />
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* Leadership */}
-      <section className="py-24 bg-muted/40 border-y border-border">
-        <div className="max-w-[1400px] mx-auto px-6">
-          <p className="label-mono text-primary mb-4">Executive Board</p>
-          <h2 className="font-display text-5xl md:text-6xl mb-16">Leadership.</h2>
-          <div className="grid md:grid-cols-3 gap-12">
-            {LEADERS.map((l) => (
-              <div key={l.name}>
-                <div className="aspect-[4/5] overflow-hidden mb-4">
-                  <img src={l.img} alt={l.name} width={800} height={1000} loading="lazy" className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500" />
-                </div>
-                <p className="font-display text-3xl">{l.name}</p>
-                <p className="label-mono text-primary mt-2">{l.role}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    </PageShell>
-  );
+  </PageShell>;
 }

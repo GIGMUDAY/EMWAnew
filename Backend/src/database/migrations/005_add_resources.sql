@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS resources (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title varchar(200) NOT NULL,
   description text NOT NULL,
   category varchar(100) NOT NULL,

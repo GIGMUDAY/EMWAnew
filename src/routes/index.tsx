@@ -20,6 +20,8 @@ import {
   Tv,
   ShieldCheck,
   Signal,
+  ChevronDown,
+  MessageCircleQuestion,
 } from "lucide-react";
 
 // Landing-page placeholder images. Replace any `src` value here to update the
@@ -45,7 +47,18 @@ const LANDING_IMAGES = {
   ],
 } as const;
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000/api/v1";
+const API_BASE = import.meta.env.VITE_API_URL ?? "https://emwa.mudaymarketing.com/api/v1";
+
+const FAQS = [
+  ["What is EMWA?", "A non-profit association empowering women in and through the media."],
+  ["Who can become a member?", "Women journalists, media professionals, students, and eligible supporters under EMWA membership categories."],
+  ["What services does EMWA provide?", "Training, mentoring, advocacy, networking, research, and professional development."],
+  ["How do I join?", "Complete the membership application form through the website or contact the EMWA office."],
+  ["Does EMWA provide training?", "Yes, through workshops, mentoring, coaching, and exchange programs."],
+  ["Can organizations partner with EMWA?", "Yes. EMWA collaborates with media organizations, CSOs, government, academia, and development partners."],
+  ["How can I support EMWA?", "Become a member, volunteer, partner, or contribute resources and expertise."],
+  ["Where is EMWA located?", "Addis Ababa, Ethiopia."],
+] as const;
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -107,12 +120,14 @@ function Home() {
     "idle" | "submitting" | "success" | "error"
   >("idle");
   const [newsletterMessage, setNewsletterMessage] = useState("");
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const subscribe = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formElement = event.currentTarget;
     setNewsletterStatus("submitting");
     setNewsletterMessage("");
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const email = String(form.get("email") ?? "").trim();
 
     try {
@@ -121,13 +136,13 @@ function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const payload = await response.json();
+      const payload = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(payload?.error?.message ?? "Unable to subscribe right now.");
       }
       setNewsletterStatus("success");
       setNewsletterMessage("You’re subscribed to The Narrative Shift.");
-      event.currentTarget.reset();
+      formElement.reset();
     } catch (error) {
       setNewsletterStatus("error");
       setNewsletterMessage(error instanceof Error ? error.message : "Unable to subscribe.");
@@ -331,6 +346,7 @@ function Home() {
                   name="email"
                   type="email"
                   required
+                  maxLength={320}
                   placeholder="name@example.com"
                   className="nl-input"
                   aria-label="Email address"
@@ -363,6 +379,25 @@ function Home() {
         </div>
 
         <InspirationalQuotes />
+      </section>
+
+      <section className="home-faq" aria-labelledby="home-faq-heading">
+        <div className="home-faq-intro">
+          <span className="home-faq-icon"><MessageCircleQuestion aria-hidden="true" /></span>
+          <p className="home-faq-eyebrow">Questions / Answers</p>
+          <h2 id="home-faq-heading">Frequently<br /><em>asked.</em></h2>
+          <p>Everything you need to know about EMWA, membership, services, partnerships, and ways to take part.</p>
+          <Link to="/contact">Still have a question? <ArrowUpRight aria-hidden="true" /></Link>
+        </div>
+        <div className="home-faq-list">
+          {FAQS.map(([question, answer], index) => {
+            const isOpen = openFaq === index;
+            return <article className={isOpen ? "is-open" : ""} key={question}>
+              <h3><button type="button" aria-expanded={isOpen} aria-controls={`home-faq-answer-${index}`} onClick={() => setOpenFaq(isOpen ? null : index)}><span>{String(index + 1).padStart(2, "0")}</span><strong>{question}</strong><i><ChevronDown aria-hidden="true" /></i></button></h3>
+              <div id={`home-faq-answer-${index}`} className="home-faq-answer" aria-hidden={!isOpen}><p>{answer}</p></div>
+            </article>;
+          })}
+        </div>
       </section>
     </PageShell>
   );

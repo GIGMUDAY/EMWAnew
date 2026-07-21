@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS contact_messages (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   full_name varchar(150) NOT NULL,
   email varchar(320) NOT NULL,
   subject varchar(200) NOT NULL CHECK (

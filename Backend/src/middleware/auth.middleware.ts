@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db/index.js';
-
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || 'super_secret_access_key_123';
+import { env } from '../config/env.js';
 
 export type AdminAuthRequest = Request;
 
@@ -15,7 +14,7 @@ export const authenticateAdmin = async (req: AdminAuthRequest, res: Response, ne
   const token = authHeader.slice(7);
 
   try {
-    const decoded = jwt.verify(token, ACCESS_SECRET) as any;
+    const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as any;
     
     // Security Guardrail: Inline live validation check for account status
     const adminCheck = await pool.query('SELECT id, email, full_name, role, is_active FROM admins WHERE id = $1', [decoded.sub]);

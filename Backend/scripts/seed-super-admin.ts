@@ -24,7 +24,7 @@ try {
   const { rows } = await pool.query(
     `INSERT INTO admins (full_name, email, password_hash, role, is_active)
      VALUES ($1, $2, $3, 'SUPER_ADMIN', true)
-     ON CONFLICT (email) DO UPDATE SET
+     ON CONFLICT ((lower(email))) DO UPDATE SET
        full_name = EXCLUDED.full_name,
        password_hash = EXCLUDED.password_hash,
        role = 'SUPER_ADMIN',
