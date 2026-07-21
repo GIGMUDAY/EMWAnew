@@ -17,8 +17,15 @@ export const app = express();
 app.set('trust proxy', env.TRUST_PROXY === 'true');
 app.use(helmet());
 
+const productionOrigins = [
+  'https://emw-anew.vercel.app',
+  'https://emwa.mudaymarketing.com',
+];
+
 const allowedOrigins = new Set(
-  env.CORS_ORIGINS.split(',').map((origin) => origin.trim().replace(/\/$/, '')),
+  [...env.CORS_ORIGINS.split(','), ...productionOrigins]
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean),
 );
 
 app.use(cors({
