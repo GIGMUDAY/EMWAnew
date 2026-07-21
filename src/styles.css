@@ -8234,6 +8234,11 @@
 @media(max-width:900px){.home-faq{grid-template-columns:1fr;gap:3.5rem}.home-faq-intro{position:static}.home-faq-intro h2 br{display:none}}
 @media(max-width:540px){.home-faq-list button{grid-template-columns:2rem 1fr auto;padding-inline:0}.home-faq-answer>p{padding-left:2rem;padding-right:1rem}.home-faq-list button>i{width:1.9rem;height:1.9rem}.home-faq-intro h2{font-size:clamp(3rem,16vw,5rem)}}
 @media(prefers-reduced-motion:reduce){.home-faq-answer,.home-faq-answer>p,.home-faq-list button>i{transition:none}}
+
+.updates2-lead-empty { display: grid; place-items: end start; min-height: 560px; padding: clamp(2rem,5vw,4rem); background: linear-gradient(145deg,#171512,#2b2420); color: #f4f0e8; }
+.updates2-lead-empty::before { content: ""; position: absolute; width: 18rem; height: 18rem; top: -7rem; right: -5rem; border: 2.5rem solid color-mix(in oklab,var(--color-primary) 65%,transparent); border-radius: 50%; opacity: .65; }
+.updates2-lead-empty>div { position: relative; z-index: 1; max-width: 600px; }.updates2-lead-empty span { font: 600 9px var(--font-mono); color: var(--color-accent); letter-spacing: .2em; text-transform: uppercase; }.updates2-lead-empty h2 { margin: 1rem 0; font: clamp(2.5rem,5vw,5rem)/.95 var(--font-display); }.updates2-lead-empty p { max-width: 48ch; margin: 0; color: rgba(244,240,232,.65); line-height: 1.7; }
+@media(max-width:700px){.updates2-lead-empty{min-height:420px}}
 @media (prefers-reduced-motion: reduce) {
   .resources-featured-cover,
   .resource-card {
@@ -9936,6 +9941,17 @@
 }
 .contact3-fields textarea {
   resize: vertical;
+}
+:root.dark .contact3-fields select {
+  color: #ffffff;
+  color-scheme: dark;
+}
+:root.dark .contact3-fields select option {
+  background: #171717;
+  color: #ffffff;
+}
+:root.dark .contact3-fields select option:disabled {
+  color: #b8b8b8;
 }
 .contact3-fields input:focus,
 .contact3-fields select:focus,

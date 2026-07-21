@@ -191,8 +191,9 @@ const FALLBACK_EVENTS: PublicEvent[] = [
 ];
 
 function Updates() {
-  const [stories, setStories] = useState<Story[]>(FALLBACK_STORIES);
-  const [events, setEvents] = useState<PublicEvent[]>(FALLBACK_EVENTS);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [events, setEvents] = useState<PublicEvent[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]>("All");
   const [query, setQuery] = useState("");
@@ -221,7 +222,6 @@ function Updates() {
 
         if (updatesResult.status === "fulfilled" && updatesResult.value.ok) {
           const updatesPayload = await updatesResult.value.json();
-          if (updatesPayload.data?.length) {
           const labels: Record<string, Story["t"]> = {
             NEWS: "News",
             PRESS: "Press",
@@ -230,7 +230,7 @@ function Updates() {
             VIDEO: "Video",
           };
           setStories(
-            updatesPayload.data.map((row: Record<string, unknown>) => ({
+            (Array.isArray(updatesPayload.data) ? updatesPayload.data : []).map((row: Record<string, unknown>) => ({
               d: new Intl.DateTimeFormat("en-GB", {
                 day: "2-digit",
                 month: "short",
@@ -245,16 +245,14 @@ function Updates() {
               featured: Boolean(row.is_featured),
             })),
           );
-          }
         } else {
-          setFeedError("Showing saved newsroom content while the live updates reconnect.");
+          setFeedError("The live newsroom feed is temporarily unavailable.");
         }
 
         if (eventsResult.status === "fulfilled" && eventsResult.value.ok) {
           const eventsPayload = await eventsResult.value.json();
-          if (eventsPayload.data?.length) {
           setEvents(
-            eventsPayload.data.map((row: Record<string, unknown>) => {
+            (Array.isArray(eventsPayload.data) ? eventsPayload.data : []).map((row: Record<string, unknown>) => {
               const starts = new Date(String(row.starts_at));
               return {
                 id: String(row.id),
@@ -270,12 +268,13 @@ function Updates() {
               };
             }),
           );
-          }
         }
         if (updatesResult.status === "fulfilled" && updatesResult.value.ok) setFeedError("");
       } catch (error) {
         if (error instanceof Error && error.name !== "AbortError")
-          setFeedError("Showing saved newsroom content while the live feed reconnects.");
+          setFeedError("The live newsroom feed is temporarily unavailable.");
+      } finally {
+        if (!controller.signal.aborted) setFeedLoading(false);
       }
     };
     void load();
@@ -334,7 +333,7 @@ function Updates() {
             <span>Updated 12 Nov 2026</span>
           </div>
         </div>
-        <article className="updates2-lead">
+        {lead ? <article className="updates2-lead">
           <img
             src={lead.img}
             alt="Journalists collaborating in a professional newsroom"
@@ -353,7 +352,9 @@ function Updates() {
             </button>
           </div>
           <small>Documentary photograph / Unsplash</small>
-        </article>
+        </article> : <div className="updates2-lead updates2-lead-empty" role="status">
+          <div><span>{feedLoading ? "Connecting to newsroom" : "From the newsroom"}</span><h2>{feedLoading ? "Loading the latest updates…" : "No published updates yet."}</h2><p>{feedLoading ? "Please wait while we retrieve EMWA's latest stories." : "Published stories from the EMWA administration desk will appear here."}</p></div>
+        </div>}
       </section>
 
       <section className="updates2-stories" id="stories">
@@ -390,7 +391,9 @@ function Updates() {
             </button>
           ))}
         </div>
-        {filtered.length ? (
+        {feedLoading ? (
+          <div className="updates2-empty" role="status"><Search /><h3>Loading newsroom updates…</h3></div>
+        ) : filtered.length ? (
           <div className="updates2-grid">
             {filtered.map((story, index) => (
               <article
