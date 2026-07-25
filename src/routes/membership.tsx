@@ -36,18 +36,19 @@ export const Route = createFileRoute("/membership")({
 const TIERS = [
   {
     name: "Associate",
-    fee: "Free",
-    note: "Start your journey",
-    eligibility: "Journalism students and first-year professionals",
+    fee: "ETB 300",
+    cadence: "/ year",
+    note: "Supporting membership",
+    eligibility: "Male journalists, journalism students, and practicing journalists without formal journalism education",
     perks: ["Member newsletter", "Regional chapter events", "Career resource library"],
   },
   {
     name: "Full Member",
-    fee: "ETB 800",
+    fee: "ETB 600",
     cadence: "/ year",
     note: "Most popular",
     featured: true,
-    eligibility: "Working women journalists, producers, and editors",
+    eligibility: "Women with at least one year of journalism experience",
     perks: [
       "Everything in Associate",
       "Experts Directory profile",
@@ -57,16 +58,14 @@ const TIERS = [
     ],
   },
   {
-    name: "Institutional",
-    fee: "ETB 15,000",
-    cadence: "/ year",
-    note: "Build capacity together",
-    eligibility: "Newsrooms, universities, and media organizations",
+    name: "Honorary Member",
+    fee: "By support",
+    note: "Support EMWA",
+    eligibility: "Individuals interested in providing financial, in-kind, or other support",
     perks: [
-      "Organization-wide access",
-      "Training partnership",
-      "Named-partner recognition",
-      "Board observer seat",
+      "Association updates",
+      "Community invitations",
+      "Recognition of support",
     ],
   },
 ];
@@ -113,14 +112,26 @@ const FAQ = [
   },
 ];
 
-const STEPS = ["About you", "Your work", "Membership", "Review"] as const;
+const STEPS = ["Personal details", "Work & education", "Membership", "Review"] as const;
 type FormData = {
   name: string;
+  dateOfBirth: string;
   email: string;
   phone: string;
+  citySubCity: string;
+  woreda: string;
+  houseNumber: string;
+  additionalSkills: string;
+  emergencyContact1Name: string;
+  emergencyContact1Phone: string;
+  emergencyContact2Name: string;
+  emergencyContact2Phone: string;
   outlet: string;
+  yearsOfExperience: string;
+  department: string;
   role: string;
-  region: string;
+  educationLevel: string;
+  fieldOfStudy: string;
   tier: string;
 };
 type MembershipType = {
@@ -133,11 +144,23 @@ type MembershipType = {
 };
 const INITIAL_FORM: FormData = {
   name: "",
+  dateOfBirth: "",
   email: "",
   phone: "",
+  citySubCity: "",
+  woreda: "",
+  houseNumber: "",
+  additionalSkills: "",
+  emergencyContact1Name: "",
+  emergencyContact1Phone: "",
+  emergencyContact2Name: "",
+  emergencyContact2Phone: "",
   outlet: "",
+  yearsOfExperience: "",
+  department: "",
   role: "",
-  region: "",
+  educationLevel: "",
+  fieldOfStudy: "",
   tier: "Full Member",
 };
 
@@ -188,13 +211,22 @@ function Membership() {
   const validateStep = (targetStep: number) => {
     if (targetStep === 0) {
       if (form.name.trim().length < 2) return "Please enter your full name.";
+      if (!form.dateOfBirth) return "Please enter your date of birth.";
       if (!/^\S+@\S+\.\S+$/.test(form.email)) return "Please enter a valid email address.";
       if (form.phone.trim().length < 5) return "Please enter a valid phone number.";
+      if (form.citySubCity.trim().length < 2) return "Please enter your city or sub-city.";
+      if (form.emergencyContact1Name.trim().length < 2)
+        return "Please enter your first emergency contact.";
+      if (form.emergencyContact1Phone.trim().length < 5)
+        return "Please enter a valid phone number for your first emergency contact.";
     }
     if (targetStep === 1) {
-      if (form.outlet.trim().length < 2) return "Please enter your outlet or institution.";
+      if (form.outlet.trim().length < 2) return "Please enter your organization.";
+      if (!/^\d+$/.test(form.yearsOfExperience) || Number(form.yearsOfExperience) > 80)
+        return "Please enter valid years of experience.";
       if (form.role.trim().length < 2) return "Please enter your current role.";
-      if (form.region.trim().length < 2) return "Please enter your region or chapter.";
+      if (form.educationLevel.trim().length < 2) return "Please enter your level of education.";
+      if (form.fieldOfStudy.trim().length < 2) return "Please enter your field of study.";
     }
     if (targetStep === 2 && !membershipTypes.some((item) => item.name === form.tier)) {
       return "Please select an active membership type.";
@@ -240,8 +272,29 @@ function Membership() {
           phone: form.phone,
           outletOrInstitution: form.outlet,
           currentRole: form.role,
-          regionOrChapter: form.region,
-          additionalInformation: {},
+          regionOrChapter: form.citySubCity,
+          additionalInformation: {
+            dateOfBirth: form.dateOfBirth,
+            citySubCity: form.citySubCity,
+            woreda: form.woreda,
+            houseNumber: form.houseNumber,
+            additionalSkills: form.additionalSkills,
+            emergencyContact1: {
+              name: form.emergencyContact1Name,
+              phone: form.emergencyContact1Phone,
+            },
+            emergencyContact2:
+              form.emergencyContact2Name || form.emergencyContact2Phone
+                ? {
+                    name: form.emergencyContact2Name,
+                    phone: form.emergencyContact2Phone,
+                  }
+                : undefined,
+            yearsOfExperience: Number(form.yearsOfExperience),
+            department: form.department,
+            educationLevel: form.educationLevel,
+            fieldOfStudy: form.fieldOfStudy,
+          },
         }),
       });
       const payload = await response.json().catch(() => null);
@@ -405,7 +458,7 @@ function Membership() {
             <br />
             at the table.
           </h2>
-          <p>Four short steps. Your details stay in place as you move through the application.</p>
+          <p>The official EMWA membership form, presented in four clear English-language steps.</p>
           <div className="membership-application-note">
             <strong>5–10</strong>
             <span>
@@ -448,8 +501,8 @@ function Membership() {
               <>
                 {step === 0 && (
                   <fieldset>
-                    <legend>Let&apos;s start with you.</legend>
-                    <p>Tell us how the membership team can reach you.</p>
+                    <legend>Personal information.</legend>
+                    <p>Enter your details as they should appear on your EMWA membership record.</p>
                     <div className="membership-fields">
                       <label>
                         <span>Full name *</span>
@@ -459,6 +512,16 @@ function Membership() {
                           onChange={(e) => update("name", e.target.value)}
                           placeholder="Your full name"
                           autoComplete="name"
+                        />
+                      </label>
+                      <label>
+                        <span>Date of birth *</span>
+                        <input
+                          required
+                          type="date"
+                          value={form.dateOfBirth}
+                          onChange={(e) => update("dateOfBirth", e.target.value)}
+                          autoComplete="bday"
                         />
                       </label>
                       <label>
@@ -472,8 +535,8 @@ function Membership() {
                           autoComplete="email"
                         />
                       </label>
-                      <label className="is-wide">
-                        <span>Phone number *</span>
+                      <label>
+                        <span>Mobile number *</span>
                         <input
                           required
                           value={form.phone}
@@ -482,16 +545,87 @@ function Membership() {
                           autoComplete="tel"
                         />
                       </label>
+                      <label>
+                        <span>City / Sub-city *</span>
+                        <input
+                          required
+                          value={form.citySubCity}
+                          onChange={(e) => update("citySubCity", e.target.value)}
+                          placeholder="City or sub-city"
+                          autoComplete="address-level2"
+                        />
+                      </label>
+                      <label>
+                        <span>Woreda</span>
+                        <input
+                          value={form.woreda}
+                          onChange={(e) => update("woreda", e.target.value)}
+                          placeholder="Woreda"
+                        />
+                      </label>
+                      <label>
+                        <span>House number</span>
+                        <input
+                          value={form.houseNumber}
+                          onChange={(e) => update("houseNumber", e.target.value)}
+                          placeholder="House number"
+                        />
+                      </label>
+                      <label className="is-wide">
+                        <span>Additional profession, training, or skills</span>
+                        <textarea
+                          value={form.additionalSkills}
+                          onChange={(e) => update("additionalSkills", e.target.value)}
+                          placeholder="List relevant additional training or skills"
+                          rows={3}
+                        />
+                      </label>
+                      <label>
+                        <span>Emergency contact 1 — name *</span>
+                        <input
+                          required
+                          value={form.emergencyContact1Name}
+                          onChange={(e) => update("emergencyContact1Name", e.target.value)}
+                          placeholder="Full name"
+                        />
+                      </label>
+                      <label>
+                        <span>Emergency contact 1 — phone *</span>
+                        <input
+                          required
+                          type="tel"
+                          value={form.emergencyContact1Phone}
+                          onChange={(e) => update("emergencyContact1Phone", e.target.value)}
+                          placeholder="+251 ..."
+                        />
+                      </label>
+                      <label>
+                        <span>Emergency contact 2 — name</span>
+                        <input
+                          value={form.emergencyContact2Name}
+                          onChange={(e) => update("emergencyContact2Name", e.target.value)}
+                          placeholder="Full name"
+                        />
+                      </label>
+                      <label>
+                        <span>Emergency contact 2 — phone</span>
+                        <input
+                          type="tel"
+                          value={form.emergencyContact2Phone}
+                          onChange={(e) => update("emergencyContact2Phone", e.target.value)}
+                          placeholder="+251 ..."
+                        />
+                      </label>
                     </div>
                   </fieldset>
                 )}
                 {step === 1 && (
                   <fieldset>
-                    <legend>Tell us about your work.</legend>
-                    <p>Students can enter their institution and area of study.</p>
+                    <legend>Work experience and education.</legend>
+                    <p>Students may enter their institution and use 0 for years of experience.</p>
                     <div className="membership-fields">
                       <label>
-                        <span>Outlet or institution *</span>
+                        <span>Organization *</span>
                         <input
                           required
                           value={form.outlet}
@@ -500,7 +634,27 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Current role *</span>
+                        <span>Years of experience *</span>
+                        <input
+                          required
+                          type="number"
+                          min="0"
+                          max="80"
+                          value={form.yearsOfExperience}
+                          onChange={(e) => update("yearsOfExperience", e.target.value)}
+                          placeholder="0"
+                        />
+                      </label>
+                      <label>
+                        <span>Department</span>
+                        <input
+                          value={form.department}
+                          onChange={(e) => update("department", e.target.value)}
+                          placeholder="Department or work area"
+                        />
+                      </label>
+                      <label>
+                        <span>Role *</span>
                         <input
                           required
                           value={form.role}
@@ -508,13 +662,22 @@ function Membership() {
                           placeholder="e.g. Reporter, student"
                         />
                       </label>
-                      <label className="is-wide">
-                        <span>Region or chapter *</span>
+                      <label>
+                        <span>Level of education *</span>
                         <input
                           required
-                          value={form.region}
-                          onChange={(e) => update("region", e.target.value)}
-                          placeholder="e.g. Addis Ababa"
+                          value={form.educationLevel}
+                          onChange={(e) => update("educationLevel", e.target.value)}
+                          placeholder="e.g. Bachelor's degree"
+                        />
+                      </label>
+                      <label>
+                        <span>Field of study *</span>
+                        <input
+                          required
+                          value={form.fieldOfStudy}
+                          onChange={(e) => update("fieldOfStudy", e.target.value)}
+                          placeholder="e.g. Journalism"
                         />
                       </label>
                     </div>
@@ -570,8 +733,45 @@ function Membership() {
                         <dd>{form.email || "Not provided"}</dd>
                       </div>
                       <div>
-                        <dt>Professional home</dt>
+                        <dt>Mobile</dt>
+                        <dd>{form.phone || "Not provided"}</dd>
+                      </div>
+                      <div>
+                        <dt>Date of birth</dt>
+                        <dd>{form.dateOfBirth || "Not provided"}</dd>
+                      </div>
+                      <div>
+                        <dt>Address</dt>
+                        <dd>
+                          {[form.citySubCity, form.woreda, form.houseNumber]
+                            .filter(Boolean)
+                            .join(", ") || "Not provided"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Organization</dt>
                         <dd>{form.outlet || "Not provided"}</dd>
+                      </div>
+                      <div>
+                        <dt>Role / Experience</dt>
+                        <dd>
+                          {form.role || "Not provided"} · {form.yearsOfExperience || "0"} years
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Education</dt>
+                        <dd>
+                          {[form.educationLevel, form.fieldOfStudy].filter(Boolean).join(" — ") ||
+                            "Not provided"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Emergency contact</dt>
+                        <dd>
+                          {[form.emergencyContact1Name, form.emergencyContact1Phone]
+                            .filter(Boolean)
+                            .join(" · ") || "Not provided"}
+                        </dd>
                       </div>
                       <div>
                         <dt>Membership</dt>

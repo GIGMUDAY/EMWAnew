@@ -8,6 +8,7 @@ import {
   ChevronRight,
   CircleUserRound,
   Clock3,
+  Download,
   FileText,
   Inbox,
   LayoutDashboard,
@@ -80,9 +81,24 @@ type Membership = {
   id: string;
   full_name: string;
   email: string;
+  phone_number: string;
   outlet_or_institution: string;
   current_position: string;
   region_or_chapter: string;
+  address?: string;
+  dynamic_data?: {
+    dateOfBirth?: string;
+    citySubCity?: string;
+    woreda?: string;
+    houseNumber?: string;
+    additionalSkills?: string;
+    emergencyContact1?: { name?: string; phone?: string };
+    emergencyContact2?: { name?: string; phone?: string };
+    yearsOfExperience?: number;
+    department?: string;
+    educationLevel?: string;
+    fieldOfStudy?: string;
+  };
   membership_type_id: string;
   status: ApplicationStatus;
   created_at: string;
@@ -1230,6 +1246,50 @@ function MembershipPanel({
       (typeId === "ALL" || row.membership_type_id === typeId) &&
       (status === "ALL" || row.status === status),
   );
+  const exportToExcel = () => {
+    const headings = [
+      "Full Name", "Email", "Phone", "Date of Birth", "City / Sub-city", "Woreda",
+      "House Number", "Organization", "Department", "Current Role", "Years of Experience",
+      "Education Level", "Field of Study", "Additional Skills", "Emergency Contact 1",
+      "Emergency Contact 1 Phone", "Emergency Contact 2", "Emergency Contact 2 Phone",
+      "Membership Type", "Status", "Registration Date",
+    ];
+    const records = visible.map((row) => {
+      const details = row.dynamic_data ?? {};
+      return [
+        row.full_name, row.email, row.phone_number, details.dateOfBirth,
+        details.citySubCity || row.region_or_chapter, details.woreda, details.houseNumber,
+        row.outlet_or_institution, details.department, row.current_position,
+        details.yearsOfExperience, details.educationLevel, details.fieldOfStudy,
+        details.additionalSkills, details.emergencyContact1?.name,
+        details.emergencyContact1?.phone, details.emergencyContact2?.name,
+        details.emergencyContact2?.phone,
+        types.find((type) => type.id === row.membership_type_id)?.name ?? "Unknown",
+        row.status, new Date(row.created_at).toLocaleString(),
+      ];
+    });
+    const escapeXml = (value: unknown) =>
+      String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
+    const excelRow = (cells: unknown[], header = false) =>
+      `<Row>${cells.map((cell) => `<Cell${header ? ' ss:StyleID="Header"' : ""}><Data ss:Type="String">${escapeXml(cell)}</Data></Cell>`).join("")}</Row>`;
+    const workbook = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles><Style ss:ID="Default" ss:Name="Normal"><Font ss:FontName="Arial" ss:Size="10"/></Style>
+<Style ss:ID="Header"><Font ss:FontName="Arial" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#8C2D3C" ss:Pattern="Solid"/></Style></Styles>
+<Worksheet ss:Name="Registered Members"><Table>${excelRow(headings, true)}${records.map((record) => excelRow(record)).join("")}</Table></Worksheet>
+</Workbook>`;
+    const url = URL.createObjectURL(
+      new Blob(["\uFEFF", workbook], { type: "application/vnd.ms-excel;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `emwa-registered-members-${new Date().toISOString().slice(0, 10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
   const review = async (id: string, next: "APPROVED" | "REJECTED") => {
     setBusy(id + next);
     try {
@@ -1250,7 +1310,7 @@ function MembershipPanel({
       title="Membership requests"
       subtitle="Review applications by membership category and status."
     >
-      <div className="mb-6 grid gap-3 bg-[#e9e3d9] p-4 sm:grid-cols-2">
+      <div className="mb-6 grid gap-3 bg-[#e9e3d9] p-4 sm:grid-cols-3">
         <Select
           value={typeId}
           onChange={setTypeId}
@@ -1267,6 +1327,14 @@ function MembershipPanel({
             label: x === "ALL" ? "All statuses" : x,
           }))}
         />
+        <button
+          type="button"
+          onClick={exportToExcel}
+          disabled={!visible.length}
+          className="flex min-h-12 items-center justify-center gap-2 bg-[#8c2d3c] px-5 font-[var(--font-mono)] text-[10px] font-bold uppercase tracking-[.14em] text-white transition hover:bg-[#702330] disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          <Download className="h-4 w-4" /> Export to Excel
+        </button>
       </div>
       {visible.length ? (
         <div className="overflow-x-auto rounded-2xl border border-black/10 bg-[#fbf9f4] shadow-sm">
@@ -2162,33 +2230,95 @@ function MessagesPanel({
   reload: () => Promise<void>;
 }) {
   const [selected, setSelected] = useState<Contact | null>(rows[0] ?? null);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | Contact["status"]>("ALL");
+  const [dateOrder, setDateOrder] = useState<"NEWEST" | "OLDEST">("NEWEST");
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const visible = useMemo(
+    () =>
+      rows
+        .filter((row) => statusFilter === "ALL" || row.status === statusFilter)
+        .sort((a, b) => {
+          const difference = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return dateOrder === "NEWEST" ? difference : -difference;
+        }),
+    [rows, statusFilter, dateOrder],
+  );
   useEffect(() => {
-    if (selected && !rows.some((x) => x.id === selected.id)) setSelected(rows[0] ?? null);
-  }, [rows, selected]);
+    if (!selected || !visible.some((message) => message.id === selected.id)) {
+      setSelected(visible[0] ?? null);
+    }
+  }, [visible, selected]);
   const update = async (id: string, status: Contact["status"]) => {
-    await adminApi(`/admin/contact-messages/${id}/status`, token, {
-      method: "PATCH",
-      body: JSON.stringify({ status }),
-    });
-    await reload();
-    setSelected((current) => (current ? { ...current, status } : current));
+    setBusy(`${id}-${status}`);
+    setError("");
+    try {
+      await adminApi(`/admin/contact-messages/${id}/status`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      setSelected((current) => (current ? { ...current, status } : current));
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to update the message.");
+    } finally {
+      setBusy("");
+    }
+  };
+  const deleteMessage = async (message: Contact) => {
+    if (!window.confirm(`Delete the message from ${message.full_name}? This cannot be undone.`)) return;
+    setBusy(`${message.id}-DELETE`);
+    setError("");
+    try {
+      await adminApi(`/admin/contact-messages/${message.id}`, token, { method: "DELETE" });
+      setSelected(null);
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to delete the message.");
+    } finally {
+      setBusy("");
+    }
   };
   return (
     <PagePanel
       title="Contact messages"
       subtitle="Read, organize, and archive messages from the public contact form."
     >
+      <div className="mb-6 grid gap-3 bg-[#e9e3d9] p-4 sm:grid-cols-2">
+        <Select
+          value={statusFilter}
+          onChange={(value) => setStatusFilter(value as typeof statusFilter)}
+          options={[
+            { value: "ALL", label: `All messages (${rows.length})` },
+            { value: "NEW", label: `Unread (${rows.filter((row) => row.status === "NEW").length})` },
+            { value: "READ", label: `Read (${rows.filter((row) => row.status === "READ").length})` },
+            { value: "ARCHIVED", label: `Archived (${rows.filter((row) => row.status === "ARCHIVED").length})` },
+          ]}
+        />
+        <Select
+          value={dateOrder}
+          onChange={(value) => setDateOrder(value as typeof dateOrder)}
+          options={[
+            { value: "NEWEST", label: "Newest first" },
+            { value: "OLDEST", label: "Oldest first" },
+          ]}
+        />
+      </div>
+      {error && <p className="mb-4 text-sm font-semibold text-[#8c2d3c]" role="alert">{error}</p>}
       <div className="grid min-h-[560px] overflow-hidden rounded-2xl border border-black/10 bg-[#fbf9f4] shadow-sm lg:grid-cols-[.85fr_1.15fr]">
         <div className="border-b border-black/10 lg:border-b-0 lg:border-r">
-          {rows.length ? (
-            rows.map((row) => (
+          {visible.length ? (
+            visible.map((row) => (
               <button
                 key={row.id}
                 onClick={() => setSelected(row)}
                 className={`block w-full border-b border-black/8 p-5 text-left transition ${selected?.id === row.id ? "bg-[#8c2d3c] text-white" : "hover:bg-black/[.025]"}`}
               >
                 <div className="flex justify-between gap-4">
-                  <strong className="font-[var(--font-body)] text-sm">{row.full_name}</strong>
+                  <strong className={`font-[var(--font-body)] text-sm ${row.status === "NEW" ? "font-black" : "font-semibold"}`}>
+                    {row.status === "NEW" && <span className="mr-2 inline-block size-2 rounded-full bg-[#e5a933]" aria-label="Unread" />}
+                    {row.full_name}
+                  </strong>
                   <span
                     className={`label-mono ${selected?.id === row.id ? "text-white/55" : "text-black/35"}`}
                   >
@@ -2203,7 +2333,7 @@ function MessagesPanel({
               </button>
             ))
           ) : (
-            <EmptyState text="No contact messages" />
+            <EmptyState text="No messages match this filter" />
           )}
         </div>
         {selected ? (
@@ -2230,12 +2360,34 @@ function MessagesPanel({
               {selected.message}
             </p>
             <div className="mt-10 flex flex-wrap gap-2 border-t border-black/10 pt-6">
-              <ActionButton label="Mark read" onClick={() => void update(selected.id, "READ")} />
+              {selected.status === "NEW" ? (
+                <ActionButton
+                  label="Mark read"
+                  busy={busy === `${selected.id}-READ`}
+                  onClick={() => void update(selected.id, "READ")}
+                />
+              ) : (
+                <ActionButton
+                  label="Mark unread"
+                  busy={busy === `${selected.id}-NEW`}
+                  onClick={() => void update(selected.id, "NEW")}
+                />
+              )}
               <ActionButton
                 label="Archive"
+                busy={busy === `${selected.id}-ARCHIVED`}
                 onClick={() => void update(selected.id, "ARCHIVED")}
                 variant="outline"
               />
+              <button
+                type="button"
+                disabled={busy === `${selected.id}-DELETE`}
+                onClick={() => void deleteMessage(selected)}
+                className="inline-flex items-center gap-2 border border-red-700 px-4 py-2 font-[var(--font-mono)] text-[9px] font-bold uppercase tracking-[.12em] text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+              >
+                <Trash2 className="size-4" />
+                {busy === `${selected.id}-DELETE` ? "Deleting…" : "Delete message"}
+              </button>
             </div>
           </article>
         ) : (

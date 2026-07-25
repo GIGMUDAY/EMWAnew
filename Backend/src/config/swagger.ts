@@ -1,11 +1,12 @@
 import swaggerJSDoc from 'swagger-jsdoc';
+import { EXPERT_CATEGORIES } from '../constants/expert-categories.js';
 const operations:Record<string,string[]>= {
   '/auth/login':['post'],'/auth/refresh':['post'],'/auth/logout':['post'],'/auth/me':['get'],
   '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],'/public/updates':['get'],'/public/updates/{slug}':['get'],'/public/events':['get'],'/public/events/{id}':['get'],
   '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get'],'/admin/expert-applications/{id}/status':['patch'],
   '/admin/membership-applications':['get'],'/admin/membership-applications/{id}':['get'],'/admin/membership-applications/{id}/status':['patch'],
   '/admin/membership-types':['post'],'/admin/membership-types/{id}':['patch','delete'],
-  '/admin/contact-messages':['get'],'/admin/contact-messages/{id}':['get'],'/admin/contact-messages/{id}/status':['patch'],
+  '/admin/contact-messages':['get'],'/admin/contact-messages/{id}':['get','delete'],'/admin/contact-messages/{id}/status':['patch'],
   '/admin/newsletter-subscribers':['get'],
   '/admin/resources':['get','post'],'/admin/resources/{id}':['patch','delete'],
   '/admin/updates':['get','post'],'/admin/updates/{id}':['get','patch','delete'],
@@ -356,6 +357,17 @@ paths['/admin/contact-messages/{id}']!.get = {
     '404': { description: 'Contact message not found' },
   },
 };
+paths['/admin/contact-messages/{id}']!.delete = {
+  tags: ['Admin Workflows'],
+  summary: 'Delete a contact message',
+  security: [{ bearerAuth: [] }],
+  parameters: [idParameter],
+  responses: {
+    '204': { description: 'Contact message deleted' },
+    '401': { description: 'Authentication required' },
+    '404': { description: 'Contact message not found' },
+  },
+};
 
 paths['/public/expert-applications']!.post = {
   tags: ['Public Workflows'],
@@ -556,6 +568,7 @@ export const swaggerSpec = swaggerJSDoc({
             'location',
             'professionalBiography',
             'email',
+            'phone',
           ],
           properties: {
             fullName: { type: 'string', minLength: 2, maxLength: 150, example: 'Hana Bekele' },
@@ -567,8 +580,8 @@ export const swaggerSpec = swaggerJSDoc({
             },
             primaryExpertise: {
               type: 'string',
-              enum: ['Journalism', 'Broadcasting', 'Digital', 'Advocacy', 'Academic', 'Film'],
-              example: 'Journalism',
+              enum: EXPERT_CATEGORIES,
+              example: 'Journalism & Media',
             },
             location: { type: 'string', minLength: 2, maxLength: 150, example: 'Addis Ababa' },
             professionalBiography: {
@@ -621,7 +634,44 @@ export const swaggerSpec = swaggerJSDoc({
               maxLength: 150,
               example: 'Addis Ababa',
             },
-            additionalInformation: { type: 'object', additionalProperties: true, default: {} },
+            additionalInformation: {
+              type: 'object',
+              required: [
+                'dateOfBirth',
+                'citySubCity',
+                'emergencyContact1',
+                'yearsOfExperience',
+                'educationLevel',
+                'fieldOfStudy',
+              ],
+              properties: {
+                dateOfBirth: { type: 'string', format: 'date', example: '1995-06-15' },
+                citySubCity: { type: 'string', minLength: 2, maxLength: 150, example: 'Addis Ababa / Bole' },
+                woreda: { type: 'string', maxLength: 100, example: '03' },
+                houseNumber: { type: 'string', maxLength: 50, example: '125' },
+                additionalSkills: { type: 'string', maxLength: 2000, example: 'Fact-checking and multimedia production' },
+                emergencyContact1: {
+                  type: 'object',
+                  required: ['name', 'phone'],
+                  properties: {
+                    name: { type: 'string', minLength: 2, maxLength: 150 },
+                    phone: { type: 'string', minLength: 5, maxLength: 40 },
+                  },
+                },
+                emergencyContact2: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', minLength: 2, maxLength: 150 },
+                    phone: { type: 'string', minLength: 5, maxLength: 40 },
+                  },
+                },
+                yearsOfExperience: { type: 'integer', minimum: 0, maximum: 80 },
+                department: { type: 'string', maxLength: 150 },
+                educationLevel: { type: 'string', minLength: 2, maxLength: 150 },
+                fieldOfStudy: { type: 'string', minLength: 2, maxLength: 200 },
+              },
+              additionalProperties: false,
+            },
           },
         },
         ContactMessageRequest: {

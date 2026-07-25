@@ -43,7 +43,23 @@ export const Route = createFileRoute("/experts")({
 });
 
 const IMAGES = [expert1, expert2, expert3, expert4, expert5, expert6];
-const CATEGORIES = ["All", "Journalism", "Broadcasting", "Digital", "Advocacy", "Academic", "Film"];
+const EXPERT_CATEGORIES = [
+  "Journalism & Media",
+  "Communications & Public Relations",
+  "Gender Equality & Women's Rights",
+  "Human Rights & Advocacy",
+  "Governance & Public Policy",
+  "Law & Justice",
+  "Health & Public Health",
+  "Education & Research",
+  "Business & Economics",
+  "Science & Technology",
+  "Environment & Climate",
+  "Agriculture & Food Systems",
+  "Arts, Culture & Entertainment",
+  "Social Development & Disability",
+] as const;
+const CATEGORIES = ["All", ...EXPERT_CATEGORIES, "Other"];
 type Expert = {
   id?: string;
   n: string;
@@ -59,84 +75,84 @@ const EXPERTS: Expert[] = [
     n: "Soliyana Gebre",
     f: "Broadcast Strategy",
     r: "Addis Ababa",
-    c: "Broadcasting",
+    c: "Journalism & Media",
     bio: "Senior broadcast strategist with 15 years of leadership experience shaping national programming and newsroom transformation.",
   },
   {
     n: "Lidya Tarekegn",
     f: "Digital Ethics",
     r: "Bahir Dar",
-    c: "Digital",
+    c: "Science & Technology",
     bio: "Specialist in digital ethics, platform accountability, and online safety for journalists working in high-risk environments.",
   },
   {
     n: "Rahel Mesfin",
     f: "Investigative Reporting",
     r: "Hawassa",
-    c: "Journalism",
+    c: "Journalism & Media",
     bio: "Award-winning investigative reporter focusing on environmental accountability, public institutions, and governance.",
   },
   {
     n: "Hiwot Bekele",
     f: "Political Analysis",
     r: "Addis Ababa",
-    c: "Journalism",
+    c: "Governance & Public Policy",
     bio: "Political analyst and columnist translating complex policy and governance issues for public audiences.",
   },
   {
     n: "Zewditu Alemu",
     f: "Environmental Reporting",
     r: "Mekelle",
-    c: "Journalism",
+    c: "Environment & Climate",
     bio: "Environmental journalist covering climate resilience, agriculture, water access, and community-led adaptation.",
   },
   {
     n: "Mahder Gezahegn",
     f: "Digital Media Strategy",
     r: "Addis Ababa",
-    c: "Digital",
+    c: "Communications & Public Relations",
     bio: "Digital strategist building audience-first editorial products across nonprofit and independent media organizations.",
   },
   {
     n: "Selamawit Tadesse",
     f: "Human Rights",
     r: "Jimma",
-    c: "Advocacy",
+    c: "Human Rights & Advocacy",
     bio: "Advocacy specialist supporting accurate, trauma-informed gender and human-rights reporting.",
   },
   {
     n: "Dr. Ayantu Bekele",
     f: "Media Ethics",
     r: "Adama",
-    c: "Academic",
+    c: "Education & Research",
     bio: "Researcher and educator advancing media ethics, journalism curricula, and responsible public communication.",
   },
   {
     n: "Meskerem Haile",
     f: "Radio Production",
     r: "Dire Dawa",
-    c: "Broadcasting",
+    c: "Journalism & Media",
     bio: "Radio producer and trainer specializing in community broadcasting, audio storytelling, and regional audiences.",
   },
   {
     n: "Yordanos Mengesha",
     f: "Freelance Reporting",
     r: "Mekelle",
-    c: "Journalism",
+    c: "Journalism & Media",
     bio: "Independent reporter covering conflict, recovery, displacement, and deeply reported human stories.",
   },
   {
     n: "Tigist Wolde",
     f: "Editorial Leadership",
     r: "Addis Ababa",
-    c: "Journalism",
+    c: "Journalism & Media",
     bio: "Editorial leader experienced in newsroom transformation, team development, standards, and commissioning.",
   },
   {
     n: "Bethlehem Girma",
     f: "Documentary Film",
     r: "Hawassa",
-    c: "Film",
+    c: "Arts, Culture & Entertainment",
     bio: "Documentary filmmaker creating character-led films centered on social justice and overlooked communities.",
   },
 ];
@@ -160,7 +176,7 @@ const expertSubmissionError = (payload: unknown) => {
     const labels: Record<string, string> = {
       fullName: "Full name",
       professionalTitle: "Professional title",
-      primaryExpertise: "Primary expertise",
+      primaryExpertise: "Expert category",
       location: "Location",
       professionalBiography: "Professional biography",
       email: "Email address",
@@ -307,6 +323,30 @@ function Experts() {
     const link = document.createElement("a");
     link.href = url;
     link.download = "emwa-experts-directory.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadExpert = (expert: Expert) => {
+    const profile = [
+      "EMWA Women's Expert Profile",
+      "",
+      `Full Name: ${expert.n}`,
+      `Professional Title: ${expert.f}`,
+      `Expert Category: ${expert.c}`,
+      `Location: ${expert.r}`,
+      "",
+      "Professional Biography",
+      expert.bio,
+    ].join("\r\n");
+    const url = URL.createObjectURL(
+      new Blob(["\uFEFF", profile], { type: "text/plain;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${expert.n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-expert-profile.txt`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -547,6 +587,14 @@ function Experts() {
                 <span>Mentorship</span>
               </div>
               <div className="expert-panel-socials" aria-label={`${selected.n}'s social links`}>
+                <button
+                  type="button"
+                  onClick={() => downloadExpert(selected)}
+                  aria-label={`Download ${selected.n}'s expert profile`}
+                  title="Download profile"
+                >
+                  <Download />
+                </button>
                 <a
                   href="https://instagram.com"
                   target="_blank"
@@ -648,12 +696,12 @@ function Experts() {
                       />
                     </label>
                     <label>
-                      <span>Primary expertise *</span>
+                      <span>Expert category *</span>
                       <select name="primaryExpertise" required defaultValue="">
                         <option value="" disabled>
-                          Select a field
+                          Select a category
                         </option>
-                        {CATEGORIES.slice(1).map((item) => (
+                        {[...EXPERT_CATEGORIES, "Other"].map((item) => (
                           <option key={item}>{item}</option>
                         ))}
                       </select>
@@ -690,10 +738,11 @@ function Experts() {
                       />
                     </label>
                     <label>
-                      <span>Phone number</span>
+                      <span>Phone number *</span>
                       <input
                         name="phone"
                         type="tel"
+                        required
                         minLength={5}
                         maxLength={40}
                         placeholder="+251 ..."

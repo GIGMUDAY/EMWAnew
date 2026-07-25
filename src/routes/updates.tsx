@@ -42,19 +42,27 @@ type PublicEvent = {
   registrationUrl?: string;
 };
 const API_BASE = import.meta.env.VITE_API_URL ?? "https://emwa.mudaymarketing.com/api/v1";
-const API_ORIGIN = new URL(API_BASE).origin;
+const API_ORIGIN = /^https?:\/\//i.test(API_BASE) ? new URL(API_BASE).origin : "";
 
 const resolveMediaUrl = (value: unknown, fallback: string) => {
   if (!value) return fallback;
   try {
-    const url = new URL(String(value), API_ORIGIN);
+    const base = API_ORIGIN || "http://emwa-relative.local";
+    const url = new URL(String(value), base);
     // Uploaded files may have been saved with the development host. Always serve
     // them from the same backend currently configured for the frontend.
-    if (url.pathname.startsWith("/uploads/")) return `${API_ORIGIN}${url.pathname}`;
-    return url.toString();
+    const uploadPath = url.pathname.match(/(?:\/api\/v1)?(\/uploads\/.+)$/)?.[1];
+    if (uploadPath) return `${API_ORIGIN}${uploadPath}`;
+    return API_ORIGIN ? url.toString() : `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return fallback;
   }
+};
+const useNewsImageFallback = (event: React.SyntheticEvent<HTMLImageElement>) => {
+  const image = event.currentTarget;
+  if (image.src === PHOTOS.newsroom) return;
+  image.onerror = null;
+  image.src = PHOTOS.newsroom;
 };
 const PHOTOS = {
   conference:
@@ -338,6 +346,7 @@ function Updates() {
             src={lead.img}
             alt="Journalists collaborating in a professional newsroom"
             fetchPriority="high"
+            onError={useNewsImageFallback}
           />
           <div className="updates2-lead-shade" />
           <div className="updates2-lead-copy">
@@ -401,7 +410,7 @@ function Updates() {
                 key={story.h}
               >
                 <div className="updates2-card-image">
-                  <img src={story.img} alt="" loading="lazy" />
+                  <img src={story.img} alt="" loading="lazy" onError={useNewsImageFallback} />
                   {story.t === "Video" && (
                     <span>
                       <Play fill="currentColor" />
@@ -530,7 +539,7 @@ function Updates() {
             >
               <X />
             </button>
-            <img src={selectedStory.img} alt="" className="updates-story-image" />
+            <img src={selectedStory.img} alt="" className="updates-story-image" onError={useNewsImageFallback} />
             <div className="updates-story-content">
               <div className="updates-story-meta">
                 <span>{selectedStory.t}</span>
