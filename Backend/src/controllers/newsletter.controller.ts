@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { pool } from '../db/index.js';
+import { pool, tx } from '../db/index.js';
 import { validate } from '../middleware/core.js';
 import { asyncHandler, listResponse, pageSchema } from '../utils/http.js';
+import { notFound } from '../utils/errors.js';
 
 export const publicNewsletter = Router();
 export const adminNewsletter = Router();
@@ -41,6 +42,7 @@ publicNewsletter.post(
 const subscriberListSchema = pageSchema.extend({
   status: z.enum(['ACTIVE', 'UNSUBSCRIBED']).optional(),
 });
+const subscriberIdSchema = z.object({ id: z.string().uuid() });
 
 adminNewsletter.get(
   '/newsletter-subscribers',
@@ -71,5 +73,24 @@ adminNewsletter.get(
       values,
     );
     listResponse(response, rows, total, query.page, query.limit);
+  }),
+);
+
+adminNewsletter.delete(
+  '/newsletter-subscribers/:id',
+  validate(subscriberIdSchema, 'params'),
+  asyncHandler(async (request, response) => {
+    await tx(async (client) => {
+      const { rows } = await client.query(
+        'DELETE FROM newsletter_subscribers WHERE id=$1 RETURNING id',
+        [request.params.id],
+      );
+      if (!rows[0]) throw notFound('Subscriber');
+      await client.query(
+        "INSERT INTO audit_logs(administrator_id,action,entity_type,entity_id) VALUES($1,'NEWSLETTER_SUBSCRIBER_DELETED','newsletter_subscriber',$2)",
+        [request.admin!.id, request.params.id],
+      );
+    });
+    response.status(204).end();
   }),
 );

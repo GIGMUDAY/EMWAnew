@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, Mail } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
+import { EMWA_PARTNERS, type EmwaPartner } from "@/lib/partners";
 
 export const Route = createFileRoute("/partners")({
   head: () => ({ meta: [
@@ -11,21 +12,20 @@ export const Route = createFileRoute("/partners")({
   component: Partners,
 });
 
-const LOGO_PARTNERS = [
-  { name: "Partner One", abbr: "P1", focus: "Media development", tone: "gold" },
-  { name: "Partner Two", abbr: "P2", focus: "Gender equality", tone: "berry" },
-  { name: "Partner Three", abbr: "P3", focus: "Institutional support", tone: "navy" },
-  { name: "Partner Four", abbr: "P4", focus: "Training & safety", tone: "green" },
-  { name: "Partner Five", abbr: "P5", focus: "Journalism education", tone: "clay" },
-  { name: "Partner Six", abbr: "P6", focus: "Independent media", tone: "violet" },
-  { name: "Partner Seven", abbr: "P7", focus: "Freedom of expression", tone: "blue" },
-  { name: "Partner Eight", abbr: "P8", focus: "Public-interest journalism", tone: "red" },
-] as const;
-
 const STRATEGIC_PARTNERS = ["Government institutions", "Media organizations", "Development partners and donors", "Civil Society Organizations (CSOs)", "National and international media associations", "Universities and research institutions", "Women's organizations", "Professional associations", "Media coalitions and networks"];
 
-function PartnerLogo({ partner, compact = false }: { partner: (typeof LOGO_PARTNERS)[number]; compact?: boolean }) {
-  return <div className={`partners-logo-card${compact ? " is-compact" : ""}`}><div className={`partners-placeholder-logo is-${partner.tone}`} aria-hidden="true"><i /><strong>{partner.abbr}</strong></div><div className="partners-placeholder-copy"><strong>{partner.name}</strong><span>{partner.focus}</span></div></div>;
+function PartnerLogo({ partner, compact = false }: { partner: EmwaPartner; compact?: boolean }) {
+  return (
+    <div className={`partners-logo-card${compact ? " is-compact" : ""}`}>
+      <div className={`partners-logo-mark ${partner.logoClass ?? ""}`}>
+        <img src={partner.logo} alt={`${partner.name} logo`} loading="lazy" />
+      </div>
+      <div className="partners-placeholder-copy">
+        <strong>{partner.name}</strong>
+        <span>{partner.focus}</span>
+      </div>
+    </div>
+  );
 }
 
 function Partners() {
@@ -43,7 +43,7 @@ function Partners() {
         <div className="partners2-marquee-label"><span>Selected partners</span><small>Scroll / Right to left</small></div>
         <div className="partners2-marquee-window">
           <div className="partners2-marquee-track">
-            {[...LOGO_PARTNERS, ...LOGO_PARTNERS].map((partner, index) => <PartnerLogo key={`${partner.name}-${index}`} partner={partner} compact />)}
+            {[...EMWA_PARTNERS, ...EMWA_PARTNERS].map((partner, index) => <PartnerLogo key={`${partner.name}-${index}`} partner={partner} compact />)}
           </div>
         </div>
       </section>

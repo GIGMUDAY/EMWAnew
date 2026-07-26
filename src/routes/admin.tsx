@@ -116,7 +116,6 @@ type Resource = {
   id: string;
   title: string;
   description: string;
-  category: string;
   file_url: string;
   mime_type: string;
   file_size: string;
@@ -483,7 +482,6 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
           id: "demo-resource-1",
           title: "Safe Reporting Handbook",
           description: "A practical guide for women working in Ethiopian media.",
-          category: "Guide",
           file_url: "#",
           mime_type: "application/pdf",
           file_size: "2400000",
@@ -727,7 +725,9 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
               {section === "messages" && (
                 <MessagesPanel rows={contacts} token={session.token} reload={load} />
               )}
-              {section === "subscribers" && <SubscribersPanel rows={subscribers} />}
+              {section === "subscribers" && (
+                <SubscribersPanel rows={subscribers} token={session.token} reload={load} />
+              )}
               {section === "administrators" && (
                 <AdministratorsPanel
                   rows={administrators}
@@ -758,6 +758,7 @@ function AdministratorsPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState("");
+  const [accessBusy, setAccessBusy] = useState("");
   const isSuperAdmin = currentAdmin.role === "SUPER_ADMIN";
 
   const createAdministrator = async (event: FormEvent<HTMLFormElement>) => {
@@ -785,6 +786,29 @@ function AdministratorsPanel({
       setError(cause instanceof Error ? cause.message : "Unable to create administrator");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const setAdministratorActive = async (row: Administrator, isActive: boolean) => {
+    if (
+      !window.confirm(
+        isActive
+          ? `Restore administration access for ${row.full_name}?`
+          : `Remove administration access for ${row.full_name}? Their audit history will be preserved.`,
+      )
+    ) return;
+    setAccessBusy(row.id);
+    setError("");
+    try {
+      await adminApi(`/admin/admins/${row.id}/status`, token, {
+        method: "PATCH",
+        body: JSON.stringify({ isActive }),
+      });
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to update administrator access");
+    } finally {
+      setAccessBusy("");
     }
   };
 
@@ -895,6 +919,25 @@ function AdministratorsPanel({
                       {row.role}
                     </span>
                     <StatusBadge value={row.is_active ? "ACTIVE" : "INACTIVE"} />
+                    {isSuperAdmin && row.id !== currentAdmin.id && (
+                      <button
+                        type="button"
+                        disabled={accessBusy === row.id}
+                        onClick={() => void setAdministratorActive(row, !row.is_active)}
+                        className={`inline-flex items-center gap-2 border px-3 py-2 font-[var(--font-body)] text-sm font-bold transition disabled:opacity-50 ${
+                          row.is_active
+                            ? "border-red-700 text-red-700 hover:bg-red-700 hover:text-white"
+                            : "border-emerald-700 text-emerald-700 hover:bg-emerald-700 hover:text-white"
+                        }`}
+                      >
+                        {row.is_active && <Trash2 className="size-4" />}
+                        {accessBusy === row.id
+                          ? "Updating…"
+                          : row.is_active
+                            ? "Remove access"
+                            : "Restore"}
+                      </button>
+                    )}
                   </div>
                 </article>
               ))}
@@ -1153,6 +1196,16 @@ function ApplicationsPanel({
       setBusy("");
     }
   };
+  const remove = async (row: Expert) => {
+    if (!window.confirm(`Permanently delete ${row.full_name}'s expert application?`)) return;
+    setBusy(row.id + "DELETE");
+    try {
+      await adminApi(`/admin/${type}-applications/${row.id}`, token, { method: "DELETE" });
+      await reload();
+    } finally {
+      setBusy("");
+    }
+  };
   return (
     <PagePanel title={title} subtitle={subtitle}>
       <FilterBar query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} />
@@ -1201,8 +1254,9 @@ function ApplicationsPanel({
               </p>
               <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-5">
                 <span className="label-mono text-black/35">{fmtDate(row.created_at)}</span>
-                {row.status === "PENDING" && (
-                  <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {row.status === "PENDING" && (
+                    <>
                     <ActionButton
                       label="Reject"
                       busy={busy === row.id + "REJECTED"}
@@ -1214,8 +1268,18 @@ function ApplicationsPanel({
                       busy={busy === row.id + "APPROVED"}
                       onClick={() => void review(row.id, "APPROVED")}
                     />
-                  </div>
-                )}
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy === row.id + "DELETE"}
+                    onClick={() => void remove(row)}
+                    className="inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+                  >
+                    <Trash2 className="size-4" />
+                    {busy === row.id + "DELETE" ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
               </div>
             </article>
           ))}
@@ -1305,6 +1369,18 @@ function MembershipPanel({
       setBusy("");
     }
   };
+  const remove = async (row: Membership) => {
+    if (!window.confirm(`Permanently delete ${row.full_name}'s membership application?`)) return;
+    setBusy(row.id + "DELETE");
+    try {
+      await adminApi(`/admin/membership-applications/${row.id}`, token, {
+        method: "DELETE",
+      });
+      await reload();
+    } finally {
+      setBusy("");
+    }
+  };
   return (
     <PagePanel
       title="Membership requests"
@@ -1368,8 +1444,9 @@ function MembershipPanel({
                   </Td>
                   <Td>{fmtDate(row.created_at)}</Td>
                   <Td>
-                    {row.status === "PENDING" ? (
-                      <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {row.status === "PENDING" ? (
+                        <>
                         <ActionButton
                           label="Reject"
                           busy={busy === row.id + "REJECTED"}
@@ -1381,10 +1458,20 @@ function MembershipPanel({
                           busy={busy === row.id + "APPROVED"}
                           onClick={() => void review(row.id, "APPROVED")}
                         />
-                      </div>
-                    ) : (
-                      <span className="label-mono text-black/30">Reviewed</span>
-                    )}
+                        </>
+                      ) : (
+                        <span className="self-center label-mono text-black/30">Reviewed</span>
+                      )}
+                      <button
+                        type="button"
+                        disabled={busy === row.id + "DELETE"}
+                        onClick={() => void remove(row)}
+                        className="inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+                      >
+                        <Trash2 className="size-4" />
+                        {busy === row.id + "DELETE" ? "Deleting…" : "Delete"}
+                      </button>
+                    </div>
                   </Td>
                 </tr>
               ))}
@@ -1409,6 +1496,7 @@ function MembershipTypesPanel({
 }) {
   const [form, setForm] = useState({ name: "", description: "", requirements: "" });
   const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState("");
   const [error, setError] = useState("");
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -1425,6 +1513,20 @@ function MembershipTypesPanel({
       setError(cause instanceof Error ? cause.message : "Unable to create membership type");
     } finally {
       setBusy(false);
+    }
+  };
+  const remove = async (row: MembershipType) => {
+    if (!window.confirm(`Delete the "${row.name}" membership type? Existing applications will remain.`))
+      return;
+    setDeleting(row.id);
+    setError("");
+    try {
+      await adminApi(`/admin/membership-types/${row.id}`, token, { method: "DELETE" });
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to delete membership type");
+    } finally {
+      setDeleting("");
     }
   };
   return (
@@ -1488,6 +1590,17 @@ function MembershipTypesPanel({
                 <p className="mt-2 label-mono text-emerald-700">
                   {row.is_active ? "Active" : "Inactive"}
                 </p>
+                {row.is_active && (
+                  <button
+                    type="button"
+                    disabled={deleting === row.id}
+                    onClick={() => void remove(row)}
+                    className="mt-4 inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+                  >
+                    <Trash2 className="size-4" />
+                    {deleting === row.id ? "Deleting…" : "Delete"}
+                  </button>
+                )}
               </div>
             </article>
           ))}
@@ -2109,6 +2222,7 @@ function ResourcesPanel({
   reload: () => Promise<void>;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const upload = async (event: FormEvent<HTMLFormElement>) => {
@@ -2151,6 +2265,21 @@ function ResourcesPanel({
       setError(cause instanceof Error ? cause.message : "Unable to update the resource");
     }
   };
+  const remove = async (row: Resource) => {
+    if (!window.confirm(`Permanently delete "${row.title}" and its uploaded file?`)) return;
+    setDeleting(row.id);
+    setError("");
+    setSuccess("");
+    try {
+      await adminApi(`/admin/resources/${row.id}`, token, { method: "DELETE" });
+      setSuccess("Resource deleted successfully.");
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to delete the resource");
+    } finally {
+      setDeleting("");
+    }
+  };
   return (
     <PagePanel
       title="Resource library"
@@ -2158,12 +2287,11 @@ function ResourcesPanel({
     >
       <form
         onSubmit={upload}
-        className="mb-8 grid gap-4 rounded-2xl border border-dashed border-[#8c2d3c]/50 bg-[#8c2d3c]/5 p-6 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto]"
+        className="mb-8 grid gap-4 rounded-2xl border border-dashed border-[#8c2d3c]/50 bg-[#8c2d3c]/5 p-6 shadow-sm md:grid-cols-2 xl:grid-cols-[1fr_1fr_auto]"
       >
         <LightInput name="title" label="Title" placeholder="Community guide" />
-        <LightInput name="category" label="Category" placeholder="Guides" />
         <LightInput name="description" label="Description" placeholder="Short description" />
-        <label className="md:col-span-2 xl:col-span-3">
+        <label className="md:col-span-2">
           <span className="label-mono text-black/50">File</span>
           <input
             name="file"
@@ -2192,7 +2320,7 @@ function ResourcesPanel({
               </div>
               <StatusBadge value={row.is_published ? "APPROVED" : "PENDING"} />
             </div>
-            <p className="mt-6 label-mono text-[#8c2d3c]">{row.category}</p>
+            <p className="mt-6 label-mono text-[#8c2d3c]">EMWA resource</p>
             <h3 className="mt-2 text-xl font-black">{row.title}</h3>
             <p className="mt-2 line-clamp-2 font-[var(--font-body)] text-sm text-black/50">
               {row.description}
@@ -2206,12 +2334,24 @@ function ResourcesPanel({
               >
                 Open file
               </a>
-              <button
-                onClick={() => void publish(row)}
-                className={`px-3 py-2 label-mono ${row.is_published ? "border border-black/20" : "bg-[#8c2d3c] text-white"}`}
-              >
-                {row.is_published ? "Unpublish" : "Publish"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => void publish(row)}
+                  className={`px-3 py-2 font-[var(--font-body)] text-sm font-bold ${row.is_published ? "border border-black/20" : "bg-[#8c2d3c] text-white"}`}
+                >
+                  {row.is_published ? "Unpublish" : "Publish"}
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting === row.id}
+                  onClick={() => void remove(row)}
+                  aria-label={`Delete ${row.title}`}
+                  className="inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+                >
+                  <Trash2 className="size-4" />
+                  {deleting === row.id ? "Deleting…" : "Delete"}
+                </button>
+              </div>
             </div>
           </article>
         ))}
@@ -2398,9 +2538,19 @@ function MessagesPanel({
   );
 }
 
-function SubscribersPanel({ rows }: { rows: NewsletterSubscriber[] }) {
+function SubscribersPanel({
+  rows,
+  token,
+  reload,
+}: {
+  rows: NewsletterSubscriber[];
+  token: string;
+  reload: () => Promise<void>;
+}) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"ALL" | NewsletterSubscriber["status"]>("ALL");
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
   const visible = rows.filter(
     (row) =>
       (status === "ALL" || row.status === status) &&
@@ -2425,6 +2575,21 @@ function SubscribersPanel({ rows }: { rows: NewsletterSubscriber[] }) {
     link.download = "emwa-newsletter-subscribers.csv";
     link.click();
     URL.revokeObjectURL(url);
+  };
+  const remove = async (row: NewsletterSubscriber) => {
+    if (!window.confirm(`Permanently delete newsletter subscriber ${row.email}?`)) return;
+    setBusy(row.id);
+    setError("");
+    try {
+      await adminApi(`/admin/newsletter-subscribers/${row.id}`, token, {
+        method: "DELETE",
+      });
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to delete subscriber");
+    } finally {
+      setBusy("");
+    }
   };
 
   return (
@@ -2475,6 +2640,7 @@ function SubscribersPanel({ rows }: { rows: NewsletterSubscriber[] }) {
           icon={Archive}
         />
       </div>
+      {error && <p className="mt-4 text-sm font-semibold text-red-700">{error}</p>}
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-black/10 bg-[#fbf9f4] shadow-sm">
         {visible.length ? (
@@ -2485,6 +2651,7 @@ function SubscribersPanel({ rows }: { rows: NewsletterSubscriber[] }) {
                 <Th>Status</Th>
                 <Th>Subscribed</Th>
                 <Th>Last updated</Th>
+                <Th>Action</Th>
               </tr>
             </thead>
             <tbody>
@@ -2500,6 +2667,17 @@ function SubscribersPanel({ rows }: { rows: NewsletterSubscriber[] }) {
                   </Td>
                   <Td>{fmtDate(row.subscribed_at)}</Td>
                   <Td>{fmtDate(row.updated_at)}</Td>
+                  <Td>
+                    <button
+                      type="button"
+                      disabled={busy === row.id}
+                      onClick={() => void remove(row)}
+                      className="inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+                    >
+                      <Trash2 className="size-4" />
+                      {busy === row.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </Td>
                 </tr>
               ))}
             </tbody>

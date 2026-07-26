@@ -424,6 +424,21 @@ function Experts() {
             />
           </label>
           <label className="experts-sort">
+            <span>Category</span>
+            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+              {CATEGORIES.map((item) => (
+                <option key={item} value={item}>
+                  {item} (
+                  {item === "All"
+                    ? experts.length
+                    : experts.filter((expert) => expert.c === item).length}
+                  )
+                </option>
+              ))}
+            </select>
+            <ChevronDown aria-hidden="true" />
+          </label>
+          <label className="experts-sort">
             <span>Sort by</span>
             <select
               value={sort}
@@ -434,24 +449,6 @@ function Experts() {
             </select>
             <ChevronDown aria-hidden="true" />
           </label>
-        </div>
-
-        <div className="experts-categories" role="group" aria-label="Filter by expertise category">
-          {CATEGORIES.map((item) => (
-            <button
-              key={item}
-              onClick={() => setCategory(item)}
-              className={category === item ? "is-active" : ""}
-              aria-pressed={category === item}
-            >
-              {item}
-              <span>
-                {item === "All"
-                  ? experts.length
-                  : experts.filter((expert) => expert.c === item).length}
-              </span>
-            </button>
-          ))}
         </div>
 
         <div className="experts-results-bar">

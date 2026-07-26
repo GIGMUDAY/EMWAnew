@@ -131,5 +131,125 @@ publicApplications.post(
   }),
 );
 
-const membershipPage=pageSchema.extend({membershipTypeId:z.string().uuid().optional()});
-function mount(kind:'expert'|'membership'){const listSchema=kind==='membership'?membershipPage:pageSchema;const table=kind==='expert'?'expert_applications':'membership_applications',path=`/${kind}-applications`;adminApplications.get(path,validate(listSchema,'query'),asyncHandler(async(req,res)=>{const q:any=req.query,params:any[]=[],where:string[]=[];if(q.status){params.push(q.status);where.push(`a.status=$${params.length}`)}if(q.membershipTypeId&&kind==='membership'){params.push(q.membershipTypeId);where.push(`a.membership_type_id=$${params.length}`)}if(q.search){params.push(`%${q.search}%`);where.push(`(a.full_name ILIKE $${params.length} OR a.email ILIKE $${params.length}${kind==='expert'?` OR a.area_of_expertise ILIKE $${params.length}`:''})`)}const w=where.length?'WHERE '+where.join(' AND '):'';const total=Number((await pool.query(`SELECT count(*) FROM ${table} a ${w}`,params)).rows[0].count);params.push(q.limit,(q.page-1)*q.limit);const {rows}=await pool.query(`SELECT a.* FROM ${table} a ${w} ORDER BY a.${q.sort} ${q.order} LIMIT $${params.length-1} OFFSET $${params.length}`,params);listResponse(res,rows,total,q.page,q.limit)}));adminApplications.get(path+'/:id',validate(id,'params'),asyncHandler(async(req,res)=>{const {rows}=await pool.query(`SELECT * FROM ${table} WHERE id=$1`,[req.params.id]);if(!rows[0])throw notFound('Application');res.json({success:true,data:rows[0]})}));adminApplications.patch(path+'/:id/status',validate(id,'params'),validate(z.object({status:z.enum(['APPROVED','REJECTED']),reviewNote:z.string().trim().max(5000).optional()})),asyncHandler(async(req,res)=>{const row=await tx(async c=>{const {rows}=await c.query(`UPDATE ${table} SET status=$1,review_note=$2,reviewed_by=$3,reviewed_at=now(),updated_at=now() WHERE id=$4 RETURNING *`,[req.body.status,req.body.reviewNote,req.admin!.id,req.params.id]);if(!rows[0])throw notFound('Application');await c.query('INSERT INTO audit_logs(administrator_id,action,entity_type,entity_id,metadata) VALUES($1,$2,$3,$4,$5)',[req.admin!.id,`${kind.toUpperCase()}_APPLICATION_${req.body.status}`,`${kind}_application`,req.params.id,{status:req.body.status}]);return rows[0]});res.json({success:true,data:row})}))} mount('expert');mount('membership');
+const membershipPage = pageSchema.extend({ membershipTypeId: z.string().uuid().optional() });
+
+function mount(kind: 'expert' | 'membership') {
+  const listSchema = kind === 'membership' ? membershipPage : pageSchema;
+  const table = kind === 'expert' ? 'expert_applications' : 'membership_applications';
+  const path = `/${kind}-applications`;
+
+  adminApplications.get(
+    path,
+    validate(listSchema, 'query'),
+    asyncHandler(async (request, response) => {
+      const query: any = request.query;
+      const params: any[] = [];
+      const conditions: string[] = [];
+      if (query.status) {
+        params.push(query.status);
+        conditions.push(`a.status=$${params.length}`);
+      }
+      if (query.membershipTypeId && kind === 'membership') {
+        params.push(query.membershipTypeId);
+        conditions.push(`a.membership_type_id=$${params.length}`);
+      }
+      if (query.search) {
+        params.push(`%${query.search}%`);
+        conditions.push(
+          `(a.full_name ILIKE $${params.length} OR a.email ILIKE $${params.length}${
+            kind === 'expert' ? ` OR a.area_of_expertise ILIKE $${params.length}` : ''
+          })`,
+        );
+      }
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+      const total = Number(
+        (await pool.query(`SELECT count(*) FROM ${table} a ${where}`, params)).rows[0].count,
+      );
+      params.push(query.limit, (query.page - 1) * query.limit);
+      const { rows } = await pool.query(
+        `SELECT a.* FROM ${table} a ${where} ORDER BY a.${query.sort} ${query.order}
+         LIMIT $${params.length - 1} OFFSET $${params.length}`,
+        params,
+      );
+      listResponse(response, rows, total, query.page, query.limit);
+    }),
+  );
+
+  adminApplications.get(
+    `${path}/:id`,
+    validate(id, 'params'),
+    asyncHandler(async (request, response) => {
+      const { rows } = await pool.query(`SELECT * FROM ${table} WHERE id=$1`, [
+        request.params.id,
+      ]);
+      if (!rows[0]) throw notFound('Application');
+      response.json({ success: true, data: rows[0] });
+    }),
+  );
+
+  adminApplications.patch(
+    `${path}/:id/status`,
+    validate(id, 'params'),
+    validate(
+      z.object({
+        status: z.enum(['APPROVED', 'REJECTED']),
+        reviewNote: z.string().trim().max(5000).optional(),
+      }),
+    ),
+    asyncHandler(async (request, response) => {
+      const row = await tx(async (client) => {
+        const { rows } = await client.query(
+          `UPDATE ${table}
+           SET status=$1,review_note=$2,reviewed_by=$3,reviewed_at=now(),updated_at=now()
+           WHERE id=$4 RETURNING *`,
+          [request.body.status, request.body.reviewNote, request.admin!.id, request.params.id],
+        );
+        if (!rows[0]) throw notFound('Application');
+        await client.query(
+          'INSERT INTO audit_logs(administrator_id,action,entity_type,entity_id,metadata) VALUES($1,$2,$3,$4,$5)',
+          [
+            request.admin!.id,
+            `${kind.toUpperCase()}_APPLICATION_${request.body.status}`,
+            `${kind}_application`,
+            request.params.id,
+            { status: request.body.status },
+          ],
+        );
+        return rows[0];
+      });
+      response.json({ success: true, data: row });
+    }),
+  );
+
+  adminApplications.delete(
+    `${path}/:id`,
+    validate(id, 'params'),
+    asyncHandler(async (request, response) => {
+      const row = await tx(async (client) => {
+        const returning = kind === 'expert' ? 'id,profile_photo_url' : 'id';
+        const { rows } = await client.query(
+          `DELETE FROM ${table} WHERE id=$1 RETURNING ${returning}`,
+          [request.params.id],
+        );
+        if (!rows[0]) throw notFound('Application');
+        await client.query(
+          'INSERT INTO audit_logs(administrator_id,action,entity_type,entity_id) VALUES($1,$2,$3,$4)',
+          [
+            request.admin!.id,
+            `${kind.toUpperCase()}_APPLICATION_DELETED`,
+            `${kind}_application`,
+            request.params.id,
+          ],
+        );
+        return rows[0];
+      });
+      if (kind === 'expert' && row.profile_photo_url) {
+        await removeLocal(row.profile_photo_url);
+      }
+      response.status(204).end();
+    }),
+  );
+}
+
+mount('expert');
+mount('membership');

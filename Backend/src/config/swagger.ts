@@ -3,11 +3,11 @@ import { EXPERT_CATEGORIES } from '../constants/expert-categories.js';
 const operations:Record<string,string[]>= {
   '/auth/login':['post'],'/auth/refresh':['post'],'/auth/logout':['post'],'/auth/me':['get'],
   '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],'/public/updates':['get'],'/public/updates/{slug}':['get'],'/public/events':['get'],'/public/events/{id}':['get'],
-  '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get'],'/admin/expert-applications/{id}/status':['patch'],
-  '/admin/membership-applications':['get'],'/admin/membership-applications/{id}':['get'],'/admin/membership-applications/{id}/status':['patch'],
+  '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get','delete'],'/admin/expert-applications/{id}/status':['patch'],
+  '/admin/membership-applications':['get'],'/admin/membership-applications/{id}':['get','delete'],'/admin/membership-applications/{id}/status':['patch'],
   '/admin/membership-types':['post'],'/admin/membership-types/{id}':['patch','delete'],
   '/admin/contact-messages':['get'],'/admin/contact-messages/{id}':['get','delete'],'/admin/contact-messages/{id}/status':['patch'],
-  '/admin/newsletter-subscribers':['get'],
+  '/admin/newsletter-subscribers':['get'],'/admin/newsletter-subscribers/{id}':['delete'],
   '/admin/resources':['get','post'],'/admin/resources/{id}':['patch','delete'],
   '/admin/updates':['get','post'],'/admin/updates/{id}':['get','patch','delete'],
   '/admin/events':['get','post'],'/admin/events/{id}':['get','patch','delete'],
@@ -472,11 +472,10 @@ paths['/admin/resources']!.post = {
       'multipart/form-data': {
         schema: {
           type: 'object',
-          required: ['title', 'description', 'category', 'file'],
+          required: ['title', 'description', 'file'],
           properties: {
             title: { type: 'string', example: 'Community Guide' },
             description: { type: 'string', example: 'A practical community resource guide.' },
-            category: { type: 'string', example: 'Guides' },
             file: { type: 'string', format: 'binary' },
           },
         },

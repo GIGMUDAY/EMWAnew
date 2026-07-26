@@ -36,12 +36,16 @@ export function SiteFooter() {
         <div className="sf-grid">
           {/* Brand column */}
           <div className="sf-brand">
-            <div className="sf-logo-row">
-              <img src={logo} alt="EMWA logo" className="sf-logo-img" />
-              <div className="sf-wordmark">
-                <span className="sf-wordmark-e">E</span>MWA
-              </div>
-            </div>
+            <Link to="/" className="sf-logo-row group" aria-label="EMWA home">
+              <img
+                src={logo}
+                alt="EMWA logo"
+                className="h-11 w-11 object-contain transition-transform duration-500 group-hover:rotate-[8deg] group-hover:scale-110"
+              />
+              <span className="font-display text-2xl tracking-tighter transition-colors group-hover:text-primary">
+                <span className="text-primary">E</span>MWA
+              </span>
+            </Link>
             <p className="sf-tagline">
               The Ethiopian Media Women Association is a legally registered professional
               organization dedicated to ensuring gender equality in and through media across

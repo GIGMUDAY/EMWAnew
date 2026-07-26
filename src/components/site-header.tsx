@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Heart, Menu, X, Moon, Sun } from "lucide-react";
+import { Heart, Menu, Moon, Sun, X } from "lucide-react";
 import logo from "@/assets/emwa-logo-new.png";
 
 const NAV = [
@@ -19,8 +19,8 @@ function ThemeToggle() {
 
   useEffect(() => {
     const stored = localStorage.getItem("emwa-theme");
-    const prefers = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isDark = stored ? stored === "dark" : prefers;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = stored ? stored === "dark" : prefersDark;
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
   }, []);
@@ -34,9 +34,11 @@ function ThemeToggle() {
 
   return (
     <button
+      type="button"
       onClick={toggle}
-      aria-label="Toggle theme"
-      className="size-10 grid place-items-center border border-border hover:border-primary hover:text-primary transition-colors"
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      title={dark ? "Light mode" : "Dark mode"}
+      className="grid size-10 place-items-center border border-border transition-colors hover:border-primary hover:text-primary"
     >
       {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>
