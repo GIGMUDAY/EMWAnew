@@ -13,7 +13,7 @@ const id = z.object({ id: z.string().uuid() });
 
 publicApplications.get('/experts', asyncHandler(async (_request, response) => {
   const { rows } = await pool.query(
-    "SELECT id,full_name,professional_title,area_of_expertise AS primary_expertise,location,biography AS professional_biography,profile_photo_url,created_at FROM expert_applications WHERE status='APPROVED' ORDER BY created_at DESC",
+    "SELECT id,full_name,email,professional_title,area_of_expertise AS primary_expertise,location,biography AS professional_biography,profile_photo_url,linkedin_url,instagram_url,facebook_url,created_at FROM expert_applications WHERE status='APPROVED' ORDER BY created_at DESC",
   );
   response.json({ success: true, data: rows });
 }));
@@ -26,6 +26,9 @@ const expertApplicationSchema = z.object({
   professionalTitle: z.string().trim().min(2).max(150),
   location: z.string().trim().min(2).max(150),
   professionalBiography: z.string().trim().min(20).max(10000),
+  linkedinUrl: z.string().trim().url().max(2000).optional().or(z.literal('')),
+  instagramUrl: z.string().trim().url().max(2000).optional().or(z.literal('')),
+  facebookUrl: z.string().trim().url().max(2000).optional().or(z.literal('')),
 });
 
 publicApplications.post(
@@ -37,8 +40,9 @@ publicApplications.post(
       const photoUrl = request.file ? fileUrl(request, request.file) : null;
       const { rows } = await pool.query(
         `INSERT INTO expert_applications
-          (full_name,email,phone_number,professional_title,area_of_expertise,location,biography,profile_photo_url)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+          (full_name,email,phone_number,professional_title,area_of_expertise,location,biography,
+           profile_photo_url,linkedin_url,instagram_url,facebook_url)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
          RETURNING id,status,profile_photo_url,created_at`,
         [
           application.fullName,
@@ -49,6 +53,9 @@ publicApplications.post(
           application.location,
           application.professionalBiography,
           photoUrl,
+          application.linkedinUrl || null,
+          application.instagramUrl || null,
+          application.facebookUrl || null,
         ],
       );
       response.status(201).json({ success: true, data: rows[0] });

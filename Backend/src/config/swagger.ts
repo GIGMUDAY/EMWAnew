@@ -591,6 +591,9 @@ export const swaggerSpec = swaggerJSDoc({
             },
             email: { type: 'string', format: 'email', example: 'hana@example.com' },
             phone: { type: 'string', minLength: 5, maxLength: 40, example: '+251911234567' },
+            linkedinUrl: { type: 'string', format: 'uri', example: 'https://linkedin.com/in/hana-bekele' },
+            instagramUrl: { type: 'string', format: 'uri', example: 'https://instagram.com/hana.bekele' },
+            facebookUrl: { type: 'string', format: 'uri', example: 'https://facebook.com/hana.bekele' },
             profilePhoto: {
               type: 'string',
               format: 'binary',

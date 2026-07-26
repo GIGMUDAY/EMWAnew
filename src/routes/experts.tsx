@@ -14,12 +14,6 @@ import {
   X,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import expert1 from "@/assets/expert-1.jpg";
-import expert2 from "@/assets/expert-2.jpg";
-import expert3 from "@/assets/expert-3.jpg";
-import expert4 from "@/assets/value-integrity.png";
-import expert5 from "@/assets/value-independence.png";
-import expert6 from "@/assets/value-excellence.png";
 import { API_BASE } from "@/lib/admin-api";
 
 export const Route = createFileRoute("/experts")({
@@ -42,7 +36,6 @@ export const Route = createFileRoute("/experts")({
   component: Experts,
 });
 
-const IMAGES = [expert1, expert2, expert3, expert4, expert5, expert6];
 const EXPERT_CATEGORIES = [
   "Journalism & Media",
   "Communications & Public Relations",
@@ -68,94 +61,11 @@ type Expert = {
   c: string;
   bio: string;
   img?: string;
+  email?: string;
+  linkedinUrl?: string;
+  instagramUrl?: string;
+  facebookUrl?: string;
 };
-
-const EXPERTS: Expert[] = [
-  {
-    n: "Soliyana Gebre",
-    f: "Broadcast Strategy",
-    r: "Addis Ababa",
-    c: "Journalism & Media",
-    bio: "Senior broadcast strategist with 15 years of leadership experience shaping national programming and newsroom transformation.",
-  },
-  {
-    n: "Lidya Tarekegn",
-    f: "Digital Ethics",
-    r: "Bahir Dar",
-    c: "Science & Technology",
-    bio: "Specialist in digital ethics, platform accountability, and online safety for journalists working in high-risk environments.",
-  },
-  {
-    n: "Rahel Mesfin",
-    f: "Investigative Reporting",
-    r: "Hawassa",
-    c: "Journalism & Media",
-    bio: "Award-winning investigative reporter focusing on environmental accountability, public institutions, and governance.",
-  },
-  {
-    n: "Hiwot Bekele",
-    f: "Political Analysis",
-    r: "Addis Ababa",
-    c: "Governance & Public Policy",
-    bio: "Political analyst and columnist translating complex policy and governance issues for public audiences.",
-  },
-  {
-    n: "Zewditu Alemu",
-    f: "Environmental Reporting",
-    r: "Mekelle",
-    c: "Environment & Climate",
-    bio: "Environmental journalist covering climate resilience, agriculture, water access, and community-led adaptation.",
-  },
-  {
-    n: "Mahder Gezahegn",
-    f: "Digital Media Strategy",
-    r: "Addis Ababa",
-    c: "Communications & Public Relations",
-    bio: "Digital strategist building audience-first editorial products across nonprofit and independent media organizations.",
-  },
-  {
-    n: "Selamawit Tadesse",
-    f: "Human Rights",
-    r: "Jimma",
-    c: "Human Rights & Advocacy",
-    bio: "Advocacy specialist supporting accurate, trauma-informed gender and human-rights reporting.",
-  },
-  {
-    n: "Dr. Ayantu Bekele",
-    f: "Media Ethics",
-    r: "Adama",
-    c: "Education & Research",
-    bio: "Researcher and educator advancing media ethics, journalism curricula, and responsible public communication.",
-  },
-  {
-    n: "Meskerem Haile",
-    f: "Radio Production",
-    r: "Dire Dawa",
-    c: "Journalism & Media",
-    bio: "Radio producer and trainer specializing in community broadcasting, audio storytelling, and regional audiences.",
-  },
-  {
-    n: "Yordanos Mengesha",
-    f: "Freelance Reporting",
-    r: "Mekelle",
-    c: "Journalism & Media",
-    bio: "Independent reporter covering conflict, recovery, displacement, and deeply reported human stories.",
-  },
-  {
-    n: "Tigist Wolde",
-    f: "Editorial Leadership",
-    r: "Addis Ababa",
-    c: "Journalism & Media",
-    bio: "Editorial leader experienced in newsroom transformation, team development, standards, and commissioning.",
-  },
-  {
-    n: "Bethlehem Girma",
-    f: "Documentary Film",
-    r: "Hawassa",
-    c: "Arts, Culture & Entertainment",
-    bio: "Documentary filmmaker creating character-led films centered on social justice and overlooked communities.",
-  },
-];
 
 type ExpertApiError = {
   error?: {
@@ -182,6 +92,9 @@ const expertSubmissionError = (payload: unknown) => {
       email: "Email address",
       phone: "Phone number",
       profilePhoto: "Profile photo",
+      linkedinUrl: "LinkedIn profile",
+      instagramUrl: "Instagram profile",
+      facebookUrl: "Facebook profile",
     };
     return `${labels[field] ?? field}: ${messages?.[0]}`;
   }
@@ -222,6 +135,10 @@ function Experts() {
           location: string;
           professional_biography: string;
           profile_photo_url?: string;
+          email?: string;
+          linkedin_url?: string;
+          instagram_url?: string;
+          facebook_url?: string;
         }>;
         setExperts(
           rows.map((row) => ({
@@ -234,6 +151,10 @@ function Experts() {
             img: row.profile_photo_url
               ? `${apiOrigin}${new URL(row.profile_photo_url, apiOrigin).pathname}`
               : undefined,
+            email: row.email,
+            linkedinUrl: row.linkedin_url,
+            instagramUrl: row.instagram_url,
+            facebookUrl: row.facebook_url,
           })),
         );
       } catch (cause) {
@@ -241,7 +162,7 @@ function Experts() {
         setExpertsError(
           cause instanceof Error ? cause.message : "Unable to load the experts directory.",
         );
-        setExperts(EXPERTS);
+        setExperts([]);
       } finally {
         setExpertsLoading(false);
       }
@@ -315,8 +236,11 @@ function Experts() {
   const downloadExperts = () => {
     const escapeCell = (value: string) => `"${value.replaceAll('"', '""')}"`;
     const rows = [
-      ["Name", "Expertise", "Region", "Category", "Biography"],
-      ...experts.map((expert) => [expert.n, expert.f, expert.r, expert.c, expert.bio]),
+      ["Name", "Expertise", "Region", "Category", "Biography", "Email", "LinkedIn", "Instagram", "Facebook"],
+      ...experts.map((expert) => [
+        expert.n, expert.f, expert.r, expert.c, expert.bio, expert.email ?? "",
+        expert.linkedinUrl ?? "", expert.instagramUrl ?? "", expert.facebookUrl ?? "",
+      ]),
     ];
     const csv = rows.map((row) => row.map(escapeCell).join(",")).join("\r\n");
     const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
@@ -329,28 +253,80 @@ function Experts() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadExpert = (expert: Expert) => {
-    const profile = [
-      "EMWA Women's Expert Profile",
-      "",
-      `Full Name: ${expert.n}`,
-      `Professional Title: ${expert.f}`,
-      `Expert Category: ${expert.c}`,
-      `Location: ${expert.r}`,
-      "",
-      "Professional Biography",
-      expert.bio,
-    ].join("\r\n");
-    const url = URL.createObjectURL(
-      new Blob(["\uFEFF", profile], { type: "text/plain;charset=utf-8" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${expert.n.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-expert-profile.txt`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  const downloadExpert = async (expert: Expert) => {
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+
+    pdf.setFillColor(140, 45, 60);
+    pdf.rect(0, 0, pageWidth, 34, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(10);
+    pdf.text("ETHIOPIAN MEDIA WOMEN ASSOCIATION", margin, 13);
+    pdf.setFontSize(18);
+    pdf.text("Women's Expert Profile", margin, 24);
+
+    let y = 48;
+    pdf.setTextColor(28, 26, 24);
+    pdf.setFontSize(24);
+    pdf.text(expert.n, margin, y);
+    y += 10;
+    pdf.setTextColor(140, 45, 60);
+    pdf.setFontSize(13);
+    pdf.text(expert.f, margin, y);
+    y += 12;
+
+    const details = [
+      ["Expert category", expert.c],
+      ["Location", expert.r],
+      ["Email", expert.email],
+      ["LinkedIn", expert.linkedinUrl],
+      ["Instagram", expert.instagramUrl],
+      ["Facebook", expert.facebookUrl],
+    ].filter((detail): detail is [string, string] => Boolean(detail[1]));
+
+    pdf.setFontSize(10);
+    for (const [label, value] of details) {
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(80, 76, 72);
+      pdf.text(`${label}:`, margin, y);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(28, 26, 24);
+      const valueLines = pdf.splitTextToSize(value, contentWidth - 38);
+      pdf.text(valueLines, margin + 38, y);
+      y += Math.max(7, valueLines.length * 5);
+    }
+
+    y += 5;
+    pdf.setDrawColor(220, 214, 205);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 10;
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(140, 45, 60);
+    pdf.setFontSize(12);
+    pdf.text("PROFESSIONAL BIOGRAPHY", margin, y);
+    y += 8;
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(45, 42, 39);
+    pdf.setFontSize(11);
+    const biographyLines = pdf.splitTextToSize(expert.bio, contentWidth);
+    for (const line of biographyLines) {
+      if (y > 278) {
+        pdf.addPage();
+        y = 20;
+      }
+      pdf.text(line, margin, y);
+      y += 6;
+    }
+
+    const filename = expert.n
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    pdf.save(`${filename}-expert-profile.pdf`);
   };
 
   return (
@@ -374,14 +350,18 @@ function Experts() {
           </div>
         </div>
         <div className="experts-hero-portrait">
-          <img
-            src={featuredExpert?.img || expert4}
-            alt={featuredExpert ? `${featuredExpert.n}, ${featuredExpert.f}` : "EMWA media expert"}
-            onError={(event) => {
-              event.currentTarget.onerror = null;
-              event.currentTarget.src = expert4;
-            }}
-          />
+          <span className="grid size-full place-items-center bg-muted font-display text-9xl text-primary/35">
+            {featuredExpert
+              ? featuredExpert.n.split(" ").slice(0, 2).map((part) => part[0]).join("")
+              : "EMWA"}
+          </span>
+          {featuredExpert?.img && (
+            <img
+              src={featuredExpert.img}
+              alt={`${featuredExpert.n}, ${featuredExpert.f}`}
+              onError={(event) => event.currentTarget.remove()}
+            />
+          )}
           <div className="experts-hero-portrait-shade" aria-hidden="true" />
           <div className="experts-hero-dossier">
             <span>{featuredExpert?.n || "Featured expert"}</span>
@@ -465,7 +445,7 @@ function Experts() {
 
         {expertsError && (
           <p className="experts-feed-note" role="status">
-            Live directory unavailable. Showing the locally available directory.
+            The approved experts directory is temporarily unavailable.
           </p>
         )}
         {expertsLoading ? (
@@ -474,20 +454,25 @@ function Experts() {
           </div>
         ) : filtered.length ? (
           <div className="experts-grid">
-            {filtered.map((expert) => {
-              const sourceIndex = experts.indexOf(expert);
-              return (
+            {filtered.map((expert) => (
                 <article className="expert-card" key={expert.id ?? expert.n}>
                   <button
                     className="expert-card-image"
                     onClick={() => setSelected(expert)}
                     aria-label={`View ${expert.n}'s profile`}
                   >
-                    <img
-                      src={expert.img || IMAGES[sourceIndex % IMAGES.length]}
-                      alt={expert.n}
-                      loading="lazy"
-                    />
+                    <span className="grid size-full place-items-center bg-muted font-display text-7xl text-primary/35">
+                      {expert.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
+                    </span>
+                    {expert.img && (
+                      <img
+                        src={expert.img}
+                        alt={expert.n}
+                        loading="lazy"
+                        className="absolute inset-0 size-full object-cover"
+                        onError={(event) => event.currentTarget.remove()}
+                      />
+                    )}
                     <span className="expert-card-category">{expert.c}</span>
                     <span className="expert-card-open">
                       <ArrowUpRight aria-hidden="true" />
@@ -507,8 +492,7 @@ function Experts() {
                     </button>
                   </div>
                 </article>
-              );
-            })}
+            ))}
           </div>
         ) : (
           <div className="experts-empty">
@@ -562,10 +546,17 @@ function Experts() {
               <X />
             </button>
             <div className="expert-panel-photo">
-              <img
-                src={selected.img || IMAGES[experts.indexOf(selected) % IMAGES.length]}
-                alt={selected.n}
-              />
+              <span className="grid size-full place-items-center bg-muted font-display text-8xl text-primary/35">
+                {selected.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
+              </span>
+              {selected.img && (
+                <img
+                  src={selected.img}
+                  alt={selected.n}
+                  className="absolute inset-0 size-full object-cover"
+                  onError={(event) => event.currentTarget.remove()}
+                />
+              )}
             </div>
             <div className="expert-panel-content">
               <p className="expert-card-verified">
@@ -586,39 +577,32 @@ function Experts() {
               <div className="expert-panel-socials" aria-label={`${selected.n}'s social links`}>
                 <button
                   type="button"
-                  onClick={() => downloadExpert(selected)}
+                  onClick={() => void downloadExpert(selected)}
                   aria-label={`Download ${selected.n}'s expert profile`}
                   title="Download profile"
                 >
                   <Download />
                 </button>
-                <a
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Instagram"
-                >
-                  <Instagram />
-                </a>
-                <a href="mailto:experts@emwa.org.et" aria-label="Email">
-                  <Mail />
-                </a>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="LinkedIn"
-                >
-                  <Linkedin />
-                </a>
-                <a
-                  href="https://facebook.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Facebook"
-                >
-                  <Facebook />
-                </a>
+                {selected.instagramUrl && (
+                  <a href={selected.instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram">
+                    <Instagram />
+                  </a>
+                )}
+                {selected.email && (
+                  <a href={`mailto:${selected.email}`} aria-label="Email">
+                    <Mail />
+                  </a>
+                )}
+                {selected.linkedinUrl && (
+                  <a href={selected.linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn">
+                    <Linkedin />
+                  </a>
+                )}
+                {selected.facebookUrl && (
+                  <a href={selected.facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook">
+                    <Facebook />
+                  </a>
+                )}
               </div>
             </div>
           </aside>
@@ -743,6 +727,33 @@ function Experts() {
                         minLength={5}
                         maxLength={40}
                         placeholder="+251 ..."
+                      />
+                    </label>
+                    <label>
+                      <span>LinkedIn profile</span>
+                      <input
+                        name="linkedinUrl"
+                        type="url"
+                        maxLength={2000}
+                        placeholder="https://linkedin.com/in/..."
+                      />
+                    </label>
+                    <label>
+                      <span>Instagram profile</span>
+                      <input
+                        name="instagramUrl"
+                        type="url"
+                        maxLength={2000}
+                        placeholder="https://instagram.com/..."
+                      />
+                    </label>
+                    <label className="expert-form-wide">
+                      <span>Facebook profile</span>
+                      <input
+                        name="facebookUrl"
+                        type="url"
+                        maxLength={2000}
+                        placeholder="https://facebook.com/..."
                       />
                     </label>
                     <label className="expert-form-wide">

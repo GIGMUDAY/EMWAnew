@@ -5481,6 +5481,7 @@ select option:disabled {
   width: 18px;
 }
 .expert-panel-photo {
+  position: relative;
   height: min(52svh, 520px);
   overflow: hidden;
 }
@@ -5881,6 +5882,8 @@ select option:disabled {
   background: #181818;
 }
 .experts-hero-portrait > img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;

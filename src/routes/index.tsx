@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { PageShell } from "@/components/page-shell";
 import YoutubeNewsFeed from "@/components/youtube-news-feed";
 import OurMandate from "@/components/our-mandate";
@@ -31,20 +31,6 @@ const LANDING_IMAGES = {
     src: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=1800&q=85",
     alt: "Confident African woman representing women working in media",
   },
-  experts: [
-    {
-      src: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=900&q=85",
-      alt: "Portrait of a woman media professional",
-    },
-    {
-      src: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=85",
-      alt: "Portrait of a woman digital media specialist",
-    },
-    {
-      src: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=85",
-      alt: "Portrait of a woman investigative journalist",
-    },
-  ],
 } as const;
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "https://emwa.mudaymarketing.com/api/v1";
@@ -71,26 +57,13 @@ const STATS = [
   { value: 25, suffix: "+", label: "Year Legacy", color: "" },
 ];
 
-const EXPERTS = [
-  {
-    name: "Soliyana Gebre",
-    field: "Broadcast Strategy",
-    region: "Addis Ababa",
-    image: LANDING_IMAGES.experts[0],
-  },
-  {
-    name: "Lidya Tarekegn",
-    field: "Digital Ethics",
-    region: "Bahir Dar",
-    image: LANDING_IMAGES.experts[1],
-  },
-  {
-    name: "Rahel Mesfin",
-    field: "Investigative Reporting",
-    region: "Hawassa",
-    image: LANDING_IMAGES.experts[2],
-  },
-];
+type HomeExpert = {
+  id: string;
+  name: string;
+  field: string;
+  region: string;
+  image?: string;
+};
 
 const NEWS = [
   {
@@ -121,6 +94,42 @@ function Home() {
   >("idle");
   const [newsletterMessage, setNewsletterMessage] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [experts, setExperts] = useState<HomeExpert[]>([]);
+  const [expertsLoading, setExpertsLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/public/experts`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Unable to load experts");
+        const payload = await response.json();
+        const apiOrigin = new URL(API_BASE).origin;
+        const rows = Array.isArray(payload?.data) ? payload.data : [];
+        setExperts(
+          rows.map((row: Record<string, unknown>) => {
+            const photo = String(row.profile_photo_url ?? "");
+            return {
+              id: String(row.id),
+              name: String(row.full_name ?? "EMWA expert"),
+              field: String(row.professional_title ?? row.primary_expertise ?? "Media expert"),
+              region: String(row.location ?? "Ethiopia"),
+              image: photo
+                ? `${apiOrigin}${new URL(photo, apiOrigin).pathname}`
+                : undefined,
+            };
+          }),
+        );
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setExperts([]);
+      } finally {
+        if (!controller.signal.aborted) setExpertsLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
 
   const subscribe = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -235,31 +244,72 @@ function Home() {
               to="/experts"
               className="label-mono border-b border-foreground pb-1 hover:text-primary hover:border-primary transition-all"
             >
-              View all 400+ experts →
+              {experts.length ? `View all ${experts.length} experts` : "Explore the directory"} →
             </Link>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 md:gap-12">
-            {EXPERTS.map((e) => (
-              <Link to="/experts" key={e.name} className="group cursor-pointer block no-underline">
-                <div className="aspect-[4/5] overflow-hidden mb-6 bg-muted">
-                  <img
-                    src={e.image.src}
-                    alt={`${e.name} — ${e.image.alt}`}
-                    loading="lazy"
-                    width={800}
-                    height={1000}
-                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
-                  />
+          {expertsLoading ? (
+            <div className="grid gap-8 md:grid-cols-3 md:gap-12" aria-label="Loading experts">
+              {[0, 1, 2].map((item) => (
+                <div key={item} className="animate-pulse">
+                  <div className="mb-6 aspect-[4/5] bg-muted" />
+                  <div className="h-8 w-2/3 bg-muted" />
+                  <div className="mt-3 h-3 w-1/2 bg-muted" />
                 </div>
-                <h3 className="font-display text-3xl group-hover:text-primary transition-colors">
-                  {e.name}
-                </h3>
-                <p className="label-mono text-primary mt-2">
-                  {e.field} / {e.region}
-                </p>
+              ))}
+            </div>
+          ) : experts.length ? (
+            <div className="grid gap-8 md:grid-cols-3 md:gap-12">
+              {experts.slice(0, 3).map((expert) => (
+                <Link
+                  to="/experts"
+                  key={expert.id}
+                  className="group block cursor-pointer no-underline"
+                >
+                  <div className="relative mb-6 grid aspect-[4/5] overflow-hidden bg-muted">
+                    <span className="m-auto font-display text-7xl text-primary/35">
+                      {expert.name
+                        .split(" ")
+                        .slice(0, 2)
+                        .map((part) => part[0])
+                        .join("")}
+                    </span>
+                    {expert.image && (
+                      <img
+                        src={expert.image}
+                        alt={expert.name}
+                        loading="lazy"
+                        width={800}
+                        height={1000}
+                        className="absolute inset-0 h-full w-full object-cover transition-all duration-700 group-hover:scale-105"
+                        onError={(event) => event.currentTarget.remove()}
+                      />
+                    )}
+                  </div>
+                  <h3 className="font-display text-3xl transition-colors group-hover:text-primary">
+                    {expert.name}
+                  </h3>
+                  <p className="label-mono mt-2 text-primary">
+                    {expert.field} / {expert.region}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="border border-border bg-muted/30 px-8 py-14 text-center md:px-14">
+              <p className="label-mono text-primary">The directory is growing</p>
+              <h3 className="mt-4 font-display text-4xl">Be among the voices featured here.</h3>
+              <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+                Approved women experts will appear here automatically. Submit your professional
+                profile to join Ethiopia&apos;s trusted media expert directory.
+              </p>
+              <Link
+                to="/experts"
+                className="mt-8 inline-flex border border-foreground px-6 py-3 label-mono transition-colors hover:border-primary hover:bg-primary hover:text-white"
+              >
+                Join the expert directory <ArrowUpRight className="ml-2 size-4" />
               </Link>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
