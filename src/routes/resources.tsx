@@ -84,7 +84,7 @@ function Resources() {
       </div>
       {featured && <article className="resources-featured">
         <div className="resources-featured-cover"><span>EMWA<br />Resource</span><strong>{featured.year}</strong><i aria-hidden="true">01</i></div>
-        <div className="resources-featured-copy"><p>Featured publication</p><h2>{featured.title}</h2><p>{featured.description}</p><div><span>{featured.format}</span><span>Open access</span><span>{featured.size}</span></div><a href={featured.fileUrl} target="_blank" rel="noreferrer" download>Download resource <Download /></a></div>
+        <div className="resources-featured-copy"><p>Featured publication</p><h2>{featured.title}</h2><p>{featured.description}</p><div><span>{featured.format}</span><span>Open access</span><span>{featured.size}</span></div><a href={`${API_BASE}/public/resources/${featured.id}/download`} download>Download resource <Download /></a></div>
       </article>}
     </section>
 
@@ -98,7 +98,7 @@ function Resources() {
       {loading ? <Empty title="Loading resources..." /> : loadError ? <Empty title="Resources unavailable." message={loadError} /> : filtered.length ?
         <div className="resources-grid" aria-live="polite">{filtered.map((document, index) => <article className={`resource-card resource-card--${document.accent}`} key={document.id}>
           <div className="resource-card-cover"><span>Publication</span><strong>{document.year}</strong><i aria-hidden="true">{String(index + 1).padStart(2, "0")}</i><small>EMWA Resource Center</small></div>
-          <div className="resource-card-content"><div className="resource-card-meta"><span>{document.format} / {document.size}</span><span>Open access</span></div><h3>{document.title}</h3><p>{document.description}</p><div className="resource-card-actions"><a href={document.fileUrl} target="_blank" rel="noreferrer" download><Download /> Download</a><a href={document.fileUrl} target="_blank" rel="noreferrer" aria-label={`View ${document.title}`}><ArrowUpRight /></a></div></div>
+          <div className="resource-card-content"><div className="resource-card-meta"><span>{document.format} / {document.size}</span><span>Open access</span></div><h3>{document.title}</h3><p>{document.description}</p><div className="resource-card-actions"><a href={`${API_BASE}/public/resources/${document.id}/download`} download><Download /> Download</a><a href={document.fileUrl} target="_blank" rel="noreferrer" aria-label={`View ${document.title}`}><ArrowUpRight /></a></div></div>
         </article>)}</div> :
         <div className="resources-empty"><BookOpen /><h3>No resources found.</h3><p>Try another search term.</p><button onClick={() => setQuery("")}>Reset library</button></div>}
     </section>

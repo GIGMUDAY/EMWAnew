@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import path from 'node:path';
 import { z } from 'zod';
+import { env } from '../config/env.js';
 import { pool, tx } from '../db/index.js';
 import { asyncHandler, listResponse, pageSchema } from '../utils/http.js';
 import { validate } from '../middleware/core.js';
@@ -32,6 +34,28 @@ publicResources.get(
     );
     if (!rows[0]) throw notFound('Resource');
     response.json({ success: true, data: rows[0] });
+  }),
+);
+
+publicResources.get(
+  '/resources/:id/download',
+  validate(id, 'params'),
+  asyncHandler(async (request, response) => {
+    const { rows } = await pool.query(
+      `SELECT file_url,original_filename
+       FROM resources WHERE id=$1 AND is_published=true`,
+      [request.params.id],
+    );
+    if (!rows[0]) throw notFound('Resource');
+
+    const resource = rows[0] as { file_url: string; original_filename: string };
+    const localFile = path.resolve(env.UPLOAD_DIR, path.basename(resource.file_url));
+    await new Promise<void>((resolve, reject) => {
+      response.download(localFile, resource.original_filename, (error) => {
+        if (error) reject(error);
+        else resolve();
+      });
+    });
   }),
 );
 
