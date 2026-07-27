@@ -211,6 +211,35 @@ const uploadUrl = (value?: string) => {
   }
 };
 
+const optimizeEventImage = async (data: FormData) => {
+  const image = data.get("featuredImage");
+  if (!(image instanceof File) || !image.size) return;
+  if (!["image/jpeg", "image/png"].includes(image.type)) {
+    throw new Error("Event image must be a JPG or PNG file.");
+  }
+  if (image.size <= 2 * 1024 * 1024) return;
+
+  const bitmap = await createImageBitmap(image);
+  const scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height));
+  const canvas = window.document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) {
+    bitmap.close();
+    throw new Error("Unable to prepare the event image.");
+  }
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", 0.82),
+  );
+  if (!blob) throw new Error("Unable to compress the event image.");
+  const filename = `${image.name.replace(/\.[^.]+$/, "") || "event-image"}.jpg`;
+  data.set("featuredImage", new File([blob], filename, { type: "image/jpeg" }));
+};
+
 function AdminPage() {
   const [session, setSession] = useState<AdminSession | null>(null);
 
@@ -1910,6 +1939,7 @@ function EventsPanel({
     const form = event.currentTarget;
     const data = new FormData(form);
     try {
+      await optimizeEventImage(data);
       if (demo) {
         const now = new Date().toISOString();
         const next: AdminEvent = {
@@ -2077,8 +2107,20 @@ function EventsPanel({
             rows.map((row) => (
               <article
                 key={row.id}
-                className="rounded-2xl border border-black/10 bg-[#fbf9f4] p-5 shadow-sm"
+                className="overflow-hidden rounded-2xl border border-black/10 bg-[#fbf9f4] p-5 shadow-sm"
               >
+                {row.featured_image_url && (
+                  <div className="-mx-5 -mt-5 mb-5 aspect-[16/7] overflow-hidden border-b border-black/10 bg-black/5">
+                    <img
+                      src={uploadUrl(row.featured_image_url)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={(event) => {
+                        event.currentTarget.parentElement?.remove();
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="flex flex-wrap justify-between gap-4">
                   <div>
                     <p className="label-mono text-[#8c2d3c]">{row.event_type}</p>

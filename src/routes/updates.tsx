@@ -35,10 +35,15 @@ type PublicEvent = {
   month: string;
   year?: string;
   title: string;
+  description: string;
   type: string;
   loc: string;
   time: string;
+  startsAt: string;
+  endsAt?: string;
+  img: string;
   full: boolean;
+  capacityStatus: string;
   registrationUrl?: string;
 };
 const API_BASE = import.meta.env.VITE_API_URL ?? "https://emwa.mudaymarketing.com/api/v1";
@@ -206,6 +211,7 @@ function Updates() {
   const [tab, setTab] = useState<(typeof TABS)[number]>("All");
   const [query, setQuery] = useState("");
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<PublicEvent | null>(null);
   const lead = stories.find((story) => story.featured) ?? stories[0];
   const filtered = useMemo(
     () =>
@@ -268,10 +274,15 @@ function Updates() {
                 month: starts.toLocaleString("en", { month: "short" }).toUpperCase(),
                 year: String(starts.getFullYear()),
                 title: String(row.title),
+                description: String(row.description),
                 type: String(row.event_type),
                 loc: String(row.location),
                 time: starts.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" }),
+                startsAt: starts.toISOString(),
+                endsAt: row.ends_at ? new Date(String(row.ends_at)).toISOString() : undefined,
+                img: resolveMediaUrl(row.featured_image_url, PHOTOS.conference),
                 full: row.capacity_status !== "AVAILABLE",
+                capacityStatus: String(row.capacity_status),
                 registrationUrl: row.registration_url ? String(row.registration_url) : undefined,
               };
             }),
@@ -306,16 +317,19 @@ function Updates() {
   };
 
   useEffect(() => {
-    document.body.style.overflow = selectedStory ? "hidden" : "";
+    document.body.style.overflow = selectedStory || selectedEvent ? "hidden" : "";
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedStory(null);
+      if (event.key === "Escape") {
+        setSelectedStory(null);
+        setSelectedEvent(null);
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = "";
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [selectedStory]);
+  }, [selectedStory, selectedEvent]);
 
   return (
     <PageShell>
@@ -481,18 +495,10 @@ function Updates() {
                   {event.time}
                 </span>
               </div>
-              {event.full ? (
-                <b>At capacity</b>
-              ) : (
-                <button
-                  onClick={() =>
-                    event.registrationUrl &&
-                    window.open(event.registrationUrl, "_blank", "noopener,noreferrer")
-                  }
-                >
-                  View details <ArrowUpRight />
-                </button>
-              )}
+              {event.full && <b>At capacity</b>}
+              <button onClick={() => setSelectedEvent(event)}>
+                View details <ArrowUpRight />
+              </button>
             </article>
           ))}
         </div>
@@ -556,6 +562,63 @@ function Updates() {
                   <p key={paragraph}>{paragraph}</p>
                 ))}
               </div>
+            </div>
+          </article>
+        </div>
+      )}
+      {selectedEvent && (
+        <div className="updates-story-backdrop" onMouseDown={() => setSelectedEvent(null)}>
+          <article
+            className="updates-story-modal updates-event-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="updates-event-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="updates-story-close"
+              onClick={() => setSelectedEvent(null)}
+              aria-label="Close event details"
+            >
+              <X />
+            </button>
+            <img
+              src={selectedEvent.img}
+              alt=""
+              className="updates-story-image"
+              onError={useNewsImageFallback}
+            />
+            <div className="updates-story-content">
+              <div className="updates-story-meta">
+                <span>{selectedEvent.type}</span>
+                <time>
+                  {new Intl.DateTimeFormat("en-GB", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  }).format(new Date(selectedEvent.startsAt))}
+                </time>
+                <small>{selectedEvent.full ? "At capacity" : "Registration available"}</small>
+              </div>
+              <h2 id="updates-event-title">{selectedEvent.title}</h2>
+              <p className="updates-story-intro">{selectedEvent.description}</p>
+              <div className="updates-event-facts">
+                <div><MapPin /><span>Location<strong>{selectedEvent.loc}</strong></span></div>
+                <div><Clock /><span>Starts<strong>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedEvent.startsAt))}</strong></span></div>
+                {selectedEvent.endsAt && (
+                  <div><Calendar /><span>Ends<strong>{new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedEvent.endsAt))}</strong></span></div>
+                )}
+              </div>
+              {!selectedEvent.full && selectedEvent.registrationUrl && (
+                <a
+                  className="updates-event-register"
+                  href={selectedEvent.registrationUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Register for this event <ArrowUpRight />
+                </a>
+              )}
             </div>
           </article>
         </div>
