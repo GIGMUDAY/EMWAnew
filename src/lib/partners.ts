@@ -12,11 +12,6 @@ export const EMWA_PARTNERS: EmwaPartner[] = [
     logo: "/partnership/photo_2026-07-26_10-50-34.jpg",
   },
   {
-    name: "Ethiopian Media Women Association",
-    focus: "Women in Ethiopian media",
-    logo: "/partnership/photo_2026-07-26_10-50-49.jpg",
-  },
-  {
     name: "Fojo Media Institute",
     focus: "Linnaeus University",
     logo: "/partnership/photo_2026-07-26_10-50-57.jpg",

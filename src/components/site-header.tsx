@@ -1,17 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Heart, Menu, Moon, Sun, X } from "lucide-react";
+import { Globe2, Heart, Menu, Moon, Sun, X } from "lucide-react";
 import logo from "@/assets/emwa-logo-new.png";
+import { useLanguage } from "@/lib/language-context";
 
 const NAV = [
-  { to: "/", label: "Home" },
-  { to: "/about", label: "About" },
-  { to: "/programs", label: "Programs" },
-  { to: "/experts", label: "Experts" },
-  { to: "/updates", label: "Updates" },
-  { to: "/resources", label: "Resources" },
-  { to: "/partners", label: "Partners" },
-  { to: "/contact", label: "Contact" },
+  { to: "/", label: "Home", am: "መነሻ" },
+  { to: "/about", label: "About", am: "ስለ እኛ" },
+  { to: "/programs", label: "Programs", am: "ፕሮግራሞች" },
+  { to: "/experts", label: "Experts", am: "ባለሙያዎች" },
+  { to: "/updates", label: "Updates", am: "ወቅታዊ መረጃ" },
+  { to: "/resources", label: "Resources", am: "ምንጮች" },
+  { to: "/partners", label: "Partners", am: "አጋሮች" },
+  { to: "/contact", label: "Contact", am: "ያግኙን" },
 ] as const;
 
 function ThemeToggle() {
@@ -38,7 +39,7 @@ function ThemeToggle() {
       onClick={toggle}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       title={dark ? "Light mode" : "Dark mode"}
-      className="grid size-10 place-items-center border border-border transition-colors hover:border-primary hover:text-primary"
+      className="grid size-10 shrink-0 place-items-center border border-border transition-colors hover:border-primary hover:text-primary"
     >
       {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </button>
@@ -47,11 +48,12 @@ function ThemeToggle() {
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  const { language, setLanguage, t } = useLanguage();
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 supports-[backdrop-filter]:bg-background/85 backdrop-blur-xl border-b border-border shadow-[0_1px_0_rgba(0,0,0,0.02)]">
       <div className="site-container min-h-16 py-2 flex justify-between items-center gap-4">
-        <Link to="/" className="flex items-center gap-3 group">
+        <Link to="/" className="flex shrink-0 items-center gap-3 group">
           <img
             src={logo}
             alt="EMWA logo"
@@ -77,30 +79,50 @@ export function SiteHeader() {
               activeProps={{ className: "text-primary after:scale-x-100" }}
               activeOptions={{ exact: item.to === "/" }}
             >
-              {item.label}
+              {language === "am" ? item.am : item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <div className="language-switcher" role="group" aria-label={t("Choose language", "ቋንቋ ይምረጡ")}>
+            <Globe2 aria-hidden="true" />
+            <button
+              type="button"
+              className={language === "en" ? "is-active" : ""}
+              onClick={() => setLanguage("en")}
+              aria-pressed={language === "en"}
+            >
+              EN
+            </button>
+            <span aria-hidden="true">/</span>
+            <button
+              type="button"
+              className={language === "am" ? "is-active" : ""}
+              onClick={() => setLanguage("am")}
+              aria-pressed={language === "am"}
+            >
+              አማ
+            </button>
+          </div>
           <ThemeToggle />
           <Link
             to="/contact"
             hash="donate"
-            className="group hidden min-h-10 items-center gap-2 border border-[#dca332] bg-[#e5a933] px-4 label-mono !text-[8px] text-[#171513] shadow-[0_6px_18px_rgba(229,169,51,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f0b83f] hover:shadow-[0_10px_24px_rgba(229,169,51,.28)] sm:inline-flex"
+            className="group hidden h-10 shrink-0 items-center gap-2 whitespace-nowrap border border-[#dca332] bg-[#e5a933] px-4 label-mono !text-[8px] text-[#171513] shadow-[0_6px_18px_rgba(229,169,51,.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f0b83f] hover:shadow-[0_10px_24px_rgba(229,169,51,.28)] sm:inline-flex"
           >
             <Heart className="size-3.5 transition-transform duration-300 group-hover:scale-110 group-hover:fill-current" />
-            Donate
+            {t("Donate", "ይደግፉ")}
           </Link>
           <Link
             to="/membership"
-            className="hidden md:inline-block bg-foreground text-background px-5 py-2 label-mono transition-all duration-300 hover:bg-primary hover:-translate-y-0.5 hover:shadow-lg"
+            className="hidden h-10 shrink-0 items-center whitespace-nowrap bg-foreground px-5 label-mono text-background transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary hover:shadow-lg md:inline-flex"
           >
-            Join Association
+            {t("Join Association", "ማህበሩን ይቀላቀሉ")}
           </Link>
           <button
             onClick={() => setOpen(!open)}
-            className="lg:hidden size-10 grid place-items-center border border-border transition-colors hover:border-primary hover:text-primary"
+            className="lg:hidden size-10 grid shrink-0 place-items-center border border-border transition-colors hover:border-primary hover:text-primary"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             aria-controls="mobile-navigation"
@@ -127,7 +149,7 @@ export function SiteHeader() {
                 className="label-mono py-3 border-b border-border/60 hover:pl-3 hover:text-primary transition-all duration-300"
                 activeProps={{ className: "text-primary pl-3" }}
               >
-                {item.label}
+                {language === "am" ? item.am : item.label}
               </Link>
             ))}
             <Link
@@ -136,14 +158,14 @@ export function SiteHeader() {
               onClick={() => setOpen(false)}
               className="mt-2 flex items-center justify-center gap-2 bg-[#e5a933] px-5 py-3 label-mono text-[#171513]"
             >
-              <Heart className="size-3.5" /> Donate
+              <Heart className="size-3.5" /> {t("Donate", "ይደግፉ")}
             </Link>
             <Link
               to="/membership"
               onClick={() => setOpen(false)}
               className="bg-foreground text-background px-5 py-3 label-mono text-center"
             >
-              Join Association
+              {t("Join Association", "ማህበሩን ይቀላቀሉ")}
             </Link>
           </nav>
         </div>

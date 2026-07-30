@@ -5,11 +5,11 @@ import {
   ArrowUpRight,
   Check,
   Facebook,
-  Instagram,
   Linkedin,
+  Music2,
   Send,
+  Twitter,
   X,
-  Youtube,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { API_BASE } from "@/lib/admin-api";
@@ -26,10 +26,18 @@ export const Route = createFileRoute("/contact")({
 });
 
 const SOCIALS = [
-  { label: "Facebook", href: "https://www.facebook.com/", icon: Facebook },
-  { label: "Instagram", href: "https://www.instagram.com/", icon: Instagram },
-  { label: "LinkedIn", href: "https://www.linkedin.com/", icon: Linkedin },
-  { label: "YouTube", href: "https://www.youtube.com/", icon: Youtube },
+  { label: "TikTok", href: "https://www.tiktok.com/@emwa302", icon: Music2 },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/ethiopian-media-women-association/",
+    icon: Linkedin,
+  },
+  { label: "Twitter", href: "https://x.com/EthMediaWomen", icon: Twitter },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/Ethiopianmediawomen",
+    icon: Facebook,
+  },
 ];
 
 function Contact() {
@@ -177,10 +185,10 @@ function Contact() {
           <div className="contact3-map-caption">
             <div>
               <p className="contact3-eyebrow">Our location</p>
-              <strong>Kirkos, Addis Ababa</strong>
+              <strong>Addis Ababa, Arada Sub-city, near Rad Mekonenne Bridge</strong>
             </div>
             <a
-              href="https://www.openstreetmap.org/?mlat=9.015&mlon=38.76#map=15/9.015/38.76"
+              href="https://www.openstreetmap.org/search?query=Rad%20Mekonenne%20Bridge%2C%20Arada%2C%20Addis%20Ababa"
               target="_blank"
               rel="noreferrer"
             >

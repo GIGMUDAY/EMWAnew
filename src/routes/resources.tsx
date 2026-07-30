@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight, BookOpen, Download, FileCheck2, Search } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
@@ -104,7 +104,7 @@ function Resources() {
     </section>
 
     <section className="resources-guidance"><div><p className="resources-eyebrow">Using our resources</p><h2>Use them. Cite them.<br />Put them to work.</h2></div><div className="resources-guidance-list"><article><span>01</span><div><h3>Open access</h3><p>Resources are free for professional, educational, and advocacy use.</p></div></article><article><span>02</span><div><h3>Credit the source</h3><p>Use the publication title, EMWA, and publication year when citing.</p></div></article><article><span>03</span><div><h3>Need another format?</h3><p>Contact our team for accessible or print-ready versions.</p></div></article></div></section>
-    <section className="resources-request"><div><p className="resources-eyebrow">Can&apos;t find it?</p><h2>Tell us what would<br />help your newsroom.</h2></div><button>Request a resource <ArrowUpRight /></button></section>
+    <section className="resources-request"><div><p className="resources-eyebrow">Can&apos;t find it?</p><h2>Tell us what would<br />help your newsroom.</h2></div><Link to="/contact">Request a resource <ArrowUpRight /></Link></section>
   </PageShell>;
 }
 

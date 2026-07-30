@@ -6,18 +6,18 @@ import { PageShell } from "@/components/page-shell";
 export const Route = createFileRoute("/updates")({
   head: () => ({
     meta: [
-      { title: "News & Events — EMWA" },
+      { title: "Updates & Events — EMWA" },
       {
         name: "description",
-        content: "EMWA news, analysis, press releases, events, and opportunities.",
+        content: "EMWA updates, analysis, press releases, events, and opportunities.",
       },
-      { property: "og:title", content: "News & Events — EMWA" },
+      { property: "og:title", content: "Updates & Events — EMWA" },
     ],
   }),
   component: Updates,
 });
 
-const TABS = ["All", "News", "Press", "Articles", "Photos", "Video"] as const;
+const TABS = ["All", "Updates", "Press", "Articles", "Photos", "Video"] as const;
 type Story = {
   d: string;
   t: (typeof TABS)[number];
@@ -83,7 +83,7 @@ const PHOTOS = {
 const FALLBACK_STORIES: Story[] = [
   {
     d: "12 Nov 2026",
-    t: "News",
+    t: "Updates",
     h: "EMWA submits gender-equity brief to Parliament",
     e: "A policy agenda for measurable representation, safer newsrooms, and transparent leadership pathways across public broadcasting.",
     img: PHOTOS.newsroom,
@@ -99,7 +99,7 @@ const FALLBACK_STORIES: Story[] = [
   },
   {
     d: "27 Oct 2026",
-    t: "News",
+    t: "Updates",
     h: "Digital safety support reaches two more regions",
     e: "Rapid-response legal and technical assistance expands to Amhara and Sidama.",
     img: PHOTOS.workshop,
@@ -237,7 +237,7 @@ function Updates() {
         if (updatesResult.status === "fulfilled" && updatesResult.value.ok) {
           const updatesPayload = await updatesResult.value.json();
           const labels: Record<string, Story["t"]> = {
-            NEWS: "News",
+            NEWS: "Updates",
             PRESS: "Press",
             ARTICLE: "Articles",
             PHOTO: "Photos",
@@ -250,7 +250,7 @@ function Updates() {
                 month: "short",
                 year: "numeric",
               }).format(new Date(String(row.published_at ?? row.created_at))),
-              t: labels[String(row.content_type)] ?? "News",
+              t: labels[String(row.content_type)] ?? "Updates",
               h: String(row.title),
               e: String(row.excerpt),
               img: resolveMediaUrl(row.featured_image_url, PHOTOS.newsroom),
@@ -335,7 +335,7 @@ function Updates() {
     <PageShell>
       <section className="updates2-hero">
         <div className="updates2-hero-intro">
-          <p className="updates2-eyebrow">News, ideas &amp; opportunities</p>
+          <p className="updates2-eyebrow">Updates, ideas &amp; opportunities</p>
           <h1>
             What&apos;s moving
             <br />

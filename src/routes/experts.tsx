@@ -469,7 +469,7 @@ function Experts() {
                         src={expert.img}
                         alt={expert.n}
                         loading="lazy"
-                        className="absolute inset-0 size-full object-cover"
+                        className="absolute inset-0 size-full object-contain"
                         onError={(event) => event.currentTarget.remove()}
                       />
                     )}
@@ -553,7 +553,7 @@ function Experts() {
                 <img
                   src={selected.img}
                   alt={selected.n}
-                  className="absolute inset-0 size-full object-cover"
+                  className="absolute inset-0 size-full object-contain"
                   onError={(event) => event.currentTarget.remove()}
                 />
               )}

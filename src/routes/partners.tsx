@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, Mail } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { EMWA_PARTNERS, type EmwaPartner } from "@/lib/partners";
 
@@ -63,7 +63,7 @@ function Partners() {
         <blockquote>“The strongest outcome was not one campaign. It was a newsroom culture where more women can lead, commission, and make decisions.”<cite><strong>Head of News</strong> / Ethiopian Broadcasting Corporation</cite></blockquote>
       </section>
 
-      <section className="partners2-cta"><p className="partners-eyebrow">Build something durable</p><h2>Let&apos;s move the work<br /><em>forward—together.</em></h2><a href="mailto:partnerships@emwa.org.et"><Mail /> Start a partnership conversation <ArrowUpRight /></a></section>
+      <section className="partners2-cta"><p className="partners-eyebrow">Build something durable</p><h2>Let&apos;s move the work<br /><em>forward—together.</em></h2><Link to="/contact">Start Partnership <ArrowUpRight /></Link></section>
     </PageShell>
   );
 }

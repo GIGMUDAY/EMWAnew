@@ -1,13 +1,29 @@
 import { Link } from "@tanstack/react-router";
-import { Linkedin, Twitter, Facebook, Youtube, Send } from "lucide-react";
+import { Facebook, Linkedin, Music2, Twitter } from "lucide-react";
 import logo from "@/assets/emwa-logo-new.png";
+import { useLanguage } from "@/lib/language-context";
 
 const SOCIALS = [
-  { label: "LinkedIn", href: "#", Icon: Linkedin },
-  { label: "Twitter", href: "#", Icon: Twitter },
-  { label: "Facebook", href: "#", Icon: Facebook },
-  { label: "Telegram", href: "#", Icon: Send },
-  { label: "YouTube", href: "#", Icon: Youtube },
+  {
+    label: "TikTok",
+    href: "https://www.tiktok.com/@emwa302",
+    Icon: Music2,
+  },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/ethiopian-media-women-association/",
+    Icon: Linkedin,
+  },
+  {
+    label: "Twitter",
+    href: "https://x.com/EthMediaWomen",
+    Icon: Twitter,
+  },
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/Ethiopianmediawomen",
+    Icon: Facebook,
+  },
 ];
 
 const NAV_ORG = [
@@ -24,6 +40,8 @@ const NAV_DISCOVER = [
 ];
 
 export function SiteFooter() {
+  const { t } = useLanguage();
+
   return (
     <footer className="sf-footer" role="contentinfo">
       {/* Decorative ghost word */}
@@ -47,13 +65,21 @@ export function SiteFooter() {
               </span>
             </Link>
             <p className="sf-tagline">
-              The Ethiopian Media Women Association is a legally registered professional
-              organization dedicated to ensuring gender equality in and through media across
-              Ethiopia since 1998.
+              {t(
+                "The Ethiopian Media Women Association is a legally registered professional organization dedicated to ensuring gender equality in and through media across Ethiopia since 1998.",
+                "የኢትዮጵያ ሚዲያ ሴቶች ማህበር ከ1998 ጀምሮ በኢትዮጵያ ሚዲያ ውስጥና በሚዲያ አማካይነት የፆታ እኩልነትን ለማረጋገጥ የሚሰራ በህጋዊነት የተመዘገበ የሙያ ማህበር ነው።",
+              )}
             </p>
             <div className="sf-socials">
               {SOCIALS.map(({ label, href, Icon }) => (
-                <a key={label} href={href} className="sf-social-btn" aria-label={label}>
+                <a
+                  key={label}
+                  href={href}
+                  className="sf-social-btn"
+                  aria-label={label}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   <Icon className="sf-social-icon" />
                 </a>
               ))}
@@ -62,12 +88,17 @@ export function SiteFooter() {
 
           {/* Org links */}
           <div className="sf-col">
-            <p className="sf-col-heading">Organization</p>
+            <p className="sf-col-heading">{t("Organization", "ድርጅቱ")}</p>
             <ul className="sf-col-list">
               {NAV_ORG.map((l) => (
                 <li key={l.to}>
                   <Link to={l.to} className="sf-link">
-                    {l.label}
+                    {t(l.label, {
+                      About: "ስለ እኛ",
+                      Programs: "ፕሮግራሞች",
+                      Membership: "አባልነት",
+                      Partners: "አጋሮች",
+                    }[l.label] ?? l.label)}
                   </Link>
                 </li>
               ))}
@@ -76,12 +107,16 @@ export function SiteFooter() {
 
           {/* Discover links */}
           <div className="sf-col">
-            <p className="sf-col-heading">Discover</p>
+            <p className="sf-col-heading">{t("Discover", "ያስሱ")}</p>
             <ul className="sf-col-list">
               {NAV_DISCOVER.map((l) => (
                 <li key={l.to}>
                   <Link to={l.to} className="sf-link">
-                    {l.label}
+                    {t(l.label, {
+                      "Experts Directory": "የባለሙያዎች ማውጫ",
+                      Updates: "ወቅታዊ መረጃ",
+                      "Resource Center": "የመረጃ ማዕከል",
+                    }[l.label] ?? l.label)}
                   </Link>
                 </li>
               ))}
@@ -90,10 +125,10 @@ export function SiteFooter() {
 
           {/* Contact */}
           <div className="sf-col">
-            <p className="sf-col-heading">Contact</p>
+            <p className="sf-col-heading">{t("Contact", "ያግኙን")}</p>
             <address className="sf-address">
-              <p>Kirkos Sub-city, Woreda 08</p>
-              <p>Addis Ababa, Ethiopia</p>
+              <p>{t("Addis Ababa, Arada Sub-city", "አዲስ አበባ፣ አራዳ ክፍለ ከተማ")}</p>
+              <p>{t("Near Rad Mekonenne Bridge", "ራድ መኮንን ድልድይ አቅራቢያ")}</p>
               <p className="sf-address-gap">
                 <a href="mailto:info@emwa.org.et" className="sf-link">
                   info@emwa.org.et

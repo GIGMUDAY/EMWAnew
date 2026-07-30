@@ -9,6 +9,7 @@ import VoicesSlider from "@/components/voices-slider";
 import StrategicAlliances from "@/components/strategic-alliances";
 import InspirationalQuotes from "@/components/inspirational-quotes";
 import { CountUp } from "@/components/count-up";
+import { useLanguage } from "@/lib/language-context";
 import {
   ArrowUpRight,
   ArrowDown,
@@ -36,14 +37,25 @@ const LANDING_IMAGES = {
 const API_BASE = import.meta.env.VITE_API_URL ?? "https://emwa.mudaymarketing.com/api/v1";
 
 const FAQS = [
-  ["What is EMWA?", "A non-profit association empowering women in and through the media."],
-  ["Who can become a member?", "Women journalists, media professionals, students, and eligible supporters under EMWA membership categories."],
-  ["What services does EMWA provide?", "Training, mentoring, advocacy, networking, research, and professional development."],
-  ["How do I join?", "Complete the membership application form through the website or contact the EMWA office."],
-  ["Does EMWA provide training?", "Yes, through workshops, mentoring, coaching, and exchange programs."],
-  ["Can organizations partner with EMWA?", "Yes. EMWA collaborates with media organizations, CSOs, government, academia, and development partners."],
-  ["How can I support EMWA?", "Become a member, volunteer, partner, or contribute resources and expertise."],
-  ["Where is EMWA located?", "Addis Ababa, Ethiopia."],
+  [
+    "Who are members of EMWA?",
+    <>A woman media practitioner with at least one year of experience in media and communication is eligible to become a Full Member of the Association. Interested applicants must complete the <Link to="/membership" hash="apply">Registration Form</Link> to express their intent. Upon approval by EMWA, the applicant is required to pay the membership fee, a formal commitment that signifies active participation and support for the Association&apos;s mission.</>,
+  ],
+  [
+    "Can men join EMWA?",
+    <>Yes. Men may join as Associate Members. They must complete the <Link to="/membership" hash="apply">Registration Form</Link> to apply. Once EMWA reviews and approves the application, payment of the membership fee is required.</>,
+  ],
+  ["Does EMWA have branch offices?", "No. EMWA operates through elected members organized under committees, who serve as the link between members and the Association. Once committee members are elected, they serve for at least two consecutive years."],
+  ["What is EMWA's structure?", "The General Assembly is the highest decision-making body, convening annually. It elects a seven-member Executive Board, composed exclusively of women. The Executive Board serves a minimum term of two consecutive years."],
+  ["Can men be employed at EMWA?", "Yes. Except for the Executive Board and the Executive Directress, all other positions are open to both men and women."],
+] as const;
+
+const AMHARIC_FAQS = [
+  ["የEMWA አባላት እነማን ናቸው?", "በሚዲያና ኮሙኒኬሽን ሙያ ቢያንስ የአንድ ዓመት ልምድ ያላት ሴት የማህበሩ ሙሉ አባል ለመሆን ብቁ ናት። አመልካቾች የምዝገባ ቅጹን መሙላት አለባቸው። ማመልከቻው በEMWA ከጸደቀ በኋላ የአባልነት ክፍያ ይፈጸማል።"],
+  ["ወንዶች EMWAን መቀላቀል ይችላሉ?", "አዎ። ወንዶች ተባባሪ አባላት ሆነው መቀላቀል ይችላሉ። የምዝገባ ቅጹን ሞልተው ካመለከቱና በEMWA ከጸደቀ በኋላ የአባልነት ክፍያ ይፈጽማሉ።"],
+  ["EMWA ቅርንጫፍ ጽሕፈት ቤቶች አሉት?", "የሉትም። EMWA በኮሚቴዎች ሥር በተደራጁ በተመረጡ አባላት አማካይነት ይሠራል። እነዚህ አባላት በአባላትና በማህበሩ መካከል ድልድይ ሆነው ቢያንስ ለሁለት ተከታታይ ዓመታት ያገለግላሉ።"],
+  ["የEMWA መዋቅር ምንድን ነው?", "በየዓመቱ የሚሰበሰበው ጠቅላላ ጉባኤ የማህበሩ ከፍተኛው ውሳኔ ሰጪ አካል ነው። ጉባኤው ሰባት ሴቶችን ያካተተ ሥራ አስፈጻሚ ቦርድ ይመርጣል። ቦርዱ ቢያንስ ለሁለት ተከታታይ ዓመታት ያገለግላል።"],
+  ["ወንዶች በEMWA ተቀጥረው መሥራት ይችላሉ?", "አዎ። ከሥራ አስፈጻሚ ቦርድና ከሥራ አስፈጻሚ ዳይሬክተር ሹመት በስተቀር ሌሎች የሥራ መደቦች ለሴቶችና ለወንዶች ክፍት ናቸው።"],
 ] as const;
 
 export const Route = createFileRoute("/")({
@@ -89,6 +101,7 @@ const NEWS = [
 ];
 
 function Home() {
+  const { language, t } = useLanguage();
   const [newsletterStatus, setNewsletterStatus] = useState<
     "idle" | "submitting" | "success" | "error"
   >("idle");
@@ -173,34 +186,34 @@ function Home() {
           />
         </div>
         <div className="md:w-5/12 flex flex-col justify-center px-5 py-14 sm:px-8 md:p-12 lg:p-16 xl:p-20 order-1 md:order-2">
-          <p className="label-mono text-primary mb-6 animate-reveal">Est. 1998 · Addis Ababa</p>
+          <p className="label-mono text-primary mb-6 animate-reveal">{t("Est. 1998 · Addis Ababa", "ተመሠረተ 1998 · አዲስ አበባ")}</p>
           <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl leading-[0.88] tracking-tighter mb-7 md:mb-8 text-balance animate-reveal">
-            The Voice
-            <br />
-            of Ethiopia's
-            <br />
-            <span className="text-secondary">Vanguard</span>
+            {t("The Voice", "የኢትዮጵያ")}<br />
+            {t("of Ethiopia's", "ፈር ቀዳጅ")}<br />
+            <span className="text-secondary">{t("Vanguard", "የሴቶች ድምፅ")}</span>
           </h1>
           <p className="text-lg leading-snug max-w-md text-muted-foreground animate-reveal">
-            Empowering Ethiopian women in media through strategic advocacy, professional
-            development, and a collective roar that echoes across the Horn of Africa.
+            {t(
+              "Empowering Ethiopian women in media through strategic advocacy, professional development, and a collective roar that echoes across the Horn of Africa.",
+              "በስትራቴጂያዊ ቅስቀሳ፣ በሙያ ማበልጸግና በጋራ ድምፅ በሚዲያ ውስጥ የሚሠሩ ኢትዮጵያዊ ሴቶችን እናበረታታለን።",
+            )}
           </p>
           <div className="mt-10 flex flex-wrap gap-3 animate-reveal">
             <Link
               to="/membership"
               className="bg-foreground text-background px-6 py-3 label-mono hover:bg-primary transition-colors inline-flex items-center gap-2"
             >
-              Become a member <ArrowUpRight className="size-3" />
+              {t("Become a member", "አባል ይሁኑ")} <ArrowUpRight className="size-3" />
             </Link>
             <Link
               to="/programs"
               className="border border-foreground px-6 py-3 label-mono hover:bg-foreground hover:text-background transition-colors"
             >
-              Explore programs
+              {t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}
             </Link>
           </div>
           <div className="mt-10 lg:mt-16 hidden md:flex items-center gap-3 label-mono text-muted-foreground animate-reveal">
-            <ArrowDown className="size-3 animate-bounce" /> Scroll
+            <ArrowDown className="size-3 animate-bounce" /> {t("Scroll", "ወደ ታች ይሂዱ")}
           </div>
         </div>
       </section>
@@ -233,18 +246,19 @@ function Home() {
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
             <div>
-              <p className="label-mono text-primary mb-4">Experts Directory</p>
+              <p className="label-mono text-primary mb-4">{t("Experts Directory", "የባለሙያዎች ማውጫ")}</p>
               <h2 className="font-display text-5xl md:text-7xl tracking-tighter leading-none">
-                Women who move
-                <br />
-                Ethiopian media forward.
+                {t("Women who move", "የኢትዮጵያን ሚዲያ")}<br />
+                {t("Ethiopian media forward.", "ወደፊት የሚያራምዱ ሴቶች።")}
               </h2>
             </div>
             <Link
               to="/experts"
               className="label-mono border-b border-foreground pb-1 hover:text-primary hover:border-primary transition-all"
             >
-              {experts.length ? `View all ${experts.length} experts` : "Explore the directory"} →
+              {experts.length
+                ? t(`View all ${experts.length} experts`, `${experts.length} ባለሙያዎችን ይመልከቱ`)
+                : t("Explore the directory", "ማውጫውን ያስሱ")} →
             </Link>
           </div>
           {expertsLoading ? (
@@ -296,17 +310,19 @@ function Home() {
             </div>
           ) : (
             <div className="border border-border bg-muted/30 px-8 py-14 text-center md:px-14">
-              <p className="label-mono text-primary">The directory is growing</p>
-              <h3 className="mt-4 font-display text-4xl">Be among the voices featured here.</h3>
+              <p className="label-mono text-primary">{t("The directory is growing", "ማውጫው እያደገ ነው")}</p>
+              <h3 className="mt-4 font-display text-4xl">{t("Be among the voices featured here.", "እዚህ ከሚቀርቡ ድምፆች አንዷ ይሁኑ።")}</h3>
               <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-                Approved women experts will appear here automatically. Submit your professional
-                profile to join Ethiopia&apos;s trusted media expert directory.
+                {t(
+                  "Approved women experts will appear here automatically. Submit your professional profile to join Ethiopia's trusted media expert directory.",
+                  "የጸደቀላቸው ሴት ባለሙያዎች እዚህ ይታያሉ። የሙያ መገለጫዎን በማስገባት የኢትዮጵያን ታማኝ የሚዲያ ባለሙያዎች ማውጫ ይቀላቀሉ።",
+                )}
               </p>
               <Link
                 to="/experts"
                 className="mt-8 inline-flex border border-foreground px-6 py-3 label-mono transition-colors hover:border-primary hover:bg-primary hover:text-white"
               >
-                Join the expert directory <ArrowUpRight className="ml-2 size-4" />
+                {t("Join the expert directory", "የባለሙያዎች ማውጫውን ይቀላቀሉ")} <ArrowUpRight className="ml-2 size-4" />
               </Link>
             </div>
           )}
@@ -318,9 +334,9 @@ function Home() {
         <div className="max-w-[1400px] mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 gap-6">
             <div>
-              <p className="label-mono text-primary mb-4">Latest Dispatches</p>
+              <p className="label-mono text-primary mb-4">{t("Latest Dispatches", "የቅርብ ጊዜ መረጃዎች")}</p>
               <h2 className="font-display text-5xl md:text-7xl tracking-tighter leading-none">
-                Newsroom
+                {t("Newsroom", "የዜና ክፍል")}
               </h2>
             </div>
             <Link
@@ -328,7 +344,7 @@ function Home() {
               hash="news"
               className="label-mono border-b border-foreground pb-1 hover:text-primary hover:border-primary transition-all"
             >
-              All stories →
+              {t("All stories", "ሁሉም ታሪኮች")} →
             </Link>
           </div>
           <div className="grid md:grid-cols-3 gap-px bg-border">
@@ -344,7 +360,7 @@ function Home() {
                 <h3 className="font-display text-2xl leading-tight mb-4">{n.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{n.excerpt}</p>
                 <div className="mt-6 label-mono inline-flex items-center gap-1 group">
-                  Read{" "}
+                  {t("Read", "ያንብቡ")}{" "}
                   <ArrowUpRight className="size-3 group-hover:translate-x-1 transition-transform" />
                 </div>
               </article>
@@ -372,15 +388,16 @@ function Home() {
         <div className="nl-inner">
           {/* Left: copy */}
           <div className="nl-left">
-            <p className="nl-eyebrow">The Narrative Shift</p>
+            <p className="nl-eyebrow">{t("The Narrative Shift", "የትርክት ለውጥ")}</p>
             <h2 className="nl-heading" id="nl-heading">
-              Monthly insights
-              <br />
-              from the Horn.
+              {t("Monthly insights", "ከአፍሪካ ቀንድ")}<br />
+              {t("from the Horn.", "ወርሃዊ ምልከታዎች።")}
             </h2>
             <p className="nl-body">
-              A curated dispatch on media, gender, and policy across Ethiopia and East Africa —
-              straight to your inbox.
+              {t(
+                "A curated dispatch on media, gender, and policy across Ethiopia and East Africa — straight to your inbox.",
+                "በኢትዮጵያና በምሥራቅ አፍሪካ ሚዲያ፣ ፆታና ፖሊሲን የሚመለከት የተመረጠ መረጃ በቀጥታ ወደ ኢሜይልዎ።",
+              )}
             </p>
           </div>
 
@@ -388,7 +405,7 @@ function Home() {
           <div className="nl-right">
             <form className="nl-form" onSubmit={subscribe}>
               <label htmlFor="nl-email" className="nl-label">
-                Your email address
+                {t("Your email address", "የኢሜይል አድራሻዎ")}
               </label>
               <div className="nl-field-row">
                 <input
@@ -406,7 +423,7 @@ function Home() {
                   className="nl-btn"
                   disabled={newsletterStatus === "submitting"}
                 >
-                  {newsletterStatus === "submitting" ? "Subscribing…" : "Subscribe"}
+                  {newsletterStatus === "submitting" ? t("Subscribing…", "በማስመዝገብ ላይ…") : t("Subscribe", "ይመዝገቡ")}
                   <svg className="nl-btn-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path
                       d="M3 8h10M9 4l4 4-4 4"
@@ -422,7 +439,7 @@ function Home() {
                 className={`nl-note${newsletterStatus === "success" ? " is-success" : newsletterStatus === "error" ? " is-error" : ""}`}
                 role={newsletterMessage ? "status" : undefined}
               >
-                {newsletterMessage || "One dispatch per month · Unsubscribe anytime · No spam."}
+                {newsletterMessage || t("One dispatch per month · Unsubscribe anytime · No spam.", "በወር አንድ መረጃ · በፈለጉት ጊዜ ይውጡ · አላስፈላጊ መልዕክት የለም።")}
               </p>
             </form>
           </div>
@@ -434,13 +451,13 @@ function Home() {
       <section className="home-faq" aria-labelledby="home-faq-heading">
         <div className="home-faq-intro">
           <span className="home-faq-icon"><MessageCircleQuestion aria-hidden="true" /></span>
-          <p className="home-faq-eyebrow">Questions / Answers</p>
-          <h2 id="home-faq-heading">Frequently<br /><em>asked.</em></h2>
-          <p>Everything you need to know about EMWA, membership, services, partnerships, and ways to take part.</p>
-          <Link to="/contact">Still have a question? <ArrowUpRight aria-hidden="true" /></Link>
+          <p className="home-faq-eyebrow">{t("Questions / Answers", "ጥያቄዎች / መልሶች")}</p>
+          <h2 id="home-faq-heading">{t("Frequently", "በተደጋጋሚ")}<br /><em>{t("asked.", "የሚጠየቁ።")}</em></h2>
+          <p>{t("Everything you need to know about EMWA, membership, services, partnerships, and ways to take part.", "ስለ EMWA፣ አባልነት፣ አገልግሎቶች፣ አጋርነትና የተሳትፎ መንገዶች ማወቅ የሚፈልጉት ሁሉ።")}</p>
+          <Link to="/contact">{t("Still have a question?", "ተጨማሪ ጥያቄ አለዎት?")} <ArrowUpRight aria-hidden="true" /></Link>
         </div>
         <div className="home-faq-list">
-          {FAQS.map(([question, answer], index) => {
+          {(language === "am" ? AMHARIC_FAQS : FAQS).map(([question, answer], index) => {
             const isOpen = openFaq === index;
             return <article className={isOpen ? "is-open" : ""} key={question}>
               <h3><button type="button" aria-expanded={isOpen} aria-controls={`home-faq-answer-${index}`} onClick={() => setOpenFaq(isOpen ? null : index)}><span>{String(index + 1).padStart(2, "0")}</span><strong>{question}</strong><i><ChevronDown aria-hidden="true" /></i></button></h3>

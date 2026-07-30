@@ -7,8 +7,8 @@ import integrityImg from "@/assets/value-integrity.png";
 import solidarityImg from "@/assets/value-solidarity.png";
 import independenceImg from "@/assets/value-independence.png";
 import excellenceImg from "@/assets/value-excellence.png";
-import boardChairImg from "@/assets/expert-1.jpg";
-import boardViceChairImg from "@/assets/expert-2.jpg";
+import accountabilityImg from "@/assets/value-accountability.png";
+import { useLanguage } from "@/lib/language-context";
 
 export const Route = createFileRoute("/about")({
   head: () => ({ meta: [
@@ -43,18 +43,24 @@ const WORK = [
 const SERVICES = ["Professional training", "Capacity-building workshops", "Research and publications", "Policy advocacy", "Networking opportunities", "Media development initiatives", "Mentorship programs", "Resource center", "Knowledge sharing", "Consultation on gender and media"];
 const BENEFICIARIES = ["Women journalists", "Media professionals", "Young journalists", "Journalism students", "Media organizations", "Civil society organizations", "Government institutions", "Researchers", "Development partners"];
 const STAKEHOLDERS = ["EMWA Members", "Media Houses", "Government Agencies", "Donors", "Peer Associations", "Board of Directors", "EMWA Management", "EMWA Staff"];
-const VALUE_IMAGES = [integrityImg, solidarityImg, independenceImg, excellenceImg, globalImg];
+const VALUE_IMAGES = [
+  integrityImg,
+  solidarityImg,
+  independenceImg,
+  excellenceImg,
+  accountabilityImg,
+];
 const BOARD_MEMBERS = [
   {
     name: "Konjit Zewede",
     role: "Media and Advocacy Expert",
-    image: boardChairImg,
+    image: "/boardmemebers/konjit-zewede.jpg",
     bio: "Konjit Zewede is a media and advocacy expert, communication and public relations specialist with over ten years of experience across Ethiopia's public and private media. She has worked with leading organizations including Fana Broadcasting Corporation as a reporter and news anchor, and currently serves as Chief Editor at National Broadcasting Services (NBC) Ethiopia, one of the country's leading broadcasters. Her career highlights include successful documentary production, government and community project follow-up, impactful news coverage, and advancing women's empowerment initiatives across diverse sectors. Konjit combines technical excellence in media production with a strong commitment to gender equality and amplifying women's voices.",
   },
   {
     name: "Sara Moges",
     role: "Media Executive",
-    image: boardViceChairImg,
+    image: "/boardmemebers/sara-moges.jpg",
     bio: "Sara Moges is an Ethiopian media executive, journalist, producer, strategic communications professional, trainer, and author with more than a decade of experience in broadcasting, public relations, media research, broadcast program production, and leadership. She is Chief Executive Officer of Tirita FM 97.6, providing strategic, editorial, operational, and business-development leadership while heading the Fact-Checking Desk to strengthen information integrity and public trust. She designs and delivers training on communication, content development, fact-checking, media literacy, and awareness creation. Her career spans Tirita FM, NBC Ethiopia, Seba Dereja Media Network, Ethiopian Tourism Organization, and cultural-event production. Sara holds an MA in Documentary Linguistics and Culture and a BA in Foreign Languages and Literature from Addis Ababa University. She is the author of the Amharic poetry collection ሰካራሙ ስንኞች.",
   },
   {
@@ -74,6 +80,18 @@ const BOARD_MEMBERS = [
     role: "Journalist and Media Leader",
     image: "/bord_memeberes/tsega-tariku.jpeg",
     bio: "Tsega Tariku is a distinguished Ethiopian journalist and media leader with over sixteen years of dynamic experience at Fana Media Corporation. Rising from reporter to Editor-in-Chief, she has excelled as a radio host, television presenter, and digital content creator. Her work is defined by specialization in gender, environment, health, and business reporting, consistently championing gender advocacy across platforms. Holding a Master's in Public Diplomacy from Jilin University, China, Tsega is also a trainer, public speaker, and regional media representative. Currently serving as Director of Branding, Creative and Quality Control at Fana Media Corporation, she continues to shape impactful narratives and drive innovation in Ethiopian media.",
+  },
+  {
+    name: "Rihana Abdella Ahmed",
+    role: "Journalist",
+    image: "/bord_memeberes/rihana.jpg",
+    bio: "Rihana Abdella Ahmed is a seasoned journalist with over a decade of experience. She spent five years at Afar Region Television Station as a reporter and news anchor, covering regional, national, and international issues, including frontline conflict reporting. Passionate about mentoring, she volunteered at Samara University to share field experiences with journalism students and trained graduates on bridging academic and professional practice. She also empowered young women through life skills training at a local boarding school. Rihana holds degrees in Management and Civil Engineering, and a Master's in Political Science and International Relations. She currently serves as Senior Reporter at Addis Media Network.",
+  },
+  {
+    name: "Maya Misikir",
+    role: "Journalist & Communications Specialist",
+    image: "/bord_memeberes/maya misikr.jpg",
+    bio: "Maya Misikir is an award-winning freelance journalist and communications specialist based in Addis Ababa with over a decade of experience reporting on politics, human rights, governance, and social issues. She founded Sifter, a weekly newsletter analyzing Ethiopia's leading human rights stories, and previously produced newsletters for The Fuller Project. Maya has reported for Voice of America and developed strategic communications for the EU Delegation to Ethiopia, UNECA, USAID, and GIZ. Her expertise spans writing, editing, media analysis, multimedia storytelling, and training. Formerly Deputy Editor-in-Chief of Addis Fortune, she has reported on women's rights, migration, labor, and conflict for outlets including The New York Times, Foreign Policy, and The Continent.",
   },
 ];
 
@@ -163,20 +181,39 @@ function ValueStory({ value, index }: { value: string[]; index: number }) {
 }
 
 function About() {
+  const { t } = useLanguage();
+
   return <PageShell>
     <PageHero
-      eyebrow="About the Association / Since 1999"
-      title={<>Women shaping media.<br /><span className="text-primary">Media shaping equality.</span></>}
-      lede="The Ethiopia Media Women Association is a non-partisan, non-profit civil society organization advancing gender equality, professional excellence, media freedom, and safety."
+      eyebrow={t("About the Association / Since 1998", "ስለ ማህበሩ / ከ1998 ጀምሮ")}
+      title={<>{t("Women shaping media.", "ሴቶች ሚዲያን ይቀርጻሉ።")}<br /><span className="text-primary">{t("Media shaping equality.", "ሚዲያ እኩልነትን ይገነባል።")}</span></>}
+      lede={t(
+        "The Ethiopian Media Women Association is a membership organization advancing gender equality, professional excellence, and inclusive practices across Ethiopia's media sector.",
+        "የኢትዮጵያ ሚዲያ ሴቶች ማህበር በኢትዮጵያ የሚዲያ ዘርፍ የፆታ እኩልነትን፣ የሙያ ልቀትንና አካታች አሠራሮችን የሚያራምድ የአባልነት ማህበር ነው።",
+      )}
     />
 
     <section className="about2-intro">
-      <div className="about2-image"><img src={globalImg} alt="Women media professionals working together" loading="eager" /><span>Established / 1999</span></div>
+      <div className="about2-image"><img src={globalImg} alt="Women media professionals working together" loading="eager" /><span>Established / 1998</span></div>
       <div className="about2-story">
-        <p className="about2-eyebrow">Who we are</p>
-        <h2>Built by women journalists.<br />Driven by lasting change.</h2>
-        <p>Founded in 1999 by women journalists and media professionals, EMWA empowers women in and through the media by promoting gender equality, strengthening professional capacity, advocating for media freedom and safety, and supporting ethical journalism.</p>
-        <p>Over the years, EMWA has expanded women's participation and leadership, strengthened gender-sensitive reporting, and created opportunities for professional development. Following its re-registration under Ethiopia's revised CSO legislation in 2019, the Association renewed its commitment to strategic partnerships, research, advocacy, and capacity building.</p>
+        <p className="about2-eyebrow">{t("Who we are", "እኛ ማን ነን")}</p>
+        <h2>{t("Built by women journalists.", "በሴት ጋዜጠኞች የተገነባ።")}<br />{t("Driven by lasting change.", "በዘላቂ ለውጥ የሚመራ።")}</h2>
+        <p>{t(
+          "The Ethiopian Media Women Association (EMWA), established in 1998, is a membership organization with members across all regions of Ethiopia. Guided by its bylaw, EMWA offers full membership to women media practitioners, while also welcoming associate members—individuals interested in media as well as male practitioners—who share our vision of advancing gender equality in the sector.",
+          "በ1998 የተመሠረተው የኢትዮጵያ ሚዲያ ሴቶች ማህበር (EMWA) በሁሉም የኢትዮጵያ ክልሎች አባላት ያሉት የአባልነት ድርጅት ነው። በመተዳደሪያ ደንቡ መሠረት ለሴት የሚዲያ ባለሙያዎች ሙሉ አባልነት ይሰጣል፤ በሚዲያ ፍላጎት ያላቸውን ግለሰቦችና ወንድ ባለሙያዎችንም በተባባሪ አባልነት ይቀበላል።",
+        )}</p>
+        <p>{t(
+          "EMWA's strategic priorities are anchored in capacity building, evidence-based research and advocacy, strategic partnerships, and resource mobilization. Through these pillars, we empower women media practitioners, support media institutions in creating enabling workplaces, and promote inclusive practices that reflect the full diversity of Ethiopian society.",
+          "የEMWA ስትራቴጂያዊ ቅድሚያዎች የአቅም ግንባታ፣ በማስረጃ የተመሠረተ ጥናትና ቅስቀሳ፣ ስትራቴጂያዊ አጋርነት እና የሀብት ማሰባሰብ ናቸው። በእነዚህ ምሰሶዎች ሴት የሚዲያ ባለሙያዎችን እናበረታታለን፣ የሚዲያ ተቋማት ምቹ የሥራ ቦታዎችን እንዲፈጥሩ እንደግፋለን።",
+        )}</p>
+        <p>{t(
+          "EMWA is working to position itself as a hub at the nexus of gender and media, serving as a platform for knowledge, collaboration, and transformation. By advancing professional excellence and advocating for women's rights, we aim to build a vibrant, equitable, and gender-responsive media landscape in Ethiopia.",
+          "EMWA በፆታና በሚዲያ መገናኛ ላይ የእውቀት፣ የትብብርና የለውጥ ማዕከል ለመሆን እየሠራ ነው። የሙያ ልቀትን በማሳደግና ለሴቶች መብት በመሟገት በኢትዮጵያ ንቁ፣ ፍትሐዊና ለፆታ ምላሽ ሰጪ የሚዲያ ምህዳር ለመገንባት እንጥራለን።",
+        )}</p>
+        <p>{t(
+          "Our work is guided by a commitment to innovation, accountability, and inclusivity—empowering women media practitioners, amplifying their voices, and advancing a gender-responsive media sector that reflects Ethiopia's diverse society.",
+          "ሥራችን በፈጠራ፣ በተጠያቂነትና በአካታችነት ቁርጠኝነት ይመራል፤ ሴት የሚዲያ ባለሙያዎችን እናበረታታለን፣ ድምፃቸውን እናጎላለን፣ የኢትዮጵያን ብዝሃነት የሚያንጸባርቅ ለፆታ ምላሽ ሰጪ የሚዲያ ዘርፍ እናራምዳለን።",
+        )}</p>
         <blockquote><span>Our motto</span>“Empowering Women in and Through the Media!”</blockquote>
       </div>
     </section>

@@ -95,20 +95,24 @@ const BENEFITS = [
 
 const FAQ = [
   {
-    q: "Who can join EMWA?",
-    a: "Any Ethiopian woman working in — or studying toward a career in — journalism, broadcasting, communications, or academic media studies.",
+    q: "Who are members of EMWA?",
+    a: <>A woman media practitioner with at least one year of experience in media and communication is eligible to become a Full Member of the Association. Interested applicants must complete the <Link to="/membership" hash="apply">Registration Form</Link> to express their intent. Upon approval by EMWA, the applicant is required to pay the membership fee, a formal commitment that signifies active participation and support for the Association&apos;s mission.</>,
   },
   {
-    q: "How long does an application take?",
-    a: "Approvals typically take 5–10 working days after we receive a complete application.",
+    q: "Can men join EMWA?",
+    a: <>Yes. Men may join as Associate Members. They must complete the <Link to="/membership" hash="apply">Registration Form</Link> to apply. Once EMWA reviews and approves the application, payment of the membership fee is required.</>,
   },
   {
-    q: "Do I need to be based in Ethiopia?",
-    a: "No. Diaspora members are welcome and are connected through the International chapter.",
+    q: "Does EMWA have branch offices?",
+    a: "No. EMWA operates through elected members organized under committees, who serve as the link between members and the Association. Once committee members are elected, they serve for at least two consecutive years.",
   },
   {
-    q: "How do I pay the membership fee?",
-    a: "You can pay by CBE Birr, Telebirr, or bank transfer after approval. Fee waivers are available on request.",
+    q: "What is EMWA's structure?",
+    a: "The General Assembly is the highest decision-making body, convening annually. It elects a seven-member Executive Board, composed exclusively of women. The Executive Board serves a minimum term of two consecutive years.",
+  },
+  {
+    q: "Can men be employed at EMWA?",
+    a: "Yes. Except for the Executive Board and the Executive Directress, all other positions are open to both men and women.",
   },
 ];
 
