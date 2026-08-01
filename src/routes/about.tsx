@@ -54,13 +54,13 @@ const BOARD_MEMBERS = [
   {
     name: "Konjit Zewede",
     role: "Media and Advocacy Expert",
-    image: "/boardmemebers/konjit-zewede.jpg",
+    image: "/bord_memeberes/konjit%20zewde.jpg",
     bio: "Konjit Zewede is a media and advocacy expert, communication and public relations specialist with over ten years of experience across Ethiopia's public and private media. She has worked with leading organizations including Fana Broadcasting Corporation as a reporter and news anchor, and currently serves as Chief Editor at National Broadcasting Services (NBC) Ethiopia, one of the country's leading broadcasters. Her career highlights include successful documentary production, government and community project follow-up, impactful news coverage, and advancing women's empowerment initiatives across diverse sectors. Konjit combines technical excellence in media production with a strong commitment to gender equality and amplifying women's voices.",
   },
   {
     name: "Sara Moges",
     role: "Media Executive",
-    image: "/boardmemebers/sara-moges.jpg",
+    image: "/bord_memeberes/sara%20moges.jpg",
     bio: "Sara Moges is an Ethiopian media executive, journalist, producer, strategic communications professional, trainer, and author with more than a decade of experience in broadcasting, public relations, media research, broadcast program production, and leadership. She is Chief Executive Officer of Tirita FM 97.6, providing strategic, editorial, operational, and business-development leadership while heading the Fact-Checking Desk to strengthen information integrity and public trust. She designs and delivers training on communication, content development, fact-checking, media literacy, and awareness creation. Her career spans Tirita FM, NBC Ethiopia, Seba Dereja Media Network, Ethiopian Tourism Organization, and cultural-event production. Sara holds an MA in Documentary Linguistics and Culture and a BA in Foreign Languages and Literature from Addis Ababa University. She is the author of the Amharic poetry collection ሰካራሙ ስንኞች.",
   },
   {

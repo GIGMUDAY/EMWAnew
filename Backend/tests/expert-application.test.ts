@@ -65,11 +65,35 @@ describe('expert application endpoint', () => {
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  it('requires a phone number', async () => {
+  it('accepts an application with email only', async () => {
     const { phone: _phone, ...withoutPhone } = validApplication;
+    query.mockResolvedValueOnce({
+      rows: [{ id: 'email-only-id', status: 'PENDING', profile_photo_url: null }],
+    });
     const response = await request(app)
       .post('/api/v1/public/expert-applications')
       .field(withoutPhone);
+
+    expect(response.status).toBe(201);
+  });
+
+  it('accepts an application with phone only', async () => {
+    const { email: _email, ...withoutEmail } = validApplication;
+    query.mockResolvedValueOnce({
+      rows: [{ id: 'phone-only-id', status: 'PENDING', profile_photo_url: null }],
+    });
+    const response = await request(app)
+      .post('/api/v1/public/expert-applications')
+      .field(withoutEmail);
+
+    expect(response.status).toBe(201);
+  });
+
+  it('rejects an application without email and phone', async () => {
+    const { email: _email, phone: _phone, ...withoutContact } = validApplication;
+    const response = await request(app)
+      .post('/api/v1/public/expert-applications')
+      .field(withoutContact);
 
     expect(response.status).toBe(400);
     expect(response.body.error.code).toBe('VALIDATION_ERROR');

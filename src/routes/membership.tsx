@@ -116,7 +116,7 @@ const FAQ = [
   },
 ];
 
-const STEPS = ["Personal details", "Work & education", "Membership", "Review"] as const;
+const STEPS = ["Personal / የግል", "Work / የሥራ", "Membership / አባልነት", "Review / ማረጋገጫ"] as const;
 type FormData = {
   name: string;
   dateOfBirth: string;
@@ -184,7 +184,7 @@ function Membership() {
       (item) => item.name.toLowerCase() === tier.toLowerCase(),
     );
     update("tier", activeTier?.name ?? membershipTypes[0]?.name ?? tier);
-    setStep(2);
+    setStep(0);
     document.querySelector("#apply")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   useEffect(() => {
@@ -462,7 +462,7 @@ function Membership() {
             <br />
             at the table.
           </h2>
-          <p>The official EMWA membership form, presented in four clear English-language steps.</p>
+          <p>The latest approved EMWA membership form, presented in four clear bilingual steps.</p>
           <div className="membership-application-note">
             <strong>5–10</strong>
             <span>
@@ -473,6 +473,21 @@ function Membership() {
           </div>
         </div>
         <form className="membership-form" onSubmit={submit}>
+          <header className="membership-official-header">
+            <img src={logo} alt="EMWA" />
+            <div>
+              <p>የኢትዮጵያ መገናኛ ብዙኃን ባለሙያ ሴቶች ማኅበር</p>
+              <strong>Ethiopian Media Women Association (EMWA)</strong>
+              <span>የአባልነት ምዝገባ ቅጽ / Membership Form</span>
+            </div>
+            <small>Official registration</small>
+          </header>
+          <p className="membership-official-intro">
+            የኢትዮጵያ መገናኛ ብዙኃን ባለሙያ ሴቶች ማኅበር በ1991 ዓ.ም. የተቋቋመ የሙያ ማኅበር ነው።
+            ሴት የመገናኛ ብዙኃንና የኮሙኒኬሽን ባለሙያዎችን፣ የጋዜጠኝነት ተማሪዎችን፣ ወንድ
+            ተባባሪ አባላትን እና የክብር አባላትን ይቀበላል።
+            <span>EMWA is a professional association established in 1998. It welcomes women media and communication professionals, women journalism students, male associate members, and honorary members.</span>
+          </p>
           <ol className="membership-progress" aria-label="Application progress">
             {STEPS.map((label, index) => (
               <li
@@ -505,11 +520,11 @@ function Membership() {
               <>
                 {step === 0 && (
                   <fieldset>
-                    <legend>Personal information.</legend>
+                    <legend>የግል መረጃ / Personal Information</legend>
                     <p>Enter your details as they should appear on your EMWA membership record.</p>
                     <div className="membership-fields">
                       <label>
-                        <span>Full name *</span>
+                        <span>ሙሉ ስም / Full name *</span>
                         <input
                           required
                           value={form.name}
@@ -519,7 +534,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Date of birth *</span>
+                        <span>የትውልድ ዘመን / Date of birth *</span>
                         <input
                           required
                           type="date"
@@ -529,7 +544,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Email address *</span>
+                        <span>ኢሜል / Email address *</span>
                         <input
                           required
                           type="email"
@@ -540,7 +555,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Mobile number *</span>
+                        <span>የእጅ ስልክ / Mobile number *</span>
                         <input
                           required
                           value={form.phone}
@@ -550,7 +565,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>City / Sub-city *</span>
+                        <span>ከተማ / ክፍለ ከተማ / City / Sub-city *</span>
                         <input
                           required
                           value={form.citySubCity}
@@ -560,7 +575,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Woreda</span>
+                        <span>ወረዳ / Woreda</span>
                         <input
                           value={form.woreda}
                           onChange={(e) => update("woreda", e.target.value)}
@@ -568,7 +583,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>House number</span>
+                        <span>የቤት ቁጥር / House number</span>
                         <input
                           value={form.houseNumber}
                           onChange={(e) => update("houseNumber", e.target.value)}
@@ -576,7 +591,7 @@ function Membership() {
                         />
                       </label>
                       <label className="is-wide">
-                        <span>Additional profession, training, or skills</span>
+                        <span>ተጨማሪ ሙያ፣ ስልጠና ወይም ክህሎት / Additional profession, training, or skills</span>
                         <textarea
                           value={form.additionalSkills}
                           onChange={(e) => update("additionalSkills", e.target.value)}
@@ -585,7 +600,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Emergency contact 1 — name *</span>
+                        <span>የአደጋ ጊዜ ተጠሪ 1 / Emergency contact 1 — name *</span>
                         <input
                           required
                           value={form.emergencyContact1Name}
@@ -594,7 +609,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Emergency contact 1 — phone *</span>
+                        <span>ስልክ / Emergency contact 1 — phone *</span>
                         <input
                           required
                           type="tel"
@@ -604,7 +619,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Emergency contact 2 — name</span>
+                        <span>የአደጋ ጊዜ ተጠሪ 2 / Emergency contact 2 — name</span>
                         <input
                           value={form.emergencyContact2Name}
                           onChange={(e) => update("emergencyContact2Name", e.target.value)}
@@ -612,7 +627,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Emergency contact 2 — phone</span>
+                        <span>ስልክ / Emergency contact 2 — phone</span>
                         <input
                           type="tel"
                           value={form.emergencyContact2Phone}
@@ -625,11 +640,11 @@ function Membership() {
                 )}
                 {step === 1 && (
                   <fieldset>
-                    <legend>Work experience and education.</legend>
+                    <legend>የሥራ ሁኔታ / Work Experience &amp; Education</legend>
                     <p>Students may enter their institution and use 0 for years of experience.</p>
                     <div className="membership-fields">
                       <label>
-                        <span>Organization *</span>
+                        <span>የሚሰሩበት ድርጅት / Organization *</span>
                         <input
                           required
                           value={form.outlet}
@@ -638,7 +653,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Years of experience *</span>
+                        <span>የሥራ ልምድ / Years of experience *</span>
                         <input
                           required
                           type="number"
@@ -650,7 +665,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Department</span>
+                        <span>የሥራ ዘርፍ / Department</span>
                         <input
                           value={form.department}
                           onChange={(e) => update("department", e.target.value)}
@@ -658,7 +673,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Role *</span>
+                        <span>የሥራ ድርሻ / Role *</span>
                         <input
                           required
                           value={form.role}
@@ -667,7 +682,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Level of education *</span>
+                        <span>የትምህርት ደረጃ / Level of education *</span>
                         <input
                           required
                           value={form.educationLevel}
@@ -676,7 +691,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>Field of study *</span>
+                        <span>የትምህርት ዘርፍ / Field of study *</span>
                         <input
                           required
                           value={form.fieldOfStudy}
@@ -689,7 +704,7 @@ function Membership() {
                 )}
                 {step === 2 && (
                   <fieldset>
-                    <legend>Choose your membership.</legend>
+                    <legend>የአባልነት ዓይነት / Membership Type</legend>
                     <p>You can change your category before submitting.</p>
                     {typesLoading ? (
                       <p>Loading active membership typesâ€¦</p>
@@ -725,7 +740,7 @@ function Membership() {
                 )}
                 {step === 3 && (
                   <fieldset>
-                    <legend>Everything look right?</legend>
+                    <legend>ማረጋገጫ / Review your application</legend>
                     <p>Review your details before preparing the application.</p>
                     <dl className="membership-review">
                       <div>

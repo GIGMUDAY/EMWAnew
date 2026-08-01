@@ -22,6 +22,8 @@ import {
   ShieldCheck,
   Signal,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   MessageCircleQuestion,
 } from "lucide-react";
 
@@ -100,6 +102,63 @@ const NEWS = [
   },
 ];
 
+function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
+  const [slide, setSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setSlide((current) => (current + 1) % 2), 6000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const move = (direction: number) => setSlide((current) => (current + direction + 2) % 2);
+
+  return (
+    <section
+      className="home-hero-slider"
+      aria-roledescription="carousel"
+      aria-label="EMWA highlights"
+    >
+      <div className="home-hero-visual">
+        <img className={slide === 0 ? "is-active" : ""} src={LANDING_IMAGES.hero.src} alt={LANDING_IMAGES.hero.alt} width={1800} height={1200} fetchPriority="high" />
+        <img className={slide === 1 ? "is-active is-fitsum" : "is-fitsum"} src="/Fitsum%20Alemayehu.png" alt="Fitsum Alemayehu, the first president of EMWA" width={1200} height={1600} />
+        <span className="home-hero-image-number" aria-hidden="true">0{slide + 1}</span>
+      </div>
+
+      <div className="home-hero-copy" key={slide} aria-live="polite">
+        {slide === 0 ? (
+          <>
+            <p className="label-mono text-primary">{t("Est. 1998 · Addis Ababa", "ተመሠረተ 1998 · አዲስ አበባ")}</p>
+            <h1>{t("The Voice", "የኢትዮጵያ")}<br />{t("of Ethiopia's", "ፈር ቀዳጅ")}<br /><span>{t("Vanguard", "የሴቶች ድምፅ")}</span></h1>
+            <p className="home-hero-lede">{t("Empowering Ethiopian women in media through strategic advocacy, professional development, and a collective voice that echoes across the Horn of Africa.", "በስትራቴጂያዊ ቅስቀሳ፣ በሙያ ማበልጸግና በጋራ ድምፅ በሚዲያ ውስጥ የሚሠሩ ኢትዮጵያዊ ሴቶችን እናበረታታለን።")}</p>
+            <div className="home-hero-actions">
+              <Link to="/membership">{t("Become a member", "አባል ይሁኑ")} <ArrowUpRight /></Link>
+              <Link to="/programs">{t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}</Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="label-mono text-primary">EMWA legacy · Founding leadership</p>
+            <h1 className="is-tribute">A legacy of<br /><span>service.</span></h1>
+            <p className="home-hero-tribute">Fitsum Alemayehu, the first president of EMWA, served the association with diligence and competence for which it is forever grateful.</p>
+            <blockquote>“I have many happy memories in Ethiopia and sad to leave. But, I am saddened most because I will miss being part of EMWA.”</blockquote>
+            <p className="home-hero-signoff">EMWA extends its gratitude to Wzo. Fitsum and wishes her success and all the best.</p>
+          </>
+        )}
+      </div>
+
+      <div className="home-hero-controls">
+        <button type="button" onClick={() => move(-1)} aria-label="Previous hero slide"><ChevronLeft /></button>
+        <div className="home-hero-dots" role="tablist" aria-label="Choose hero slide">
+          {[0, 1].map((item) => (
+            <button key={item} type="button" className={slide === item ? "is-active" : ""} onClick={() => setSlide(item)} role="tab" aria-selected={slide === item} aria-label={`Show slide ${item + 1}`}><span /></button>
+          ))}
+        </div>
+        <button type="button" onClick={() => move(1)} aria-label="Next hero slide"><ChevronRight /></button>
+      </div>
+    </section>
+  );
+}
+
 function Home() {
   const { language, t } = useLanguage();
   const [newsletterStatus, setNewsletterStatus] = useState<
@@ -174,6 +233,8 @@ function Home() {
   return (
     <PageShell>
       {/* HERO */}
+      <HomeHero t={t} />
+      {false && (
       <section className="relative flex flex-col md:flex-row min-h-[calc(100svh-65px)] border-b border-border">
         <div className="md:w-7/12 relative order-2 md:order-1 overflow-hidden min-h-[42svh] md:min-h-0 bg-muted">
           <img
@@ -217,6 +278,7 @@ function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* WOMEN NEWS FEED (YouTube) */}
       <YoutubeNewsFeed />

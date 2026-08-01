@@ -68,7 +68,8 @@ type Dashboard = Record<string, string | number> & {
 type Expert = {
   id: string;
   full_name: string;
-  email: string;
+  email?: string;
+  phone_number?: string;
   professional_title: string;
   area_of_expertise: string;
   location: string;
@@ -76,6 +77,7 @@ type Expert = {
   created_at: string;
   biography?: string;
   profile_photo_url?: string;
+  last_edited_at?: string;
 };
 type Membership = {
   id: string;
@@ -1200,6 +1202,8 @@ function ApplicationsPanel({
   const [filter, setFilter] = useState<"ALL" | ApplicationStatus>("ALL");
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState("");
+  const [editing, setEditing] = useState<Expert | null>(null);
+  const [editError, setEditError] = useState("");
   const visible = rows.filter(
     (row) =>
       (filter === "ALL" || row.status === filter) &&
@@ -1235,6 +1239,24 @@ function ApplicationsPanel({
       setBusy("");
     }
   };
+  const saveExpert = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editing) return;
+    setBusy(editing.id + "UPDATE");
+    setEditError("");
+    try {
+      await adminApi(`/admin/expert-applications/${editing.id}`, token, {
+        method: "PATCH",
+        body: new FormData(event.currentTarget),
+      });
+      setEditing(null);
+      await reload();
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : "Unable to update this expert.");
+    } finally {
+      setBusy("");
+    }
+  };
   return (
     <PagePanel title={title} subtitle={subtitle}>
       <FilterBar query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} />
@@ -1243,7 +1265,7 @@ function ApplicationsPanel({
           {visible.map((row) => (
             <article
               key={row.id}
-              className="rounded-2xl border border-black/10 bg-[#fbf9f4] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/8"
+              className="min-w-0 overflow-visible rounded-2xl border border-black/10 bg-[#fbf9f4] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/8"
             >
               <div className="relative mb-6 grid aspect-[16/8] overflow-hidden rounded-xl bg-[linear-gradient(135deg,#e8ded1,#d7c5b3)]">
                 <span className="m-auto text-5xl font-black text-[#8c2d3c]/45">
@@ -1258,13 +1280,13 @@ function ApplicationsPanel({
                     src={uploadUrl(row.profile_photo_url)}
                     alt={`${row.full_name}'s uploaded profile`}
                     loading="lazy"
-                    className="absolute inset-0 size-full object-cover object-center transition duration-500 hover:scale-[1.03]"
+                    className="absolute inset-0 size-full object-contain object-center transition duration-500 hover:scale-[1.02]"
                     onError={(event) => event.currentTarget.remove()}
                   />
                 )}
               </div>
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="label-mono text-[#8c2d3c]">
                     {row.area_of_expertise || "Expert profile"}
                   </p>
@@ -1273,17 +1295,25 @@ function ApplicationsPanel({
                     {row.professional_title} · {row.location}
                   </p>
                 </div>
-                <StatusBadge value={row.status} />
+                <span className="shrink-0"><StatusBadge value={row.status} /></span>
               </div>
               <p className="mt-6 font-[var(--font-body)] text-sm leading-6 text-black/60">
                 {row.biography || "No biography provided."}
               </p>
               <p className="mt-3 break-all font-[var(--font-body)] text-sm font-semibold text-[#8c2d3c]">
-                {row.email}
+                {row.email || row.phone_number || "No contact method"}
               </p>
               <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-5">
                 <span className="label-mono text-black/35">{fmtDate(row.created_at)}</span>
                 <div className="flex flex-wrap gap-2">
+                  <ActionButton
+                    label="Edit"
+                    onClick={() => {
+                      setEditError("");
+                      setEditing(row);
+                    }}
+                    variant="outline"
+                  />
                   {row.status === "PENDING" && (
                     <>
                     <ActionButton
@@ -1316,7 +1346,56 @@ function ApplicationsPanel({
       ) : (
         <EmptyState text="No expert applications match this view" />
       )}
+      {editing && (
+        <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/65 p-4 backdrop-blur-sm" onMouseDown={() => setEditing(null)}>
+          <form
+            className="my-auto w-full max-w-3xl rounded-2xl bg-[#fbf9f4] shadow-2xl"
+            onSubmit={saveExpert}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="flex items-start justify-between gap-4 border-b border-black/10 px-6 py-5 sm:px-8">
+              <div>
+                <p className="label-mono text-[#8c2d3c]">Expert directory editor</p>
+                <h2 className="mt-2 text-3xl font-black text-black">Update expert profile</h2>
+                <p className="mt-1 text-sm text-black/55">Changes to approved experts appear in the public directory.</p>
+              </div>
+              <button type="button" aria-label="Close editor" onClick={() => setEditing(null)} className="grid size-10 shrink-0 place-items-center rounded-full border border-black/15 text-black hover:bg-black hover:text-white"><X className="size-4" /></button>
+            </header>
+            <div className="grid max-h-[68vh] gap-5 overflow-y-auto px-6 py-6 sm:grid-cols-2 sm:px-8">
+              <AdminExpertField label="Full name" name="fullName" defaultValue={editing.full_name} required />
+              <AdminExpertField label="Professional title" name="professionalTitle" defaultValue={editing.professional_title} required />
+              <AdminExpertField label="Expert category" name="primaryExpertise" defaultValue={editing.area_of_expertise} required />
+              <AdminExpertField label="Location" name="location" defaultValue={editing.location} required />
+              <AdminExpertField label="Email address" name="email" type="email" defaultValue={editing.email ?? ""} />
+              <AdminExpertField label="Phone number" name="phone" type="tel" defaultValue={editing.phone_number ?? ""} />
+              <label className="flex flex-col gap-2 sm:col-span-2">
+                <span className="label-mono text-black/55">Professional biography</span>
+                <textarea name="professionalBiography" required minLength={20} maxLength={10000} rows={7} defaultValue={editing.biography ?? ""} className="rounded-lg border border-black/15 bg-white px-4 py-3 text-black outline-none focus:border-[#8c2d3c]" />
+              </label>
+              <label className="flex flex-col gap-2 sm:col-span-2">
+                <span className="label-mono text-black/55">Replace profile photo</span>
+                <input name="profilePhoto" type="file" accept="image/jpeg,image/png" className="rounded-lg border border-dashed border-black/20 bg-white px-4 py-4 text-sm text-black" />
+                <small className="text-black/45">Leave empty to keep the current photo.</small>
+              </label>
+              {editError && <p className="sm:col-span-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700" role="alert">{editError}</p>}
+            </div>
+            <footer className="flex flex-wrap justify-end gap-3 border-t border-black/10 px-6 py-5 sm:px-8">
+              <button type="button" onClick={() => setEditing(null)} className="border border-black/20 px-5 py-3 text-sm font-bold text-black hover:bg-black/5">Cancel</button>
+              <button type="submit" disabled={busy === editing.id + "UPDATE"} className="bg-[#8c2d3c] px-5 py-3 text-sm font-bold text-white hover:bg-[#6f2230] disabled:opacity-50">{busy === editing.id + "UPDATE" ? "Saving…" : "Save expert"}</button>
+            </footer>
+          </form>
+        </div>
+      )}
     </PagePanel>
+  );
+}
+
+function AdminExpertField({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <label className="flex min-w-0 flex-col gap-2">
+      <span className="label-mono text-black/55">{label}</span>
+      <input {...props} minLength={props.type === "email" ? undefined : 2} maxLength={props.type === "email" ? 254 : 150} className="min-w-0 rounded-lg border border-black/15 bg-white px-4 py-3 text-black outline-none focus:border-[#8c2d3c]" />
+    </label>
   );
 }
 

@@ -25,7 +25,7 @@ const SECTIONS = [
   { h: "8. Limitation of Liability", b: "To the maximum extent permitted by law, EMWA is not liable for indirect, incidental, or consequential damages arising from use of the site, services, or any content downloaded." },
   { h: "9. Governing Law", b: "These Terms are governed by the laws of the Federal Democratic Republic of Ethiopia. Any disputes shall be resolved in the courts of Addis Ababa." },
   { h: "10. Changes", b: "EMWA may revise these Terms at any time. Continued use of the website after changes constitutes acceptance of the revised Terms." },
-  { h: "11. Contact", b: "For questions about these Terms, contact legal@emwa.org.et." },
+  { h: "11. Contact", b: "For questions about these Terms, contact contact@ethmwa.org." },
 ];
 
 function Terms() {

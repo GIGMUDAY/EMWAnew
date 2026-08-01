@@ -3,7 +3,7 @@ import { EXPERT_CATEGORIES } from '../constants/expert-categories.js';
 const operations:Record<string,string[]>= {
   '/auth/login':['post'],'/auth/refresh':['post'],'/auth/logout':['post'],'/auth/me':['get'],
   '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],'/public/updates':['get'],'/public/updates/{slug}':['get'],'/public/events':['get'],'/public/events/{id}':['get'],
-  '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get','delete'],'/admin/expert-applications/{id}/status':['patch'],
+  '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get','patch','delete'],'/admin/expert-applications/{id}/status':['patch'],
   '/admin/membership-applications':['get'],'/admin/membership-applications/{id}':['get','delete'],'/admin/membership-applications/{id}/status':['patch'],
   '/admin/membership-types':['post'],'/admin/membership-types/{id}':['patch','delete'],
   '/admin/contact-messages':['get'],'/admin/contact-messages/{id}':['get','delete'],'/admin/contact-messages/{id}/status':['patch'],
@@ -566,8 +566,6 @@ export const swaggerSpec = swaggerJSDoc({
             'primaryExpertise',
             'location',
             'professionalBiography',
-            'email',
-            'phone',
           ],
           properties: {
             fullName: { type: 'string', minLength: 2, maxLength: 150, example: 'Hana Bekele' },
@@ -591,15 +589,16 @@ export const swaggerSpec = swaggerJSDoc({
             },
             email: { type: 'string', format: 'email', example: 'hana@example.com' },
             phone: { type: 'string', minLength: 5, maxLength: 40, example: '+251911234567' },
-            linkedinUrl: { type: 'string', format: 'uri', example: 'https://linkedin.com/in/hana-bekele' },
-            instagramUrl: { type: 'string', format: 'uri', example: 'https://instagram.com/hana.bekele' },
-            facebookUrl: { type: 'string', format: 'uri', example: 'https://facebook.com/hana.bekele' },
             profilePhoto: {
               type: 'string',
               format: 'binary',
               description: 'Optional JPG or PNG profile photo.',
             },
           },
+          anyOf: [
+            { required: ['email'] },
+            { required: ['phone'] },
+          ],
         },
         MembershipApplicationRequest: {
           type: 'object',

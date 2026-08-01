@@ -130,13 +130,23 @@ export function SiteFooter() {
               <p>{t("Addis Ababa, Arada Sub-city", "አዲስ አበባ፣ አራዳ ክፍለ ከተማ")}</p>
               <p>{t("Near Rad Mekonenne Bridge", "ራድ መኮንን ድልድይ አቅራቢያ")}</p>
               <p className="sf-address-gap">
-                <a href="mailto:info@emwa.org.et" className="sf-link">
-                  info@emwa.org.et
+                <a href="mailto:info@ethmwa.org" className="sf-link">
+                  info@ethmwa.org
                 </a>
               </p>
               <p>
-                <a href="tel:+251115500000" className="sf-link">
-                  +251 11 550 0000
+                <a href="mailto:contact@ethmwa.org" className="sf-link">
+                  contact@ethmwa.org
+                </a>
+              </p>
+              <p className="sf-address-gap">
+                <a href="tel:+251977300031" className="sf-link">
+                  +251 977 300 031
+                </a>
+              </p>
+              <p>
+                <a href="tel:+251998139676" className="sf-link">
+                  +251 998 139 676
                 </a>
               </p>
             </address>

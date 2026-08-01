@@ -30,6 +30,7 @@ const officialEnglishApplication = {
     houseNumber: '125',
     additionalSkills: 'Fact-checking and multimedia production',
     emergencyContact1: { name: 'Sara Bekele', phone: '+251922345678' },
+    emergencyContact2: { name: 'Marta Bekele', phone: '+251933456789' },
     yearsOfExperience: 5,
     department: 'News',
     educationLevel: "Bachelor's degree",
@@ -56,6 +57,7 @@ describe('official English membership application', () => {
           dateOfBirth: '1995-06-15',
           yearsOfExperience: 5,
           educationLevel: "Bachelor's degree",
+          emergencyContact2: { name: 'Marta Bekele', phone: '+251933456789' },
         }),
       ]),
     );

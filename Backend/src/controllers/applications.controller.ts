@@ -13,22 +13,22 @@ const id = z.object({ id: z.string().uuid() });
 
 publicApplications.get('/experts', asyncHandler(async (_request, response) => {
   const { rows } = await pool.query(
-    "SELECT id,full_name,email,professional_title,area_of_expertise AS primary_expertise,location,biography AS professional_biography,profile_photo_url,linkedin_url,instagram_url,facebook_url,created_at FROM expert_applications WHERE status='APPROVED' ORDER BY created_at DESC",
+    "SELECT id,full_name,email,phone_number,professional_title,area_of_expertise AS primary_expertise,location,biography AS professional_biography,profile_photo_url,linkedin_url,instagram_url,facebook_url,created_at FROM expert_applications WHERE status='APPROVED' ORDER BY created_at DESC",
   );
   response.json({ success: true, data: rows });
 }));
 
 const expertApplicationSchema = z.object({
   fullName: z.string().trim().min(2).max(150),
-  email,
-  phone: z.string().trim().min(5).max(40),
+  email: email.optional().or(z.literal('')),
+  phone: z.string().trim().min(5).max(40).optional().or(z.literal('')),
   primaryExpertise: z.enum(EXPERT_CATEGORIES),
   professionalTitle: z.string().trim().min(2).max(150),
   location: z.string().trim().min(2).max(150),
   professionalBiography: z.string().trim().min(20).max(10000),
-  linkedinUrl: z.string().trim().url().max(2000).optional().or(z.literal('')),
-  instagramUrl: z.string().trim().url().max(2000).optional().or(z.literal('')),
-  facebookUrl: z.string().trim().url().max(2000).optional().or(z.literal('')),
+}).refine((application) => Boolean(application.email || application.phone), {
+  message: 'At least one contact method is required: email address or phone number.',
+  path: ['email'],
 });
 
 publicApplications.post(
@@ -40,22 +40,18 @@ publicApplications.post(
       const photoUrl = request.file ? fileUrl(request, request.file) : null;
       const { rows } = await pool.query(
         `INSERT INTO expert_applications
-          (full_name,email,phone_number,professional_title,area_of_expertise,location,biography,
-           profile_photo_url,linkedin_url,instagram_url,facebook_url)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+          (full_name,email,phone_number,professional_title,area_of_expertise,location,biography,profile_photo_url)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8)
          RETURNING id,status,profile_photo_url,created_at`,
         [
           application.fullName,
-          application.email,
-          application.phone,
+          application.email || null,
+          application.phone || null,
           application.professionalTitle,
           application.primaryExpertise,
           application.location,
           application.professionalBiography,
           photoUrl,
-          application.linkedinUrl || null,
-          application.instagramUrl || null,
-          application.facebookUrl || null,
         ],
       );
       response.status(201).json({ success: true, data: rows[0] });
@@ -257,6 +253,58 @@ function mount(kind: 'expert' | 'membership') {
     }),
   );
 }
+
+adminApplications.patch(
+  '/expert-applications/:id',
+  validate(id, 'params'),
+  profilePhotoUpload.single('profilePhoto'),
+  asyncHandler(async (request, response) => {
+    try {
+      const application = expertApplicationSchema.parse(request.body);
+      const newPhotoUrl = request.file ? fileUrl(request, request.file) : undefined;
+      const result = await tx(async (client) => {
+        const existing = (await client.query(
+          'SELECT profile_photo_url FROM expert_applications WHERE id=$1',
+          [request.params.id],
+        )).rows[0];
+        if (!existing) throw notFound('Application');
+
+        const { rows } = await client.query(
+          `UPDATE expert_applications SET
+             full_name=$1,email=$2,phone_number=$3,professional_title=$4,
+             area_of_expertise=$5,location=$6,biography=$7,
+             profile_photo_url=COALESCE($8,profile_photo_url),
+             last_edited_by=$9,last_edited_at=now(),updated_at=now()
+           WHERE id=$10 RETURNING *`,
+          [
+            application.fullName,
+            application.email || null,
+            application.phone || null,
+            application.professionalTitle,
+            application.primaryExpertise,
+            application.location,
+            application.professionalBiography,
+            newPhotoUrl ?? null,
+            request.admin!.id,
+            request.params.id,
+          ],
+        );
+        await client.query(
+          'INSERT INTO audit_logs(administrator_id,action,entity_type,entity_id,metadata) VALUES($1,$2,$3,$4,$5)',
+          [request.admin!.id, 'EXPERT_APPLICATION_UPDATED', 'expert_application', request.params.id, { photoReplaced: Boolean(newPhotoUrl) }],
+        );
+        return { row: rows[0], previousPhotoUrl: existing.profile_photo_url as string | null };
+      });
+      if (newPhotoUrl && result.previousPhotoUrl && result.previousPhotoUrl !== newPhotoUrl) {
+        await removeLocal(result.previousPhotoUrl);
+      }
+      response.json({ success: true, data: result.row });
+    } catch (error) {
+      if (request.file) await removeLocal(request.file.path);
+      throw error;
+    }
+  }),
+);
 
 mount('expert');
 mount('membership');

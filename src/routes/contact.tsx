@@ -6,7 +6,9 @@ import {
   Check,
   Facebook,
   Linkedin,
+  MapPin,
   Music2,
+  Navigation,
   Send,
   Twitter,
   X,
@@ -175,27 +177,55 @@ function Contact() {
         </form>
 
         <div className="contact3-map-wrap">
+          <header className="contact3-map-header">
+            <div>
+              <p className="contact3-eyebrow">Visit EMWA</p>
+              <h2>Find us in Addis Ababa.</h2>
+            </div>
+            <span className="contact3-map-pin" aria-hidden="true">
+              <MapPin />
+            </span>
+          </header>
           <div className="contact3-map">
             <iframe
               title="EMWA headquarters in Addis Ababa"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=38.74%2C9.00%2C38.78%2C9.03&layer=mapnik"
+              src="https://www.google.com/maps?q=9.0396455%2C38.7555613&z=17&output=embed"
               loading="lazy"
             />
           </div>
           <div className="contact3-map-caption">
             <div>
-              <p className="contact3-eyebrow">Our location</p>
+              <p className="contact3-eyebrow">Physical address</p>
               <strong>Addis Ababa, Arada Sub-city, near Rad Mekonenne Bridge</strong>
             </div>
             <a
-              href="https://www.openstreetmap.org/search?query=Rad%20Mekonenne%20Bridge%2C%20Arada%2C%20Addis%20Ababa"
+              href="https://maps.app.goo.gl/xcC5bYanr3m98Psv6"
               target="_blank"
               rel="noreferrer"
             >
-              Directions <ArrowUpRight />
+              <Navigation /> Open in Google Maps <ArrowUpRight />
             </a>
           </div>
         </div>
+      </section>
+
+      <section className="contact3-details" aria-labelledby="contact-details-title">
+        <div>
+          <p className="contact3-eyebrow">Direct contact</p>
+          <h2 id="contact-details-title">Reach our team.</h2>
+        </div>
+        <address>
+          <div>
+            <span>Email addresses</span>
+            <a href="mailto:info@ethmwa.org">info@ethmwa.org</a>
+            <a href="mailto:contact@ethmwa.org">contact@ethmwa.org</a>
+          </div>
+          <div>
+            <span>Phone numbers</span>
+            <a href="tel:+251977300031">+251 977 300 031</a>
+            <a href="tel:+251998139676">+251 998 139 676</a>
+          </div>
+        </address>
       </section>
 
       <section className="contact3-socials">

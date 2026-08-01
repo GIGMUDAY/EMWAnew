@@ -10,6 +10,7 @@ import {
   Linkedin,
   Mail,
   MapPin,
+  Phone,
   Search,
   X,
 } from "lucide-react";
@@ -62,6 +63,7 @@ type Expert = {
   bio: string;
   img?: string;
   email?: string;
+  phone?: string;
   linkedinUrl?: string;
   instagramUrl?: string;
   facebookUrl?: string;
@@ -92,9 +94,6 @@ const expertSubmissionError = (payload: unknown) => {
       email: "Email address",
       phone: "Phone number",
       profilePhoto: "Profile photo",
-      linkedinUrl: "LinkedIn profile",
-      instagramUrl: "Instagram profile",
-      facebookUrl: "Facebook profile",
     };
     return `${labels[field] ?? field}: ${messages?.[0]}`;
   }
@@ -136,6 +135,7 @@ function Experts() {
           professional_biography: string;
           profile_photo_url?: string;
           email?: string;
+          phone_number?: string;
           linkedin_url?: string;
           instagram_url?: string;
           facebook_url?: string;
@@ -152,6 +152,7 @@ function Experts() {
               ? `${apiOrigin}${new URL(row.profile_photo_url, apiOrigin).pathname}`
               : undefined,
             email: row.email,
+            phone: row.phone_number,
             linkedinUrl: row.linkedin_url,
             instagramUrl: row.instagram_url,
             facebookUrl: row.facebook_url,
@@ -174,13 +175,22 @@ function Experts() {
   const submitExpertApplication = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
+    const formData = new FormData(form);
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+
+    if (!email && !phone) {
+      setSubmitError("Please provide at least an email address or a phone number.");
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError("");
 
     try {
       const response = await fetch(`${API_BASE}/public/expert-applications`, {
         method: "POST",
-        body: new FormData(form),
+        body: formData,
       });
       const payload = await response
         .json()
@@ -236,10 +246,10 @@ function Experts() {
   const downloadExperts = () => {
     const escapeCell = (value: string) => `"${value.replaceAll('"', '""')}"`;
     const rows = [
-      ["Name", "Expertise", "Region", "Category", "Biography", "Email", "LinkedIn", "Instagram", "Facebook"],
+      ["Name", "Expertise", "Region", "Category", "Biography", "Email", "Phone", "LinkedIn", "Instagram", "Facebook"],
       ...experts.map((expert) => [
         expert.n, expert.f, expert.r, expert.c, expert.bio, expert.email ?? "",
-        expert.linkedinUrl ?? "", expert.instagramUrl ?? "", expert.facebookUrl ?? "",
+        expert.phone ?? "", expert.linkedinUrl ?? "", expert.instagramUrl ?? "", expert.facebookUrl ?? "",
       ]),
     ];
     const csv = rows.map((row) => row.map(escapeCell).join(",")).join("\r\n");
@@ -283,6 +293,7 @@ function Experts() {
       ["Expert category", expert.c],
       ["Location", expert.r],
       ["Email", expert.email],
+      ["Phone", expert.phone],
       ["LinkedIn", expert.linkedinUrl],
       ["Instagram", expert.instagramUrl],
       ["Facebook", expert.facebookUrl],
@@ -593,6 +604,11 @@ function Experts() {
                     <Mail />
                   </a>
                 )}
+                {selected.phone && (
+                  <a href={`tel:${selected.phone}`} aria-label="Phone">
+                    <Phone />
+                  </a>
+                )}
                 {selected.linkedinUrl && (
                   <a href={selected.linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn">
                     <Linkedin />
@@ -709,53 +725,27 @@ function Experts() {
                       />
                     </label>
                     <label>
-                      <span>Email address *</span>
+                      <span>Email address</span>
                       <input
                         name="email"
                         type="email"
-                        required
                         maxLength={254}
                         placeholder="name@example.com"
                       />
                     </label>
                     <label>
-                      <span>Phone number *</span>
+                      <span>Phone number</span>
                       <input
                         name="phone"
                         type="tel"
-                        required
                         minLength={5}
                         maxLength={40}
                         placeholder="+251 ..."
                       />
                     </label>
-                    <label>
-                      <span>LinkedIn profile</span>
-                      <input
-                        name="linkedinUrl"
-                        type="url"
-                        maxLength={2000}
-                        placeholder="https://linkedin.com/in/..."
-                      />
-                    </label>
-                    <label>
-                      <span>Instagram profile</span>
-                      <input
-                        name="instagramUrl"
-                        type="url"
-                        maxLength={2000}
-                        placeholder="https://instagram.com/..."
-                      />
-                    </label>
-                    <label className="expert-form-wide">
-                      <span>Facebook profile</span>
-                      <input
-                        name="facebookUrl"
-                        type="url"
-                        maxLength={2000}
-                        placeholder="https://facebook.com/..."
-                      />
-                    </label>
+                    <p className="expert-form-contact-note expert-form-wide">
+                      Please provide at least one contact method: email address or phone number.
+                    </p>
                     <label className="expert-form-wide">
                       <span>Profile photo</span>
                       <input name="profilePhoto" type="file" accept="image/jpeg,image/png" />

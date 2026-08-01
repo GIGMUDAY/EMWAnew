@@ -21,11 +21,11 @@ const SECTIONS = [
   { h: "4. Legal Basis", b: "Where applicable, we process personal information on the basis of your consent, our legitimate interests in operating a professional association, and compliance with Ethiopian law." },
   { h: "5. Sharing", b: "We share personal information only with program partners strictly to deliver services you have opted into, with service providers under contractual confidentiality, and where required by law. Experts Directory profiles are public by design." },
   { h: "6. Retention", b: "We retain membership and program records for the duration of your active engagement plus a reasonable archival period. Newsletter subscriber data is retained until you unsubscribe." },
-  { h: "7. Your Rights", b: "You may request access, correction, or deletion of your personal information by contacting privacy@emwa.org.et. Directory listings can be delisted on request." },
+  { h: "7. Your Rights", b: "You may request access, correction, or deletion of your personal information by contacting contact@ethmwa.org. Directory listings can be delisted on request." },
   { h: "8. Security", b: "We apply administrative, technical, and physical safeguards appropriate to the sensitivity of the information we hold. No system is perfectly secure and we cannot guarantee absolute security." },
   { h: "9. Cookies", b: "Our website uses minimal cookies for functional purposes and privacy-friendly analytics. You can control cookies through your browser settings." },
   { h: "10. Changes", b: "We may update this policy from time to time. Material changes will be communicated via the website and, where appropriate, direct email." },
-  { h: "11. Contact", b: "Questions about this policy may be sent to privacy@emwa.org.et or EMWA, Kirkos Sub-city, Addis Ababa, Ethiopia." },
+  { h: "11. Contact", b: "Questions about this policy may be sent to contact@ethmwa.org or EMWA, Addis Ababa, Arada Sub-city, near Rad Mekonenne Bridge." },
 ];
 
 function Privacy() {
