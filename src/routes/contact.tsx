@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { API_BASE } from "@/lib/admin-api";
+import { useLanguage } from "@/lib/language-context";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -43,6 +44,7 @@ const SOCIALS = [
 ];
 
 function Contact() {
+  const { t, language } = useLanguage();
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -73,17 +75,17 @@ function Contact() {
         const firstError = fieldErrors
           ? Object.values(fieldErrors).find((messages) => messages?.length)?.[0]
           : undefined;
-        throw new Error(firstError ?? payload?.error?.message ?? "Unable to send your message.");
+        throw new Error(firstError ?? payload?.error?.message ?? t("Unable to send your message.", "መልዕክትዎን መላክ አልተቻለም።"));
       }
       form.reset();
       setSent(true);
     } catch (cause) {
       setError(
         cause instanceof TypeError
-          ? "Cannot reach the EMWA server. Please check your connection and try again."
+          ? t("Cannot reach the EMWA server. Please check your connection and try again.", "ወደ EMWA አገልጋይ መድረስ አልተቻለም። እባክዎን ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።")
           : cause instanceof Error
             ? cause.message
-            : "Unable to send your message.",
+            : t("Unable to send your message.", "መልዕክትዎን መላክ አልተቻለም።"),
       );
     } finally {
       setSending(false);
@@ -93,33 +95,41 @@ function Contact() {
   return (
     <PageShell>
       <section className="contact3-hero">
-        <p className="contact3-eyebrow">Contact / EMWA</p>
+        <p className="contact3-eyebrow">{t("Contact / EMWA", "ግንኙነት / EMWA")}</p>
         <h1>
-          Start a <em>conversation.</em>
+          {language === "am" ? (
+            <>
+              ውይይት <em>ይጀምሩ።</em>
+            </>
+          ) : (
+            <>
+              Start a <em>conversation.</em>
+            </>
+          )}
         </h1>
-        <p>Have a question, an idea, or a reason to work together? Send us a message.</p>
+        <p>{t("Have a question, an idea, or a reason to work together? Send us a message.", "ጥያቄ፣ ሃሳብ ወይም አብረው ለመስራት ምክንያት አለዎት? መልዕክት ይላኩልን።")}</p>
       </section>
 
       <section className="contact3-main" id="donate">
         <form onSubmit={submitMessage}>
           <header>
-            <p className="contact3-eyebrow">Write to us</p>
-            <h2>Send a message.</h2>
+            <p className="contact3-eyebrow">{t("Write to us", "ይጻፉልን")}</p>
+            <h2>{t("Send a message.", "መልዕክት ይላኩ።")}</h2>
           </header>
           <div className="contact3-fields">
             <label>
-              <span>Your name</span>
+              <span>{t("Your name", "ስምዎ")}</span>
               <input
                 name="fullName"
                 autoComplete="name"
-                placeholder="Full name"
+                placeholder={t("Full name", "ሙሉ ስም")}
                 minLength={2}
                 maxLength={150}
                 required
               />
             </label>
             <label>
-              <span>Email address</span>
+              <span>{t("Email address", "የኢሜይል አድራሻ")}</span>
               <input
                 name="email"
                 type="email"
@@ -130,35 +140,35 @@ function Contact() {
               />
             </label>
             <label className="is-wide">
-              <span>Company name</span>
+              <span>{t("Company name", "የድርጅት ስም")}</span>
               <input
                 name="companyName"
                 autoComplete="organization"
-                placeholder="Organization or company"
+                placeholder={t("Organization or company", "ድርጅት ወይም ኩባንያ")}
                 maxLength={200}
               />
             </label>
             <label className="is-wide">
-              <span>Subject</span>
+              <span>{t("Subject", "ርዕስ ጉዳይ")}</span>
               <select name="subject" defaultValue="" required>
                 <option value="" disabled>
-                  Select a subject
+                  {t("Select a subject", "ርዕስ ጉዳይ ይምረጡ")}
                 </option>
-                <option>Membership</option>
-                <option>Partnership</option>
-                <option>Media enquiry</option>
-                <option>Programme collaboration</option>
-                <option>Other</option>
+                <option value="Membership">{t("Membership", "አባልነት")}</option>
+                <option value="Partnership">{t("Partnership", "አጋርነት")}</option>
+                <option value="Media enquiry">{t("Media enquiry", "የሚዲያ ጥያቄ")}</option>
+                <option value="Programme collaboration">{t("Programme collaboration", "የፕሮግራም ትብብር")}</option>
+                <option value="Other">{t("Other", "ሌላ")}</option>
               </select>
             </label>
             <label className="is-wide">
-              <span>Message</span>
+              <span>{t("Message", "መልዕክት")}</span>
               <textarea
                 name="message"
                 rows={5}
                 minLength={10}
                 maxLength={10000}
-                placeholder="How can we help?"
+                placeholder={t("How can we help?", "እንዴት እንረዳዎ?")}
                 required
               />
             </label>
@@ -166,11 +176,11 @@ function Contact() {
           <button type="submit" className={sent ? "is-sent" : ""} disabled={sending || sent}>
             {sent ? (
               <>
-                <Check /> Message sent
+                <Check /> {t("Message sent", "መልዕክቱ ተልቋል")}
               </>
             ) : (
               <>
-                {sending ? "Sendingâ€¦" : "Send message"} <Send />
+                {sending ? t("Sending…", "በመላክ ላይ…") : t("Send message", "መልዕክት ላክ")} <Send />
               </>
             )}
           </button>
@@ -179,8 +189,8 @@ function Contact() {
         <div className="contact3-map-wrap">
           <header className="contact3-map-header">
             <div>
-              <p className="contact3-eyebrow">Visit EMWA</p>
-              <h2>Find us in Addis Ababa.</h2>
+              <p className="contact3-eyebrow">{t("Visit EMWA", "EMWAን ይጎብኙ")}</p>
+              <h2>{t("Find us in Addis Ababa.", "አዲስ አበባ ውስጥ ያግኙን።")}</h2>
             </div>
             <span className="contact3-map-pin" aria-hidden="true">
               <MapPin />
@@ -195,15 +205,15 @@ function Contact() {
           </div>
           <div className="contact3-map-caption">
             <div>
-              <p className="contact3-eyebrow">Physical address</p>
-              <strong>Addis Ababa, Arada Sub-city, near Rad Mekonenne Bridge</strong>
+              <p className="contact3-eyebrow">{t("Physical address", "አድራሻ")}</p>
+              <strong>{t("Addis Ababa, Arada Sub-city, near Ras Mekonnen Bridge", "አዲስ አበባ፣ አራዳ ክፍለ ከተማ፣ ራስ መኮንን ድልድይ አጠገብ")}</strong>
             </div>
             <a
               href="https://maps.app.goo.gl/xcC5bYanr3m98Psv6"
               target="_blank"
               rel="noreferrer"
             >
-              <Navigation /> Open in Google Maps <ArrowUpRight />
+              <Navigation /> {t("Open in Google Maps", "በGoogle Maps ክፈት")} <ArrowUpRight />
             </a>
           </div>
         </div>
@@ -211,17 +221,17 @@ function Contact() {
 
       <section className="contact3-details" aria-labelledby="contact-details-title">
         <div>
-          <p className="contact3-eyebrow">Direct contact</p>
-          <h2 id="contact-details-title">Reach our team.</h2>
+          <p className="contact3-eyebrow">{t("Direct contact", "ቀጥታ ግንኙነት")}</p>
+          <h2 id="contact-details-title">{t("Reach our team.", "ቡድናችንን ያግኙ።")}</h2>
         </div>
         <address>
           <div>
-            <span>Email addresses</span>
+            <span>{t("Email addresses", "የኢሜይል አድራሻዎች")}</span>
             <a href="mailto:info@ethmwa.org">info@ethmwa.org</a>
             <a href="mailto:contact@ethmwa.org">contact@ethmwa.org</a>
           </div>
           <div>
-            <span>Phone numbers</span>
+            <span>{t("Phone numbers", "የስልክ ቁጥሮች")}</span>
             <a href="tel:+251977300031">+251 977 300 031</a>
             <a href="tel:+251998139676">+251 998 139 676</a>
           </div>
@@ -230,8 +240,8 @@ function Contact() {
 
       <section className="contact3-socials">
         <div>
-          <p className="contact3-eyebrow">Follow our work</p>
-          <h2>Stay connected.</h2>
+          <p className="contact3-eyebrow">{t("Follow our work", "ስራችንን ይከታተሉ")}</p>
+          <h2>{t("Stay connected.", "ተገናኝተው ይቆዩ።")}</h2>
         </div>
         <nav aria-label="Social media links">
           {SOCIALS.map(({ label, href, icon: Icon }) => (
@@ -271,13 +281,16 @@ function Contact() {
               <X />
             </button>
             <span className="contact3-notice-icon">{error ? <AlertCircle /> : <Check />}</span>
-            <p className="contact3-eyebrow">{error ? "Message not sent" : "Message received"}</p>
+            <p className="contact3-eyebrow">{error ? t("Message not sent", "መልዕክቱ አልተላከም") : t("Message received", "መልዕክቱ ደርሶናል")}</p>
             <h2 id="contact-notice-title">
-              {error ? "Something went wrong." : "Thank you for reaching out."}
+              {error ? t("Something went wrong.", "ችግር አጋጥሟል።") : t("Thank you for reaching out.", "ስላነጋገሩን እናመሰግናለን።")}
             </h2>
             <p>
               {error ||
-                "Your message has been received successfully. The EMWA team will review it and contact you as soon as possible."}
+                t(
+                  "Your message has been received successfully. The EMWA team will review it and contact you as soon as possible.",
+                  "መልዕክትዎ በስኬት ደርሶናል። የEMWA ቡድን ገምግሞ በተቻለ ፍጥነት ያነጋግርዎታል።",
+                )}
             </p>
             <button
               type="button"
@@ -287,7 +300,7 @@ function Contact() {
                 setError("");
               }}
             >
-              {error ? "Try again" : "Done"}
+              {error ? t("Try again", "እንደገና ይሞክሩ") : t("Done", "ጨርስ")}
             </button>
           </section>
         </div>

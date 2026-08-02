@@ -1,29 +1,37 @@
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/lib/language-context";
 
 const SLIDES = [
   {
     img: "https://images.unsplash.com/photo-1585637071663-799845ad5212?w=1600&q=80",
     text: "Women journalists on the frontlines are reshaping how the world sees conflict.",
+    textAm: "በግንባር ላይ ያሉ ሴት ጋዜጠኞች ዓለም ግጭትን የሚያይበትን መንገድ እየቀየሩ ይገኛሉ።",
     author: "Reuters Institute",
     role: "Global Press Freedom Report 2026",
+    roleAm: "ዓለም አቀፍ የፕሬስ ነፃነት ሪፖርት 2026",
   },
   {
     img: "https://images.unsplash.com/photo-1495020689067-958852a7765e?w=1600&q=80",
     text: "A record number of women now lead major international newsrooms.",
+    textAm: "በታሪክ ከፍተኛ ቁጥር ያላቸው ሴቶች አሁን ዋና ዋና ዓለም አቀፍ የዜና ክፍሎችን ይመራሉ።",
     author: "UNESCO",
     role: "Women in News, Global Report",
+    roleAm: "ሴቶች በዜና፣ ዓለም አቀፍ ሪፖርት",
   },
   {
     img: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1600&q=80",
     text: "From Addis to Nairobi, women reporters are driving accountability journalism.",
+    textAm: "ከአዲስ አበባ እስከ ናይሮቢ፣ ሴት ሪፖርተሮች ተጠያቂነትን የሚያረጋግጥ ጋዜጠኝነትን እየመሩ ነው።",
     author: "International Women's Media Foundation",
     role: "2026 Courage in Journalism Awards",
+    roleAm: "የ2026 በጋዜጠኝነት የጽናትና የድፍረት ሽልማት",
   },
 ];
 
 export default function HeroSlider() {
   const [index, setIndex] = useState(0);
   const [autoPlay, setAutoPlay] = useState(true);
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     if (!autoPlay) return;
@@ -43,7 +51,9 @@ export default function HeroSlider() {
       onMouseLeave={() => setAutoPlay(true)}
     >
       <div className="max-w-[1400px] mx-auto px-6">
-        <p className="label-mono text-primary mb-8 text-center">Voices in Motion</p>
+        <p className="label-mono text-primary mb-8 text-center">
+          {t("Voices in Motion", "በእንቅስቃሴ ላይ ያሉ ድምጾች")}
+        </p>
 
         <div className="relative aspect-[16/9] md:aspect-[20/9] overflow-hidden bg-foreground">
           {/* Images */}
@@ -95,10 +105,10 @@ export default function HeroSlider() {
                 }`}
               >
                 <blockquote className="font-display text-3xl md:text-5xl leading-tight tracking-tight mb-6">
-                  &ldquo;{s.text}&rdquo;
+                  &ldquo;{language === "am" ? s.textAm : s.text}&rdquo;
                 </blockquote>
                 <p className="label-mono text-primary">
-                  {s.author} <span className="text-muted-foreground">· {s.role}</span>
+                  {s.author} <span className="text-muted-foreground">· {language === "am" ? s.roleAm : s.role}</span>
                 </p>
               </div>
             ))}

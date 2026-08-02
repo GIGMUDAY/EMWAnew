@@ -32,7 +32,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let initial: SiteLanguage = "en";
     try {
-      initial = localStorage.getItem("emwa-language") === "am" ? "am" : "en";
+      const stored = localStorage.getItem("emwa-language");
+      if (stored === "am" || stored === "en") {
+        initial = stored;
+      }
     } catch {
       // Language switching should still work when browser storage is unavailable.
     }
@@ -51,10 +54,17 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [initialized, language]);
 
-  const setLanguage = (nextLanguage: SiteLanguage) => {
+  const setLanguage = useCallback((nextLanguage: SiteLanguage) => {
     translationUnavailable.current = false;
     setLanguageState(nextLanguage);
-  };
+    document.documentElement.lang = nextLanguage;
+    document.documentElement.dataset.language = nextLanguage;
+    try {
+      localStorage.setItem("emwa-language", nextLanguage);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (language !== "am" || translationUnavailable.current || !pendingTranslations.current.size)
@@ -90,12 +100,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const translate = useCallback(
     (english: string, amharic: string) => {
       if (language === "en") return english;
+      if (amharic && amharic !== english) return amharic;
       const translated = translations.current.get(english);
       if (translated) return translated;
       if (!translationUnavailable.current) pendingTranslations.current.set(english, amharic);
-      return amharic;
+      return amharic || english;
     },
-    [language, translationVersion],
+    [language],
   );
 
   const value = useMemo(
@@ -104,7 +115,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setLanguage,
       t: translate,
     }),
-    [language, translate],
+    [language, setLanguage, translate],
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

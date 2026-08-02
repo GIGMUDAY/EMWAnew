@@ -1,41 +1,57 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
 const QUOTES = [
   {
     img: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=1600&q=80",
     text: "There is no limit to what we, as women, can accomplish.",
+    textAm: "እኛ እንደ ሴቶች ማሳካት የምንችለው ነገር ምንም አይነት ወሰን የለውም።",
     author: "Michelle Obama",
     role: "Author & Advocate",
+    roleAm: "ደራሲ እና ተሟጋች",
     tag: "Leadership",
+    tagAm: "መሪነት",
   },
   {
     img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1600&q=80",
     text: "One child, one teacher, one book, one pen can change the world.",
+    textAm: "አንድ ህጻን፣ አንድ መምህር፣ አንድ መጽሐፍ እና አንድ እስክሪብቶ ዓለምን መለወጥ ይችላሉ።",
     author: "Malala Yousafzai",
     role: "Nobel Peace Laureate",
+    roleAm: "የኖቤል ሰላም ሽልማት ባለቤት",
     tag: "Education",
+    tagAm: "ትምህርት",
   },
   {
     img: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=1600&q=80",
     text: "The question isn't who's going to let me; it's who's going to stop me.",
+    textAm: "ጥያቄው ማን ይፈቅድልኛል ሳይሆን ማን ሊያስቆመኝ ይችላል የሚለው ነው።",
     author: "Ayn Rand",
     role: "Writer",
+    roleAm: "ጸሐፊ",
     tag: "Courage",
+    tagAm: "ድፍረት",
   },
   {
     img: "https://images.unsplash.com/photo-1573497491208-6b1acb260507?w=1600&q=80",
     text: "A woman with a voice is, by definition, a strong woman.",
+    textAm: "ድምፅ ያላት ሴት፣ በማንኛውም መለኪያ ጠንካራ ሴት ናት።",
     author: "Melinda Gates",
     role: "Philanthropist",
+    roleAm: "በጎ አድራጊ",
     tag: "Voice",
+    tagAm: "ድምፅ",
   },
   {
     img: "https://images.unsplash.com/photo-1600275669439-14e40452d20b?w=1600&q=80",
     text: "I raise up my voice — not so I can shout, but so that those without a voice can be heard.",
+    textAm: "ድምጼን የማነሳው ለመጮህ ሳይሆን ድምጽ የሌላቸው እንዲሰሙ ነው።",
     author: "Malala Yousafzai",
     role: "Advocate for Girls' Education",
+    roleAm: "የሴት ልጆች ትምህርት ተሟጋች",
     tag: "Solidarity",
+    tagAm: "አንድነት",
   },
 ];
 
@@ -48,6 +64,7 @@ export default function InspirationalQuotes() {
   const [isExiting, setIsExiting] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { t, language } = useLanguage();
 
   const goTo = (next: number) => {
     if (next === index) return;
@@ -94,6 +111,9 @@ export default function InspirationalQuotes() {
   }, [index, paused]);
 
   const q = QUOTES[index];
+  const quoteText = language === "am" && q.textAm ? q.textAm : q.text;
+  const quoteRole = language === "am" && q.roleAm ? q.roleAm : q.role;
+  const quoteTag = language === "am" && q.tagAm ? q.tagAm : q.tag;
 
   return (
     <section
@@ -121,7 +141,7 @@ export default function InspirationalQuotes() {
       <div className="vim-inner">
         {/* ── Top bar ── */}
         <div className="vim-topbar">
-          <p className="vim-eyebrow">Voices in Motion</p>
+          <p className="vim-eyebrow">{t("Voices in Motion", "በእንቅስቃሴ ላይ ያሉ ድምጾች")}</p>
           {/* Progress bar */}
           <div className="vim-progress-track" aria-hidden="true">
             <div
@@ -147,13 +167,13 @@ export default function InspirationalQuotes() {
           key={index}
         >
           <span className="vim-mark" aria-hidden="true">"</span>
-          <blockquote className="vim-quote">{q.text}</blockquote>
+          <blockquote className="vim-quote">{quoteText}</blockquote>
 
           <footer className="vim-footer">
-            <span className="vim-tag">{q.tag}</span>
+            <span className="vim-tag">{quoteTag}</span>
             <div className="vim-author-block">
               <span className="vim-author">{q.author}</span>
-              <span className="vim-role">{q.role}</span>
+              <span className="vim-role">{quoteRole}</span>
             </div>
           </footer>
         </div>

@@ -89,16 +89,16 @@ export function SiteHeader() {
             <Globe2 aria-hidden="true" />
             <button
               type="button"
-              className={language === "en" ? "is-active" : ""}
+              className={`px-2 py-1 cursor-pointer transition-colors ${language === "en" ? "is-active text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => setLanguage("en")}
               aria-pressed={language === "en"}
             >
               EN
             </button>
-            <span aria-hidden="true">/</span>
+            <span aria-hidden="true" className="text-muted-foreground/50">/</span>
             <button
               type="button"
-              className={language === "am" ? "is-active" : ""}
+              className={`px-2 py-1 cursor-pointer transition-colors ${language === "am" ? "is-active text-primary font-bold" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => setLanguage("am")}
               aria-pressed={language === "am"}
             >
@@ -141,6 +141,29 @@ export function SiteHeader() {
             aria-label="Mobile navigation"
             className="site-container flex flex-col py-4 gap-1 max-h-[calc(100dvh-4rem)] overflow-y-auto"
           >
+            {/* Mobile language switcher */}
+            <div className="flex items-center justify-between py-2.5 px-1 border-b border-border/60 mb-2">
+              <span className="label-mono text-xs text-muted-foreground flex items-center gap-2">
+                <Globe2 className="size-4" /> {t("Language", "ቋንቋ")}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLanguage("en")}
+                  className={`px-3 py-1 text-xs label-mono border transition-colors ${language === "en" ? "bg-primary text-white border-primary" : "border-border text-foreground"}`}
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage("am")}
+                  className={`px-3 py-1 text-xs label-mono border transition-colors ${language === "am" ? "bg-primary text-white border-primary" : "border-border text-foreground"}`}
+                >
+                  አማርኛ
+                </button>
+              </div>
+            </div>
+
             {NAV.map((item) => (
               <Link
                 key={item.to}

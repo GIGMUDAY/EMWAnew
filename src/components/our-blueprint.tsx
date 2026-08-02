@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useLanguage } from "@/lib/language-context";
 
 /* ── per-card scroll reveal ── */
 function useCardInView() {
@@ -30,25 +31,33 @@ const PILLARS = [
   {
     n: "01",
     title: "Leadership Incubator",
+    titleAm: "የአመራርነት ማዕከል",
     body: "Accelerating women into editor-in-chief and executive producer roles through executive coaching and residency.",
+    bodyAm: "ሴቶችን በዋና አዘጋጅነት እና በስራ አስፈጻሚ ፕሮዲዩሰርነት ደረጃዎች ማሳደግ።",
     accent: "bp-card--default",
   },
   {
     n: "02",
     title: "Media Safety Protocols",
+    titleAm: "የሚዲያ ደህንነት ደንቦች",
     body: "Legal, digital, and physical protection for journalists reporting from the field.",
+    bodyAm: "በሜዳ ላይ ዘገባ ለሚሰሩ ጋዜጠኞች የህግ፣ የዲጂታል እና የአካል ደህንነት ጥበቃ።",
     accent: "bp-card--default",
   },
   {
     n: "03",
     title: "Regional Newsroom Grants",
+    titleAm: "የክልል ዜና ክፍሎች ድጋፍ",
     body: "Micro-grants that fund women-led investigative reporting outside Addis Ababa.",
+    bodyAm: "ከአዲስ አበባ ውጭ በሴቶች የሚመሩ አጣሪ ጋዜጠኝነት ስራዎችን የሚደግፉ ድጋፎች።",
     accent: "bp-card--default",
   },
   {
     n: "04",
     title: "Voice on Air Fellowship",
+    titleAm: "የአየር ላይ ድምጽ ህብረት",
     body: "A one-year fellowship pairing early-career broadcasters with senior mentors nationwide.",
+    bodyAm: "አዳዲስ የብሮድካስት ባለሙያዎችን ከአጋር አጋዦች ጋር የሚያገናኝ የ1 ዓመት ፕሮግራም።",
     accent: "bp-card--featured",
   },
 ];
@@ -63,6 +72,7 @@ function PillarCard({
   isLast: boolean;
 }) {
   const { ref, visible } = useCardInView();
+  const { t, language } = useLanguage();
 
   return (
     <li
@@ -80,11 +90,11 @@ function PillarCard({
 
       {/* Card */}
       <Link to="/programs" className={`bp-card ${pillar.accent}`}>
-        <span className="bp-card-label">Initiative</span>
-        <h3 className="bp-card-title">{pillar.title}</h3>
-        <p className="bp-card-body">{pillar.body}</p>
+        <span className="bp-card-label">{t("Initiative", "ተነሳሽነት")}</span>
+        <h3 className="bp-card-title">{language === "am" && pillar.titleAm ? pillar.titleAm : pillar.title}</h3>
+        <p className="bp-card-body">{language === "am" && pillar.bodyAm ? pillar.bodyAm : pillar.body}</p>
         <span className="bp-card-cta">
-          Learn more <ArrowUpRight className="bp-cta-icon" aria-hidden="true" />
+          {t("Learn more", "ተጨማሪ ያንብቡ")} <ArrowUpRight className="bp-cta-icon" aria-hidden="true" />
         </span>
       </Link>
     </li>
@@ -94,6 +104,7 @@ function PillarCard({
 export default function OurBlueprint() {
   const headerRef = useRef<HTMLDivElement>(null);
   const [headerVisible, setHeaderVisible] = useState(false);
+  const { t, language } = useLanguage();
 
   useEffect(() => {
     const el = headerRef.current;
@@ -120,16 +131,26 @@ export default function OurBlueprint() {
           ref={headerRef}
           className={`bp-header${headerVisible ? " bp-header--visible" : ""}`}
         >
-          <p className="bp-eyebrow">Our Blueprint</p>
+          <p className="bp-eyebrow">{t("Our Blueprint", "የእኛ ንድፈ ሐሳብ")}</p>
           <h2 className="bp-headline" id="bp-heading">
-            Four <span className="bp-headline-accent">pillars.</span>
+            {language === "am" ? (
+              <>
+                አራት <span className="bp-headline-accent">አዕማድ።</span>
+              </>
+            ) : (
+              <>
+                Four <span className="bp-headline-accent">pillars.</span>
+              </>
+            )}
           </h2>
           <p className="bp-subtext">
-            Designing structural change through curated initiatives that span
-            policy, safety, funding, and voice.
+            {t(
+              "Designing structural change through curated initiatives that span policy, safety, funding, and voice.",
+              "ፖሊሲን፣ ደህንነትን፣ የገንዘብ ድጋፍንና ድምፅን በሚያቅፉ ፕሮግራሞች መዋቅራዊ ለውጥ ማምጣት።",
+            )}
           </p>
           <Link to="/programs" className="bp-all-link">
-            All programs <ArrowUpRight className="bp-all-icon" aria-hidden="true" />
+            {t("All programs", "ሁሉንም ፕሮግራሞች ይመልከቱ")} <ArrowUpRight className="bp-all-icon" aria-hidden="true" />
           </Link>
         </div>
 

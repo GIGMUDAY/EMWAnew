@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, ExternalLink } from "lucide-react";
 import { useCallback, useState, useEffect, useRef } from "react";
+import { useLanguage } from "@/lib/language-context";
 
 type Testimonial = {
   quote: string;
@@ -116,6 +117,7 @@ export default function VoicesSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isSliding, setIsSliding] = useState(false);
   const { ref, inView } = useVoicesInView();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const feedUrl = import.meta.env.VITE_GLOBAL_VOICES_API_URL;
@@ -223,7 +225,7 @@ export default function VoicesSlider() {
       <div className="voices-container">
         {/* Voices section eyebrow */}
         <div className="voices-header">
-          <p className="voices-eyebrow">Global media voices</p>
+          <p className="voices-eyebrow">{t("Global media voices", "ዓለም አቀፍ የሜዲያ ድምጾች")}</p>
           <div className="voices-header-rule" aria-hidden="true" />
           <div className="voices-counter" aria-hidden="true">
             <span className="voices-counter-current">0{activeIndex + 1}</span>
@@ -245,7 +247,7 @@ export default function VoicesSlider() {
             <div
               className={`voices-quote-wrapper${isSliding ? " voices-quote-wrapper--sliding" : ""}`}
             >
-              <div className="voices-quote-text">{renderQuoteText(activeTestimonial.quote)}</div>
+              <div className="voices-quote-text">{renderQuoteText(t(activeTestimonial.quote, activeTestimonial.quote))}</div>
 
               {/* Divider line */}
               <div className="voices-divider" aria-hidden="true" />

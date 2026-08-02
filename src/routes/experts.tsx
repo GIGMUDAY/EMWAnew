@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { API_BASE } from "@/lib/admin-api";
+import { useLanguage } from "@/lib/language-context";
 
 export const Route = createFileRoute("/experts")({
   head: () => ({
@@ -53,6 +54,26 @@ const EXPERT_CATEGORIES = [
   "Arts, Culture & Entertainment",
   "Social Development & Disability",
 ] as const;
+
+const CATEGORY_MAP_AM: Record<string, string> = {
+  All: "ሁሉም",
+  "Journalism & Media": "ጋዜጠኝነት እና ሚዲያ",
+  "Communications & Public Relations": "ኮሙኒኬሽን እና ህዝብ ግንኙነት",
+  "Gender Equality & Women's Rights": "የፆታ እኩልነት እና የሴቶች መብት",
+  "Human Rights & Advocacy": "ሰብአዊ መብቶች እና ተሟጋችነት",
+  "Governance & Public Policy": "መልካም አስተዳደር እና ህዝባዊ ፖሊሲ",
+  "Law & Justice": "ህግ እና ፍትህ",
+  "Health & Public Health": "ጤና እና ህዝብ ጤና",
+  "Education & Research": "ትምህርት እና ምርምር",
+  "Business & Economics": "ንግድ እና ኢኮኖሚክስ",
+  "Science & Technology": "ሳይንስ እና ቴክኖሎጂ",
+  "Environment & Climate": "አካባቢ እና አየር ንብረት",
+  "Agriculture & Food Systems": "ግብርና እና ምግብ ስርዓቶች",
+  "Arts, Culture & Entertainment": "ኪነ-ጥበብ፣ ባህል እና መዝናኛ",
+  "Social Development & Disability": "ማህበራዊ ልማት እና አካል ጉዳተኝነት",
+  Other: "ሌሎች",
+};
+
 const CATEGORIES = ["All", ...EXPERT_CATEGORIES, "Other"];
 type Expert = {
   id?: string;
@@ -102,6 +123,7 @@ const expertSubmissionError = (payload: unknown) => {
 };
 
 function Experts() {
+  const { t, language } = useLanguage();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<"name" | "field">("name");
@@ -180,7 +202,7 @@ function Experts() {
     const phone = String(formData.get("phone") ?? "").trim();
 
     if (!email && !phone) {
-      setSubmitError("Please provide at least an email address or a phone number.");
+      setSubmitError(t("Please provide at least an email address or a phone number.", "እባክዎን ቢያንስ የኢሜይል አድራሻ ወይም የስልክ ቁጥር ያስገቡ።"));
       return;
     }
 
@@ -206,10 +228,10 @@ function Experts() {
     } catch (cause) {
       setSubmitError(
         cause instanceof TypeError
-          ? "Cannot reach the EMWA server. Please check your connection and try again."
+          ? t("Cannot reach the EMWA server. Please check your connection and try again.", "ወደ EMWA አገልጋይ መድረስ አልተቻለም። እባክዎን ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።")
           : cause instanceof Error
             ? cause.message
-            : "Unable to submit your application.",
+            : t("Unable to submit your application.", "ማመልከቻዎን ማስገባት አልተቻለም።"),
       );
     } finally {
       setSubmitting(false);
@@ -344,20 +366,30 @@ function Experts() {
     <PageShell>
       <section className="experts-hero">
         <div className="experts-hero-copy">
-          <p className="experts-eyebrow">The Expertise Archive / EMWA</p>
+          <p className="experts-eyebrow">{t("The Expertise Archive / EMWA", "የባለሙያዎች መዝገብ / EMWA")}</p>
           <h1>
-            Knowledge has
-            <br />a <em>voice.</em>
+            {language === "am" ? (
+              <>
+                እውቀት<br />ድምፅ <em>አለው።</em>
+              </>
+            ) : (
+              <>
+                Knowledge has
+                <br />a <em>voice.</em>
+              </>
+            )}
           </h1>
           <p>
-            A curated, verified network of Ethiopian women ready to inform reporting, shape policy,
-            mentor peers, and lead public conversation.
+            {t(
+              "A curated, verified network of Ethiopian women ready to inform reporting, shape policy, mentor peers, and lead public conversation.",
+              "ዘገባዎችን ለማበልጸግ፣ ፖሊሲን ለመቅረፅ፣ እህቶችን ለማማከር እና የህዝብ ውይይትን ለመምራት የተዘጋጁ የተረጋገጡ የኢትዮጵያውያን ሴቶች መረብ።",
+            )}
           </p>
           <div className="experts-hero-actions">
             <a href="#expert-directory">
-              Browse the directory <ArrowUpRight aria-hidden="true" />
+              {t("Browse the directory", "ማውጫውን ያስሱ")} <ArrowUpRight aria-hidden="true" />
             </a>
-            <button onClick={() => setRegisterOpen(true)}>Submit your profile</button>
+            <button onClick={() => setRegisterOpen(true)}>{t("Submit your profile", "መገለጫዎን ያስገቡ")}</button>
           </div>
         </div>
         <div className="experts-hero-portrait">
@@ -375,11 +407,11 @@ function Experts() {
           )}
           <div className="experts-hero-portrait-shade" aria-hidden="true" />
           <div className="experts-hero-dossier">
-            <span>{featuredExpert?.n || "Featured expert"}</span>
+            <span>{featuredExpert?.n || t("Featured expert", "ልዩ ባለሙያ")}</span>
             <strong>
-              {featuredExpert?.c || "Media expertise"}
+              {language === "am" && CATEGORY_MAP_AM[featuredExpert?.c] ? CATEGORY_MAP_AM[featuredExpert?.c] : featuredExpert?.c || t("Media expertise", "የሚዲያ ሙያ")}
             </strong>
-            <p>{featuredExpert?.r || "Ethiopia"}</p>
+            <p>{featuredExpert?.r || "ኢትዮጵያ"}</p>
           </div>
           <span className="experts-hero-index" aria-hidden="true">
             E/01
@@ -394,32 +426,34 @@ function Experts() {
       >
         <header className="experts-directory-header">
           <div>
-            <p className="experts-eyebrow">Verified professionals</p>
-            <h2 id="experts-directory-heading">Find the right voice.</h2>
+            <p className="experts-eyebrow">{t("Verified professionals", "የተረጋገጡ ባለሙያዎች")}</p>
+            <h2 id="experts-directory-heading">{t("Find the right voice.", "ትክክለኛውን ድምፅ ያግኙ።")}</h2>
           </div>
           <p>
-            Search by discipline, name, or region to find a source, speaker, mentor, trainer, or
-            collaborator.
+            {t(
+              "Search by discipline, name, or region to find a source, speaker, mentor, trainer, or collaborator.",
+              "ምንጭ፣ ተናጋሪ፣ አማካሪ፣ አሰልጣኝ ወይም አጋር ለማግኘት በዘርፍ፣ በስም ወይም በክልል ይፈልጉ።",
+            )}
           </p>
         </header>
 
         <div className="experts-toolbar">
           <label className="experts-search">
             <Search aria-hidden="true" />
-            <span className="sr-only">Search experts</span>
+            <span className="sr-only">{t("Search experts", "ባለሙያዎችን ይፈልጉ")}</span>
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name, skill, region..."
+              placeholder={t("Search name, skill, region...", "በስም፣ በሙያ፣ በክልል ይፈልጉ...")}
             />
           </label>
           <label className="experts-sort">
-            <span>Category</span>
+            <span>{t("Category", "ዘርፍ")}</span>
             <select value={category} onChange={(event) => setCategory(event.target.value)}>
               {CATEGORIES.map((item) => (
                 <option key={item} value={item}>
-                  {item} (
+                  {language === "am" ? CATEGORY_MAP_AM[item] ?? item : item} (
                   {item === "All"
                     ? experts.length
                     : experts.filter((expert) => expert.c === item).length}
@@ -430,13 +464,13 @@ function Experts() {
             <ChevronDown aria-hidden="true" />
           </label>
           <label className="experts-sort">
-            <span>Sort by</span>
+            <span>{t("Sort by", "ክፍልፍል")}</span>
             <select
               value={sort}
               onChange={(event) => setSort(event.target.value as "name" | "field")}
             >
-              <option value="name">Name</option>
-              <option value="field">Expertise</option>
+              <option value="name">{t("Name", "ስም")}</option>
+              <option value="field">{t("Expertise", "ሙያ")}</option>
             </select>
             <ChevronDown aria-hidden="true" />
           </label>
@@ -444,24 +478,32 @@ function Experts() {
 
         <div className="experts-results-bar">
           <p>
-            Showing <strong>{filtered.length}</strong> verified experts
+            {language === "am" ? (
+              <>
+                <strong>{filtered.length}</strong> የተረጋገጡ ባለሙያዎች በመታየት ላይ ናቸው
+              </>
+            ) : (
+              <>
+                Showing <strong>{filtered.length}</strong> verified experts
+              </>
+            )}
           </p>
           <div className="experts-results-actions">
             <button onClick={downloadExperts} disabled={!experts.length}>
-              <Download aria-hidden="true" /> Download all experts
+              <Download aria-hidden="true" /> {t("Download all experts", "ሁሉንም ባለሙያዎች ያውርዱ")}
             </button>
-            <button onClick={() => setRegisterOpen(true)}>Add your expertise</button>
+            <button onClick={() => setRegisterOpen(true)}>{t("Add your expertise", "ሙያዎን ያክሉ")}</button>
           </div>
         </div>
 
         {expertsError && (
           <p className="experts-feed-note" role="status">
-            The approved experts directory is temporarily unavailable.
+            {t("The approved experts directory is temporarily unavailable.", "የተረጋገጡ ባለሙያዎች ማውጫ በጊዜያዊነት አይገኝም።")}
           </p>
         )}
         {expertsLoading ? (
           <div className="experts-empty">
-            <p>Loading approved expertsâ€¦</p>
+            <p>{t("Loading approved experts…", "የተረጋገጡ ባለሙያዎችን በመጫን ላይ…")}</p>
           </div>
         ) : filtered.length ? (
           <div className="experts-grid">
@@ -484,14 +526,14 @@ function Experts() {
                         onError={(event) => event.currentTarget.remove()}
                       />
                     )}
-                    <span className="expert-card-category">{expert.c}</span>
+                    <span className="expert-card-category">{language === "am" ? CATEGORY_MAP_AM[expert.c] ?? expert.c : expert.c}</span>
                     <span className="expert-card-open">
                       <ArrowUpRight aria-hidden="true" />
                     </span>
                   </button>
                   <div className="expert-card-copy">
                     <p className="expert-card-verified">
-                      <BadgeCheck aria-hidden="true" /> EMWA verified
+                      <BadgeCheck aria-hidden="true" /> {t("EMWA verified", "የEMWA የተረጋገጠ")}
                     </p>
                     <h3>{expert.n}</h3>
                     <p className="expert-card-field">{expert.f}</p>
@@ -499,7 +541,7 @@ function Experts() {
                       <MapPin aria-hidden="true" /> {expert.r}
                     </p>
                     <button onClick={() => setSelected(expert)}>
-                      View expertise <ArrowUpRight aria-hidden="true" />
+                      {t("View expertise", "ሙያን ይመልከቱ")} <ArrowUpRight aria-hidden="true" />
                     </button>
                   </div>
                 </article>
@@ -508,11 +550,11 @@ function Experts() {
         ) : (
           <div className="experts-empty">
             <Search aria-hidden="true" />
-            <h3>{experts.length ? "No matching experts." : "No approved experts yet."}</h3>
+            <h3>{experts.length ? t("No matching experts.", "ተዛማጅ ባለሙያዎች አልተገኙም።") : t("No approved experts yet.", "ገና የተረጋገጡ ባለሙያዎች የሉም።")}</h3>
             <p>
               {experts.length
-                ? "Try another name, field, region, or category."
-                : "Approved expert profiles will appear here after administrative review."}
+                ? t("Try another name, field, region, or category.", "በሌላ ስም፣ ሙያ፣ ክልል ወይም ዘርፍ ይፈልጉ።")
+                : t("Approved expert profiles will appear here after administrative review.", "የተረጋገጡ የባለሙያዎች መገለጫዎች ከአስተዳደራዊ ግምገማ በኋላ እዚህ ይታያሉ።")}
             </p>
             <button
               onClick={() => {
@@ -520,7 +562,7 @@ function Experts() {
                 setCategory("All");
               }}
             >
-              Reset directory
+              {t("Reset directory", "ማውጫውን እንደገና አስጀምር")}
             </button>
           </div>
         )}
@@ -528,15 +570,23 @@ function Experts() {
 
       <section className="experts-register-cta">
         <div>
-          <p className="experts-eyebrow">Be discoverable</p>
+          <p className="experts-eyebrow">{t("Be discoverable", "ተደራሽ ይሁኑ")}</p>
           <h2>
-            Your knowledge belongs
-            <br />
-            in the conversation.
+            {language === "am" ? (
+              <>
+                እውቀትዎ በውይይቱ<br />ውስጥ ሊኖር ይገባል።
+              </>
+            ) : (
+              <>
+                Your knowledge belongs
+                <br />
+                in the conversation.
+              </>
+            )}
           </h2>
         </div>
         <button onClick={() => setRegisterOpen(true)}>
-          Join the directory <ArrowUpRight aria-hidden="true" />
+          {t("Join the directory", "ማውጫውን ይቀላቀሉ")} <ArrowUpRight aria-hidden="true" />
         </button>
       </section>
 
@@ -571,7 +621,7 @@ function Experts() {
             </div>
             <div className="expert-panel-content">
               <p className="expert-card-verified">
-                <BadgeCheck /> EMWA verified expert
+                <BadgeCheck /> {t("EMWA verified expert", "የEMWA የተረጋገጠ ባለሙያ")}
               </p>
               <h2>{selected.n}</h2>
               <p className="expert-panel-field">{selected.f}</p>
@@ -581,16 +631,16 @@ function Experts() {
               <div className="expert-panel-rule" />
               <p className="expert-panel-bio">{selected.bio}</p>
               <div className="expert-panel-tags">
-                <span>{selected.c}</span>
-                <span>Available for interviews</span>
-                <span>Mentorship</span>
+                <span>{language === "am" ? CATEGORY_MAP_AM[selected.c] ?? selected.c : selected.c}</span>
+                <span>{t("Available for interviews", "ለቃለ-መጠይቅ የሚገኙ")}</span>
+                <span>{t("Mentorship", "የአማካሪነት ድጋፍ")}</span>
               </div>
               <div className="expert-panel-socials" aria-label={`${selected.n}'s social links`}>
                 <button
                   type="button"
                   onClick={() => void downloadExpert(selected)}
                   aria-label={`Download ${selected.n}'s expert profile`}
-                  title="Download profile"
+                  title={t("Download profile", "መገለጫ ያውርዱ")}
                 >
                   <Download />
                 </button>
@@ -644,10 +694,10 @@ function Experts() {
             {submitted ? (
               <div className="expert-submit-success">
                 <BadgeCheck />
-                <p className="experts-eyebrow">Application received</p>
-                <h2>Thank you for adding your voice.</h2>
+                <p className="experts-eyebrow">{t("Application received", "ማመልከቻዎ ደርሶናል")}</p>
+                <h2>{t("Thank you for adding your voice.", "ድምጽዎን ስላከሉ እናመሰግናለን።")}</h2>
                 <p>
-                  EMWA will review your profile and contact you before it appears in the directory.
+                  {t("EMWA will review your profile and contact you before it appears in the directory.", "EMWA መገለጫዎን ገምግሞ በማውጫው ውስጥ ከመታየቱ በፊት ያነጋግርዎታል።")}
                 </p>
                 <button
                   onClick={() => {
@@ -655,77 +705,81 @@ function Experts() {
                     setRegisterOpen(false);
                   }}
                 >
-                  Close
+                  {t("Close", "ዝጋ")}
                 </button>
               </div>
             ) : (
               <>
                 <header>
-                  <p className="experts-eyebrow">Expert registration</p>
+                  <p className="experts-eyebrow">{t("Expert registration", "የባለሙያ ምዝገባ")}</p>
                   <h2 id="register-expert-heading">
-                    Join Ethiopia&apos;s trusted media directory.
+                    {t("Join Ethiopia's trusted media directory.", "የኢትዮጵያን ታማኝ የሚዲያ ማውጫ ይቀላቀሉ።")}
                   </h2>
                   <p>
-                    Share enough detail for our team to verify your experience and build a useful
-                    public profile.
+                    {t(
+                      "Share enough detail for our team to verify your experience and build a useful public profile.",
+                      "ቡድናችን ልምድዎን አረጋግጦ ጠቃሚ ህዝባዊ መገለጫ እንዲገነባ በቂ መረጃ ያጋሩ።",
+                    )}
                   </p>
                 </header>
                 <form onSubmit={submitExpertApplication}>
                   <div className="expert-form-grid">
                     <label>
-                      <span>Full name *</span>
+                      <span>{t("Full name *", "ሙሉ ስም *")}</span>
                       <input
                         name="fullName"
                         required
                         minLength={2}
                         maxLength={150}
-                        placeholder="Your professional name"
+                        placeholder={t("Your professional name", "የሙያ ስምዎ")}
                       />
                     </label>
                     <label>
-                      <span>Professional title *</span>
+                      <span>{t("Professional title *", "የሙያ ማዕረግ *")}</span>
                       <input
                         name="professionalTitle"
                         required
                         minLength={2}
                         maxLength={150}
-                        placeholder="e.g. Investigative reporter"
+                        placeholder={t("e.g. Investigative reporter", "ምሳሌ፡ አጣሪ ሪፖርተር")}
                       />
                     </label>
                     <label>
-                      <span>Expert category *</span>
+                      <span>{t("Expert category *", "የባለሙያ ዘርፍ *")}</span>
                       <select name="primaryExpertise" required defaultValue="">
                         <option value="" disabled>
-                          Select a category
+                          {t("Select a category", "ዘርፍ ይምረጡ")}
                         </option>
                         {[...EXPERT_CATEGORIES, "Other"].map((item) => (
-                          <option key={item}>{item}</option>
+                          <option key={item} value={item}>
+                            {language === "am" ? CATEGORY_MAP_AM[item] ?? item : item}
+                          </option>
                         ))}
                       </select>
                     </label>
                     <label>
-                      <span>Location *</span>
+                      <span>{t("Location *", "አካባቢ / ክልል *")}</span>
                       <input
                         name="location"
                         required
                         minLength={2}
                         maxLength={150}
-                        placeholder="City / Region"
+                        placeholder={t("City / Region", "ከተማ / ክልል")}
                       />
                     </label>
                     <label className="expert-form-wide">
-                      <span>Professional biography *</span>
+                      <span>{t("Professional biography *", "የሙያ ታሪክ *")}</span>
                       <textarea
                         name="professionalBiography"
                         required
                         minLength={20}
                         maxLength={10000}
                         rows={5}
-                        placeholder="Describe your expertise, experience, and the topics you can speak about."
+                        placeholder={t("Describe your expertise, experience, and the topics you can speak about.", "ስለ ሙያዎ፣ ልምድዎ እና መናገር ስለሚችሉባቸው ጉዳዮች ይግለጹ።")}
                       />
                     </label>
                     <label>
-                      <span>Email address</span>
+                      <span>{t("Email address", "የኢሜይል አድራሻ")}</span>
                       <input
                         name="email"
                         type="email"
@@ -734,7 +788,7 @@ function Experts() {
                       />
                     </label>
                     <label>
-                      <span>Phone number</span>
+                      <span>{t("Phone number", "የስልክ ቁጥር")}</span>
                       <input
                         name="phone"
                         type="tel"
@@ -744,17 +798,16 @@ function Experts() {
                       />
                     </label>
                     <p className="expert-form-contact-note expert-form-wide">
-                      Please provide at least one contact method: email address or phone number.
+                      {t("Please provide at least one contact method: email address or phone number.", "እባክዎን ቢያንስ አንድ የመገናኛ መንገድ ያስገቡ፡ የኢሜይል አድራሻ ወይም የስልክ ቁጥር።")}
                     </p>
                     <label className="expert-form-wide">
-                      <span>Profile photo</span>
+                      <span>{t("Profile photo", "የመገለጫ ፎቶ")}</span>
                       <input name="profilePhoto" type="file" accept="image/jpeg,image/png" />
                     </label>
                     <label className="expert-form-consent expert-form-wide">
                       <input type="checkbox" required />
                       <span>
-                        I confirm this information is accurate and consent to EMWA reviewing it for
-                        publication.
+                        {t("I confirm this information is accurate and consent to EMWA reviewing it for publication.", "ይህ መረጃ ትክክለኛ መሆኑን አረጋግጣለሁ፤ EMWA ለህትመት እንዲገመግመው እስማማለሁ።")}
                       </span>
                     </label>
                   </div>
@@ -764,9 +817,9 @@ function Experts() {
                     </p>
                   )}
                   <footer>
-                    <p>Review normally takes 5–7 working days.</p>
+                    <p>{t("Review normally takes 5–7 working days.", "ግምገማ በተለምዶ ከ5–7 የሥራ ቀናት ይወስዳል።")}</p>
                     <button type="submit" disabled={submitting}>
-                      {submitting ? "Submittingâ€¦" : "Submit for review"} <ArrowUpRight />
+                      {submitting ? t("Submitting…", "በማስገባት ላይ…") : t("Submit for review", "ለግምገማ ያስገቡ")} <ArrowUpRight />
                     </button>
                   </footer>
                 </form>

@@ -65,10 +65,10 @@ export const Route = createFileRoute("/")({
 });
 
 const STATS = [
-  { value: 1200, suffix: "+", label: "Active Members", color: "text-primary" },
-  { value: 12, suffix: "", label: "Regional Chapters", color: "text-secondary" },
-  { value: 450, suffix: "", label: "Trained Journalists", color: "text-accent" },
-  { value: 25, suffix: "+", label: "Year Legacy", color: "" },
+  { value: 1200, suffix: "+", label: "Active Members", labelAm: "ንቁ አባላት", color: "text-primary" },
+  { value: 12, suffix: "", label: "Regional Chapters", labelAm: "የክልል ቅርንጫፎች", color: "text-secondary" },
+  { value: 450, suffix: "", label: "Trained Journalists", labelAm: "የሰለጠኑ ጋዜጠኞች", color: "text-accent" },
+  { value: 25, suffix: "+", label: "Year Legacy", labelAm: "ዓመታት ታሪክ", color: "" },
 ];
 
 type HomeExpert = {
@@ -308,7 +308,7 @@ function Home() {
               <div className={`font-display text-6xl md:text-7xl ${s.color}`}>
                 <CountUp end={s.value} suffix={s.suffix} />
               </div>
-              <div className="label-mono mt-3">{s.label}</div>
+              <div className="label-mono mt-3">{language === "am" ? s.labelAm : s.label}</div>
             </div>
           ))}
         </div>
