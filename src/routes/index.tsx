@@ -79,28 +79,12 @@ type HomeExpert = {
   image?: string;
 };
 
-const NEWS = [
-  {
-    date: "12 Nov 2026",
-    category: "Policy",
-    title: "EMWA submits gender-equity brief to the House of Peoples' Representatives",
-    excerpt:
-      "A joint policy brief on women's representation in state broadcasting was formally received this week.",
-  },
-  {
-    date: "04 Nov 2026",
-    category: "Program",
-    title: "Third cohort of the Leadership Incubator graduates in Addis Ababa",
-    excerpt: "38 women editors and producers from nine regions completed the six-month residency.",
-  },
-  {
-    date: "27 Oct 2026",
-    category: "Advocacy",
-    title: "Digital safety network expands to Amhara and Sidama regions",
-    excerpt:
-      "Rapid-response legal support is now available to member journalists in two new regions.",
-  },
-];
+type HomeUpdate = {
+  slug: string;
+  date: string;
+  title: string;
+  excerpt: string;
+};
 
 function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
   const [slide, setSlide] = useState(0);
@@ -168,6 +152,8 @@ function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [experts, setExperts] = useState<HomeExpert[]>([]);
   const [expertsLoading, setExpertsLoading] = useState(true);
+  const [updates, setUpdates] = useState<HomeUpdate[]>([]);
+  const [updatesLoading, setUpdatesLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -198,6 +184,37 @@ function Home() {
         if (!(error instanceof DOMException && error.name === "AbortError")) setExperts([]);
       } finally {
         if (!controller.signal.aborted) setExpertsLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/public/updates?page=1&limit=3&type=NEWS`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Unable to load updates");
+        const payload = await response.json();
+        const rows = Array.isArray(payload?.data) ? payload.data : [];
+        setUpdates(
+          rows.map((row: Record<string, unknown>) => ({
+            slug: String(row.slug),
+            date: new Intl.DateTimeFormat("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            }).format(new Date(String(row.published_at ?? row.created_at))),
+            title: String(row.title ?? "EMWA update"),
+            excerpt: String(row.excerpt ?? ""),
+          })),
+        );
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) setUpdates([]);
+      } finally {
+        if (!controller.signal.aborted) setUpdatesLoading(false);
       }
     })();
     return () => controller.abort();
@@ -409,15 +426,14 @@ function Home() {
               {t("All stories", "ሁሉም ታሪኮች")} →
             </Link>
           </div>
+          {updates.length > 0 ? (
           <div className="grid md:grid-cols-3 gap-px bg-border">
-            {NEWS.map((n) => (
-              <article
-                key={n.title}
-                className="bg-background p-8 hover:bg-muted/50 transition-colors cursor-pointer"
-              >
+            {updates.map((n) => (
+              <Link key={n.slug} to="/updates" hash="stories" className="block no-underline">
+              <article className="h-full bg-background p-8 hover:bg-muted/50 transition-colors cursor-pointer">
                 <div className="flex justify-between label-mono text-muted-foreground mb-6">
                   <span>{n.date}</span>
-                  <span className="text-primary">{n.category}</span>
+                  <span className="text-primary">Update</span>
                 </div>
                 <h3 className="font-display text-2xl leading-tight mb-4">{n.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{n.excerpt}</p>
@@ -426,8 +442,14 @@ function Home() {
                   <ArrowUpRight className="size-3 group-hover:translate-x-1 transition-transform" />
                 </div>
               </article>
+              </Link>
             ))}
           </div>
+          ) : (
+            <div className="border border-border bg-background px-8 py-12 text-center text-muted-foreground">
+              {updatesLoading ? "Loading the latest updates…" : "No published updates yet."}
+            </div>
+          )}
         </div>
       </section>
 

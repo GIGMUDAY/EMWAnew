@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -13,6 +13,13 @@ import {
 import { PageShell } from "@/components/page-shell";
 import logo from "@/assets/emwa-logo-new.png";
 import { API_BASE } from "@/lib/admin-api";
+import { useLanguage } from "@/lib/language-context";
+import {
+  getCountries,
+  getCountryCallingCode,
+  parsePhoneNumberFromString,
+  type CountryCode,
+} from "libphonenumber-js";
 
 export const Route = createFileRoute("/membership")({
   head: () => ({
@@ -116,20 +123,26 @@ const FAQ = [
   },
 ];
 
-const STEPS = ["Personal / የግል", "Work / የሥራ", "Membership / አባልነት", "Review / ማረጋገጫ"] as const;
+const STEPS = {
+  en: ["Personal", "Work", "Membership", "Review"],
+  am: ["የግል", "የሥራ", "አባልነት", "ማረጋገጫ"],
+} as const;
 type FormData = {
   name: string;
   dateOfBirth: string;
   email: string;
   phone: string;
+  phoneCountry: CountryCode;
   citySubCity: string;
   woreda: string;
   houseNumber: string;
   additionalSkills: string;
   emergencyContact1Name: string;
   emergencyContact1Phone: string;
+  emergencyContact1Country: CountryCode;
   emergencyContact2Name: string;
   emergencyContact2Phone: string;
+  emergencyContact2Country: CountryCode;
   outlet: string;
   yearsOfExperience: string;
   department: string;
@@ -151,14 +164,17 @@ const INITIAL_FORM: FormData = {
   dateOfBirth: "",
   email: "",
   phone: "",
+  phoneCountry: "ET",
   citySubCity: "",
   woreda: "",
   houseNumber: "",
   additionalSkills: "",
   emergencyContact1Name: "",
   emergencyContact1Phone: "",
+  emergencyContact1Country: "ET",
   emergencyContact2Name: "",
   emergencyContact2Phone: "",
+  emergencyContact2Country: "ET",
   outlet: "",
   yearsOfExperience: "",
   department: "",
@@ -168,7 +184,151 @@ const INITIAL_FORM: FormData = {
   tier: "Full Member",
 };
 
+const MEMBERSHIP_FIELD_LABELS: Record<string, string> = {
+  membershipTypeId: "Membership type",
+  fullName: "Full name",
+  email: "Email address",
+  phone: "Mobile number",
+  outletOrInstitution: "Organization",
+  currentRole: "Current role",
+  regionOrChapter: "City or sub-city",
+  additionalInformation: "Additional application information",
+  dateOfBirth: "Date of birth",
+  citySubCity: "City or sub-city",
+  emergencyContact1: "First emergency contact",
+  emergencyContact2: "Second emergency contact",
+  yearsOfExperience: "Years of experience",
+  educationLevel: "Level of education",
+  fieldOfStudy: "Field of study",
+};
+
+const friendlyRuleMessage = (label: string, message: string) => {
+  const rule = message.toLowerCase();
+  if (rule.includes("required") || rule.includes("received undefined") || rule.includes("too small"))
+    return `${label} is required.`;
+  if (rule.includes("email")) return "Please enter a valid email address.";
+  if (rule.includes("uuid")) return `Please select a valid ${label.toLowerCase()}.`;
+  if (rule.includes("date")) return `Please enter a valid ${label.toLowerCase()}.`;
+  if (rule.includes("too big") || rule.includes("maximum")) return `${label} is too long.`;
+  if (rule.includes("number") || rule.includes("integer"))
+    return `${label} must be a valid whole number.`;
+  return `${label} is invalid. Please check it and try again.`;
+};
+
+const getMembershipSubmissionError = (payload: unknown, status: number) => {
+  const response = payload as {
+    error?: {
+      code?: string;
+      message?: string;
+      details?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] };
+    };
+  } | null;
+  const error = response?.error;
+  const fieldErrors = error?.details?.fieldErrors;
+
+  if (fieldErrors) {
+    for (const [field, messages] of Object.entries(fieldErrors)) {
+      if (!messages?.length) continue;
+      const label = MEMBERSHIP_FIELD_LABELS[field] ?? "This field";
+      return friendlyRuleMessage(label, messages[0]);
+    }
+  }
+
+  if (error?.details?.formErrors?.length)
+    return friendlyRuleMessage("Application information", error.details.formErrors[0]);
+  if (status === 409 || error?.code === "CONFLICT")
+    return "An application with these details already exists. Please check your information or contact EMWA.";
+  if (status >= 500)
+    return "The EMWA server could not process your application right now. Please try again shortly.";
+  if (error?.code === "VALIDATION_ERROR")
+    return "Some application details are missing or invalid. Please review the form and try again.";
+  return error?.message || "Unable to submit the application. Please try again.";
+};
+
+const countryFlag = (country: CountryCode) =>
+  String.fromCodePoint(...country.split("").map((letter) => 127397 + letter.charCodeAt(0)));
+
+function InternationalPhoneField({
+  country,
+  value,
+  onCountryChange,
+  onChange,
+  required,
+  language,
+  label,
+}: {
+  country: CountryCode;
+  value: string;
+  onCountryChange: (country: CountryCode) => void;
+  onChange: (value: string) => void;
+  required?: boolean;
+  language: "en" | "am";
+  label: string;
+}) {
+  const names = useMemo(
+    () => new Intl.DisplayNames([language], { type: "region" }),
+    [language],
+  );
+  const countries = useMemo(
+    () =>
+      getCountries()
+        .map((code) => ({ code, name: names.of(code) ?? code, dial: `+${getCountryCallingCode(code)}` }))
+        .sort((a, b) => a.name.localeCompare(b.name, language)),
+    [language, names],
+  );
+
+  const changeCountry = (nextCountry: CountryCode) => {
+    const oldDial = `+${getCountryCallingCode(country)}`;
+    const nextDial = `+${getCountryCallingCode(nextCountry)}`;
+    const national = value.startsWith(oldDial)
+      ? value.slice(oldDial.length).replace(/^0+/, "")
+      : value.replace(/^\+?\d*/, "").replace(/^0+/, "");
+    onCountryChange(nextCountry);
+    onChange(national ? `${nextDial}${national}` : "");
+  };
+
+  const changeNumber = (raw: string) => {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    if (!cleaned) return onChange("");
+    if (cleaned.startsWith("+")) return onChange(`+${cleaned.slice(1).replace(/\D/g, "")}`);
+    onChange(`+${getCountryCallingCode(country)}${cleaned.replace(/^0+/, "")}`);
+  };
+
+  return (
+    <label>
+      <span>{label}</span>
+      <div className="membership-phone-field">
+        <span className="membership-country-flag" aria-hidden="true">
+          {countryFlag(country)}
+        </span>
+        <select
+          value={country}
+          onChange={(event) => changeCountry(event.target.value as CountryCode)}
+          aria-label={language === "am" ? "ሀገር ይምረጡ" : "Select country"}
+        >
+          {countries.map((item) => (
+            <option key={item.code} value={item.code}>
+              {countryFlag(item.code)} {item.name} ({item.dial})
+            </option>
+          ))}
+        </select>
+        <input
+          required={required}
+          type="tel"
+          inputMode="tel"
+          value={value}
+          onChange={(event) => changeNumber(event.target.value)}
+          placeholder={`+${getCountryCallingCode(country)}`}
+          autoComplete="tel"
+        />
+      </div>
+    </label>
+  );
+}
+
 function Membership() {
+  const { language, t } = useLanguage();
+  const notProvided = t("Not provided", "አልተሰጠም");
   const [step, setStep] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
@@ -177,8 +337,10 @@ function Membership() {
   const [typesLoading, setTypesLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const update = (field: keyof FormData, value: string) =>
+  const update = (field: keyof FormData, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
+    if (formError) setFormError("");
+  };
   const chooseTier = (tier: string) => {
     const activeTier = membershipTypes.find(
       (item) => item.name.toLowerCase() === tier.toLowerCase(),
@@ -214,23 +376,40 @@ function Membership() {
 
   const validateStep = (targetStep: number) => {
     if (targetStep === 0) {
-      if (form.name.trim().length < 2) return "Please enter your full name.";
-      if (!form.dateOfBirth) return "Please enter your date of birth.";
+      if (!form.name.trim()) return "Full name is required.";
+      if (form.name.trim().length < 2) return "Full name must contain at least 2 characters.";
+      if (!form.dateOfBirth) return "Date of birth is required.";
+      if (!form.email.trim()) return "Email address is required.";
       if (!/^\S+@\S+\.\S+$/.test(form.email)) return "Please enter a valid email address.";
-      if (form.phone.trim().length < 5) return "Please enter a valid phone number.";
-      if (form.citySubCity.trim().length < 2) return "Please enter your city or sub-city.";
+      if (!form.phone.trim()) return "Mobile number is required.";
+      if (!parsePhoneNumberFromString(form.phone)?.isValid())
+        return "Please enter a valid mobile number for the selected country.";
+      if (!form.citySubCity.trim()) return "City or sub-city is required.";
+      if (form.citySubCity.trim().length < 2) return "Please enter a valid city or sub-city.";
+      if (!form.emergencyContact1Name.trim()) return "First emergency contact name is required.";
       if (form.emergencyContact1Name.trim().length < 2)
-        return "Please enter your first emergency contact.";
-      if (form.emergencyContact1Phone.trim().length < 5)
-        return "Please enter a valid phone number for your first emergency contact.";
+        return "First emergency contact name must contain at least 2 characters.";
+      if (!form.emergencyContact1Phone.trim()) return "First emergency contact phone is required.";
+      if (!parsePhoneNumberFromString(form.emergencyContact1Phone)?.isValid())
+        return "Please enter a valid phone number for your first emergency contact's country.";
+      if (
+        form.emergencyContact2Phone &&
+        !parsePhoneNumberFromString(form.emergencyContact2Phone)?.isValid()
+      )
+        return "Please enter a valid phone number for your second emergency contact's country.";
     }
     if (targetStep === 1) {
-      if (form.outlet.trim().length < 2) return "Please enter your organization.";
+      if (!form.outlet.trim()) return "Organization is required.";
+      if (form.outlet.trim().length < 2) return "Organization must contain at least 2 characters.";
+      if (!form.yearsOfExperience) return "Years of experience is required.";
       if (!/^\d+$/.test(form.yearsOfExperience) || Number(form.yearsOfExperience) > 80)
-        return "Please enter valid years of experience.";
-      if (form.role.trim().length < 2) return "Please enter your current role.";
-      if (form.educationLevel.trim().length < 2) return "Please enter your level of education.";
-      if (form.fieldOfStudy.trim().length < 2) return "Please enter your field of study.";
+        return "Years of experience must be a whole number between 0 and 80.";
+      if (!form.role.trim()) return "Current role is required.";
+      if (form.role.trim().length < 2) return "Current role must contain at least 2 characters.";
+      if (!form.educationLevel.trim()) return "Level of education is required.";
+      if (form.educationLevel.trim().length < 2) return "Please enter a valid level of education.";
+      if (!form.fieldOfStudy.trim()) return "Field of study is required.";
+      if (form.fieldOfStudy.trim().length < 2) return "Please enter a valid field of study.";
     }
     if (targetStep === 2 && !membershipTypes.some((item) => item.name === form.tier)) {
       return "Please select an active membership type.";
@@ -302,8 +481,7 @@ function Membership() {
         }),
       });
       const payload = await response.json().catch(() => null);
-      if (!response.ok)
-        throw new Error(payload?.error?.message ?? "Unable to submit the application.");
+      if (!response.ok) throw new Error(getMembershipSubmissionError(payload, response.status));
       setSubmitted(true);
     } catch (cause) {
       setFormError(
@@ -476,20 +654,21 @@ function Membership() {
           <header className="membership-official-header">
             <img src={logo} alt="EMWA" />
             <div>
-              <p>የኢትዮጵያ መገናኛ ብዙኃን ባለሙያ ሴቶች ማኅበር</p>
-              <strong>Ethiopian Media Women Association (EMWA)</strong>
-              <span>የአባልነት ምዝገባ ቅጽ / Membership Form</span>
+              <strong>{t("Ethiopian Media Women Association (EMWA)", "የኢትዮጵያ መገናኛ ብዙኃን ባለሙያ ሴቶች ማኅበር (EMWA)")}</strong>
+              <span>{t("Membership Form", "የአባልነት ምዝገባ ቅጽ")}</span>
             </div>
-            <small>Official registration</small>
+            <small>{t("Official registration", "መደበኛ ምዝገባ")}</small>
           </header>
           <p className="membership-official-intro">
+            {language === "am" && <>
             የኢትዮጵያ መገናኛ ብዙኃን ባለሙያ ሴቶች ማኅበር በ1991 ዓ.ም. የተቋቋመ የሙያ ማኅበር ነው።
             ሴት የመገናኛ ብዙኃንና የኮሙኒኬሽን ባለሙያዎችን፣ የጋዜጠኝነት ተማሪዎችን፣ ወንድ
             ተባባሪ አባላትን እና የክብር አባላትን ይቀበላል።
-            <span>EMWA is a professional association established in 1998. It welcomes women media and communication professionals, women journalism students, male associate members, and honorary members.</span>
+            </>}
+            {language === "en" && <span>EMWA is a professional association established in 1998. It welcomes women media and communication professionals, women journalism students, male associate members, and honorary members.</span>}
           </p>
           <ol className="membership-progress" aria-label="Application progress">
-            {STEPS.map((label, index) => (
+            {STEPS[language].map((label, index) => (
               <li
                 key={label}
                 className={index === step ? "is-current" : index < step ? "is-complete" : ""}
@@ -506,25 +685,24 @@ function Membership() {
                 <span>
                   <Check aria-hidden="true" />
                 </span>
-                <p className="membership-kicker">Application received</p>
-                <h3>Thank you, {form.name || "future member"}.</h3>
+              <p className="membership-kicker">{t("Application received", "ማመልከቻው ደርሷል")}</p>
+                <h3>{t("Thank you", "እናመሰግናለን")}, {form.name || t("future member", "የወደፊት አባል")}.</h3>
                 <p>
-                  Your membership request has been sent to EMWA and is now pending administrative
-                  review.
+                  {t("Your membership request has been sent to EMWA and is now pending administrative review.", "የአባልነት ጥያቄዎ ለEMWA ተልኳል፤ አሁን የአስተዳደር ግምገማን በመጠበቅ ላይ ነው።")}
                 </p>
                 <Link to="/contact">
-                  Contact the membership team <ArrowRight aria-hidden="true" />
+                  {t("Contact the membership team", "የአባልነት ቡድኑን ያነጋግሩ")} <ArrowRight aria-hidden="true" />
                 </Link>
               </div>
             ) : (
               <>
                 {step === 0 && (
                   <fieldset>
-                    <legend>የግል መረጃ / Personal Information</legend>
-                    <p>Enter your details as they should appear on your EMWA membership record.</p>
+                    <legend>{t("Personal Information", "የግል መረጃ")}</legend>
+                    <p>{t("Enter your details as they should appear on your EMWA membership record.", "በEMWA የአባልነት መዝገብዎ ላይ እንዲታዩ የሚፈልጓቸውን መረጃዎች ያስገቡ።")}</p>
                     <div className="membership-fields">
                       <label>
-                        <span>ሙሉ ስም / Full name *</span>
+                        <span>{t("Full name *", "ሙሉ ስም *")}</span>
                         <input
                           required
                           value={form.name}
@@ -534,7 +712,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የትውልድ ዘመን / Date of birth *</span>
+                        <span>{t("Date of birth *", "የትውልድ ቀን *")}</span>
                         <input
                           required
                           type="date"
@@ -544,7 +722,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>ኢሜል / Email address *</span>
+                        <span>{t("Email address *", "ኢሜይል አድራሻ *")}</span>
                         <input
                           required
                           type="email"
@@ -554,18 +732,17 @@ function Membership() {
                           autoComplete="email"
                         />
                       </label>
+                      <InternationalPhoneField
+                        required
+                        language={language}
+                        label={t("Mobile number *", "የሞባይል ስልክ ቁጥር *")}
+                        country={form.phoneCountry}
+                        value={form.phone}
+                        onCountryChange={(country) => update("phoneCountry", country)}
+                        onChange={(value) => update("phone", value)}
+                      />
                       <label>
-                        <span>የእጅ ስልክ / Mobile number *</span>
-                        <input
-                          required
-                          value={form.phone}
-                          onChange={(e) => update("phone", e.target.value)}
-                          placeholder="+251 ..."
-                          autoComplete="tel"
-                        />
-                      </label>
-                      <label>
-                        <span>ከተማ / ክፍለ ከተማ / City / Sub-city *</span>
+                        <span>{t("City / Sub-city *", "ከተማ / ክፍለ ከተማ *")}</span>
                         <input
                           required
                           value={form.citySubCity}
@@ -575,7 +752,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>ወረዳ / Woreda</span>
+                        <span>{t("Woreda", "ወረዳ")}</span>
                         <input
                           value={form.woreda}
                           onChange={(e) => update("woreda", e.target.value)}
@@ -583,7 +760,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የቤት ቁጥር / House number</span>
+                        <span>{t("House number", "የቤት ቁጥር")}</span>
                         <input
                           value={form.houseNumber}
                           onChange={(e) => update("houseNumber", e.target.value)}
@@ -591,7 +768,7 @@ function Membership() {
                         />
                       </label>
                       <label className="is-wide">
-                        <span>ተጨማሪ ሙያ፣ ስልጠና ወይም ክህሎት / Additional profession, training, or skills</span>
+                        <span>{t("Additional profession, training, or skills", "ተጨማሪ ሙያ፣ ስልጠና ወይም ክህሎት")}</span>
                         <textarea
                           value={form.additionalSkills}
                           onChange={(e) => update("additionalSkills", e.target.value)}
@@ -600,7 +777,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የአደጋ ጊዜ ተጠሪ 1 / Emergency contact 1 — name *</span>
+                        <span>{t("Emergency contact 1 — name *", "የአደጋ ጊዜ ተጠሪ 1 — ስም *")}</span>
                         <input
                           required
                           value={form.emergencyContact1Name}
@@ -608,43 +785,41 @@ function Membership() {
                           placeholder="Full name"
                         />
                       </label>
+                      <InternationalPhoneField
+                        required
+                        language={language}
+                        label={t("Emergency contact 1 — phone *", "የአደጋ ጊዜ ተጠሪ 1 — ስልክ *")}
+                        country={form.emergencyContact1Country}
+                        value={form.emergencyContact1Phone}
+                        onCountryChange={(country) => update("emergencyContact1Country", country)}
+                        onChange={(value) => update("emergencyContact1Phone", value)}
+                      />
                       <label>
-                        <span>ስልክ / Emergency contact 1 — phone *</span>
-                        <input
-                          required
-                          type="tel"
-                          value={form.emergencyContact1Phone}
-                          onChange={(e) => update("emergencyContact1Phone", e.target.value)}
-                          placeholder="+251 ..."
-                        />
-                      </label>
-                      <label>
-                        <span>የአደጋ ጊዜ ተጠሪ 2 / Emergency contact 2 — name</span>
+                        <span>{t("Emergency contact 2 — name", "የአደጋ ጊዜ ተጠሪ 2 — ስም")}</span>
                         <input
                           value={form.emergencyContact2Name}
                           onChange={(e) => update("emergencyContact2Name", e.target.value)}
                           placeholder="Full name"
                         />
                       </label>
-                      <label>
-                        <span>ስልክ / Emergency contact 2 — phone</span>
-                        <input
-                          type="tel"
-                          value={form.emergencyContact2Phone}
-                          onChange={(e) => update("emergencyContact2Phone", e.target.value)}
-                          placeholder="+251 ..."
-                        />
-                      </label>
+                      <InternationalPhoneField
+                        language={language}
+                        label={t("Emergency contact 2 — phone", "የአደጋ ጊዜ ተጠሪ 2 — ስልክ")}
+                        country={form.emergencyContact2Country}
+                        value={form.emergencyContact2Phone}
+                        onCountryChange={(country) => update("emergencyContact2Country", country)}
+                        onChange={(value) => update("emergencyContact2Phone", value)}
+                      />
                     </div>
                   </fieldset>
                 )}
                 {step === 1 && (
                   <fieldset>
-                    <legend>የሥራ ሁኔታ / Work Experience &amp; Education</legend>
-                    <p>Students may enter their institution and use 0 for years of experience.</p>
+                    <legend>{t("Work Experience & Education", "የሥራ ልምድ እና ትምህርት")}</legend>
+                    <p>{t("Students may enter their institution and use 0 for years of experience.", "ተማሪዎች የትምህርት ተቋማቸውን በማስገባት ለሥራ ልምድ 0 መጠቀም ይችላሉ።")}</p>
                     <div className="membership-fields">
                       <label>
-                        <span>የሚሰሩበት ድርጅት / Organization *</span>
+                        <span>{t("Organization *", "የሚሰሩበት ድርጅት *")}</span>
                         <input
                           required
                           value={form.outlet}
@@ -653,7 +828,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የሥራ ልምድ / Years of experience *</span>
+                        <span>{t("Years of experience *", "የሥራ ልምድ በዓመት *")}</span>
                         <input
                           required
                           type="number"
@@ -665,7 +840,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የሥራ ዘርፍ / Department</span>
+                        <span>{t("Department", "የሥራ ዘርፍ")}</span>
                         <input
                           value={form.department}
                           onChange={(e) => update("department", e.target.value)}
@@ -673,7 +848,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የሥራ ድርሻ / Role *</span>
+                        <span>{t("Role *", "የሥራ ድርሻ *")}</span>
                         <input
                           required
                           value={form.role}
@@ -682,7 +857,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የትምህርት ደረጃ / Level of education *</span>
+                        <span>{t("Level of education *", "የትምህርት ደረጃ *")}</span>
                         <input
                           required
                           value={form.educationLevel}
@@ -691,7 +866,7 @@ function Membership() {
                         />
                       </label>
                       <label>
-                        <span>የትምህርት ዘርፍ / Field of study *</span>
+                        <span>{t("Field of study *", "የትምህርት ዘርፍ *")}</span>
                         <input
                           required
                           value={form.fieldOfStudy}
@@ -704,10 +879,10 @@ function Membership() {
                 )}
                 {step === 2 && (
                   <fieldset>
-                    <legend>የአባልነት ዓይነት / Membership Type</legend>
-                    <p>You can change your category before submitting.</p>
+                    <legend>{t("Membership Type", "የአባልነት ዓይነት")}</legend>
+                    <p>{t("You can change your category before submitting.", "ከማስገባትዎ በፊት የአባልነት ምድብዎን መቀየር ይችላሉ።")}</p>
                     {typesLoading ? (
-                      <p>Loading active membership typesâ€¦</p>
+                      <p>{t("Loading active membership types…", "የአባልነት ዓይነቶችን በመጫን ላይ…")}</p>
                     ) : applicationTiers.length ? (
                       <div className="membership-tier-options">
                         {applicationTiers.map((tier) => (
@@ -740,24 +915,24 @@ function Membership() {
                 )}
                 {step === 3 && (
                   <fieldset>
-                    <legend>ማረጋገጫ / Review your application</legend>
-                    <p>Review your details before preparing the application.</p>
+                    <legend>{t("Review your application", "ማመልከቻዎን ያረጋግጡ")}</legend>
+                    <p>{t("Review your details before submitting the application.", "ማመልከቻውን ከማስገባትዎ በፊት መረጃዎችዎን ያረጋግጡ።")}</p>
                     <dl className="membership-review">
                       <div>
-                        <dt>Name</dt>
-                        <dd>{form.name || "Not provided"}</dd>
+                        <dt>{t("Name", "ስም")}</dt>
+                        <dd>{form.name || notProvided}</dd>
                       </div>
                       <div>
-                        <dt>Email</dt>
-                        <dd>{form.email || "Not provided"}</dd>
+                        <dt>{t("Email", "ኢሜይል")}</dt>
+                        <dd>{form.email || notProvided}</dd>
                       </div>
                       <div>
-                        <dt>Mobile</dt>
-                        <dd>{form.phone || "Not provided"}</dd>
+                        <dt>{t("Mobile", "ሞባይል")}</dt>
+                        <dd>{form.phone || notProvided}</dd>
                       </div>
                       <div>
-                        <dt>Date of birth</dt>
-                        <dd>{form.dateOfBirth || "Not provided"}</dd>
+                        <dt>{t("Date of birth", "የትውልድ ቀን")}</dt>
+                        <dd>{form.dateOfBirth || notProvided}</dd>
                       </div>
                       <div>
                         <dt>Address</dt>
@@ -768,8 +943,8 @@ function Membership() {
                         </dd>
                       </div>
                       <div>
-                        <dt>Organization</dt>
-                        <dd>{form.outlet || "Not provided"}</dd>
+                        <dt>{t("Organization", "ድርጅት")}</dt>
+                        <dd>{form.outlet || notProvided}</dd>
                       </div>
                       <div>
                         <dt>Role / Experience</dt>
@@ -814,20 +989,20 @@ function Membership() {
                     }}
                     disabled={step === 0}
                   >
-                    <ArrowLeft aria-hidden="true" /> Back
+                    <ArrowLeft aria-hidden="true" /> {t("Back", "ተመለስ")}
                   </button>
-                  {step < STEPS.length - 1 ? (
+                  {step < STEPS.en.length - 1 ? (
                     <button
                       type="button"
                       className="is-next"
                       onClick={continueApplication}
                       disabled={step === 2 && (typesLoading || !applicationTiers.length)}
                     >
-                      Continue <ArrowRight aria-hidden="true" />
+                      {t("Continue", "ቀጥል")} <ArrowRight aria-hidden="true" />
                     </button>
                   ) : (
                     <button type="submit" className="is-next" disabled={submitting}>
-                      {submitting ? "Submittingâ€¦" : "Submit application"}{" "}
+                      {submitting ? t("Submitting…", "በማስገባት ላይ…") : t("Submit application", "ማመልከቻውን አስገባ")}{" "}
                       <ArrowRight aria-hidden="true" />
                     </button>
                   )}

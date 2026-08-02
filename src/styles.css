@@ -11156,6 +11156,49 @@ html[data-language="am"] .language-switcher {
   border-color: var(--color-primary);
   box-shadow: 0 1px 0 var(--color-primary);
 }
+.membership-phone-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 0.75rem;
+  align-items: end;
+}
+.membership-country-flag {
+  display: grid;
+  width: 2.15rem;
+  height: 2.65rem;
+  place-items: center;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid #9f9a90;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.membership-phone-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem 1.8rem 1rem 0;
+  border: 0;
+  border-bottom: 1px solid #9f9a90;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.membership-phone-field select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 0 var(--color-primary);
+}
+.dark .membership-phone-field select {
+  border-bottom-color: #68645d;
+  color: #f9f7f2;
+  color-scheme: dark;
+}
+.dark .membership-country-flag { border-bottom-color: #68645d; }
+@media (max-width: 620px) {
+  .membership-phone-field { grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.6rem; }
+  .membership-phone-field input { grid-column: 1 / -1; }
+}
 .membership-tier-options {
   display: flex;
   flex-direction: column;

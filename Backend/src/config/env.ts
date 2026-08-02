@@ -17,6 +17,7 @@ const schema = z.object({
   UPLOAD_DIR: z.string().default('uploads'),
   MAX_FILE_SIZE_MB: z.coerce.number().positive().default(10),
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
+  GOOGLE_TRANSLATE_API_KEY: z.string().trim().optional(),
 });
 
 export const env = schema.parse(process.env);
