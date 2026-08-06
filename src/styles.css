@@ -11158,46 +11158,54 @@ html[data-language="am"] .language-switcher {
 }
 .membership-phone-field {
   display: grid;
-  grid-template-columns: auto minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 0.75rem;
-  align-items: end;
+  align-items: flex-end;
 }
-.membership-country-flag {
-  display: grid;
-  width: 2.15rem;
-  height: 2.65rem;
-  place-items: center;
+.membership-country-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   padding-bottom: 0.7rem;
   border-bottom: 1px solid #9f9a90;
+  cursor: pointer;
+}
+.membership-country-flag {
+  display: inline-flex;
+  align-items: center;
   font-size: 1.3rem;
   line-height: 1;
 }
-.membership-phone-field select {
+.membership-country-arrow {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: currentColor;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.membership-country-select-wrapper select {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  min-width: 0;
-  padding: 0.75rem 1.8rem 1rem 0;
-  border: 0;
-  border-bottom: 1px solid #9f9a90;
-  border-radius: 0;
-  outline: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
+  height: 100%;
+  opacity: 0;
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
 }
-.membership-phone-field select:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 1px 0 var(--color-primary);
+.membership-country-select-wrapper select option {
+  color: #211d1a;
+  background: #ffffff;
 }
-.dark .membership-phone-field select {
-  border-bottom-color: #68645d;
+.dark .membership-country-select-wrapper select option {
   color: #f9f7f2;
-  color-scheme: dark;
+  background: #24211e;
 }
-.dark .membership-country-flag { border-bottom-color: #68645d; }
+.dark .membership-country-select-wrapper { border-bottom-color: #68645d; }
 @media (max-width: 620px) {
-  .membership-phone-field { grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.6rem; }
-  .membership-phone-field input { grid-column: 1 / -1; }
+  .membership-phone-field { grid-template-columns: auto minmax(0, 1fr); gap: 0.6rem; }
+  .membership-phone-field input { grid-column: auto; }
 }
 .membership-tier-options {
   display: flex;

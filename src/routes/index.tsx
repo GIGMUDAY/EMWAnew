@@ -4,7 +4,6 @@ import { PageShell } from "@/components/page-shell";
 import YoutubeNewsFeed from "@/components/youtube-news-feed";
 import OurMandate from "@/components/our-mandate";
 import OurBlueprint from "@/components/our-blueprint";
-import MembershipCta from "@/components/membership-cta";
 import VoicesSlider from "@/components/voices-slider";
 import StrategicAlliances from "@/components/strategic-alliances";
 import InspirationalQuotes from "@/components/inspirational-quotes";
@@ -452,9 +451,6 @@ function Home() {
           )}
         </div>
       </section>
-
-      {/* MEMBERSHIP CTA */}
-      <MembershipCta />
 
       {/* TESTIMONIALS SLIDER */}
       <VoicesSlider />

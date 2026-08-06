@@ -298,20 +298,23 @@ function InternationalPhoneField({
     <label>
       <span>{label}</span>
       <div className="membership-phone-field">
-        <span className="membership-country-flag" aria-hidden="true">
-          {countryFlag(country)}
-        </span>
-        <select
-          value={country}
-          onChange={(event) => changeCountry(event.target.value as CountryCode)}
-          aria-label={language === "am" ? "ሀገር ይምረጡ" : "Select country"}
-        >
-          {countries.map((item) => (
-            <option key={item.code} value={item.code}>
-              {countryFlag(item.code)} {item.name} ({item.dial})
-            </option>
-          ))}
-        </select>
+        <div className="membership-country-select-wrapper">
+          <span className="membership-country-flag" aria-hidden="true">
+            {countryFlag(country)}
+          </span>
+          <ChevronDown className="membership-country-arrow" aria-hidden="true" />
+          <select
+            value={country}
+            onChange={(event) => changeCountry(event.target.value as CountryCode)}
+            aria-label={language === "am" ? "ሀገር ይምረጡ" : "Select country"}
+          >
+            {countries.map((item) => (
+              <option key={item.code} value={item.code}>
+                {countryFlag(item.code)} {item.name} ({item.dial})
+              </option>
+            ))}
+          </select>
+        </div>
         <input
           required={required}
           type="tel"
