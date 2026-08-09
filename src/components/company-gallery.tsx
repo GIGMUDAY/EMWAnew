@@ -46,6 +46,9 @@ function GalleryLightbox({
 }) {
   const [current, setCurrent] = useState(startIndex);
   const [animDir, setAnimDir] = useState<"next" | "prev" | null>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const thumbsRef = useRef<HTMLDivElement>(null);
 
   const go = useCallback(
     (dir: "next" | "prev") => {
@@ -57,10 +60,19 @@ function GalleryLightbox({
             : (c - 1 + images.length) % images.length,
         );
         setAnimDir(null);
-      }, 200);
+      }, 180);
     },
     [images.length],
   );
+
+  // Auto scroll active thumbnail into view
+  useEffect(() => {
+    if (!thumbsRef.current) return;
+    const activeThumb = thumbsRef.current.children[current] as HTMLElement | undefined;
+    if (activeThumb) {
+      activeThumb.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  }, [current]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -76,6 +88,23 @@ function GalleryLightbox({
     };
   }, [go, onClose]);
 
+  // Touch Swipe Handlers for Mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    const distance = touchStartX.current - touchEndX.current;
+    if (distance > 40) go("next"); // Swiped left -> next
+    if (distance < -40) go("prev"); // Swiped right -> prev
+  };
+
   return (
     <div
       className="gallery-lightbox-backdrop"
@@ -90,24 +119,28 @@ function GalleryLightbox({
         aria-modal="true"
         aria-label="Gallery lightbox"
       >
-        {/* Close */}
-        <button
-          className="gallery-lightbox-close"
-          onClick={onClose}
-          aria-label="Close gallery"
-          type="button"
-        >
-          <X />
-        </button>
+        {/* Top Header Bar */}
+        <div className="gallery-lightbox-header">
+          <span className="gallery-lightbox-counter" aria-live="polite">
+            {current + 1} / {images.length}
+          </span>
 
-        {/* Counter */}
-        <span className="gallery-lightbox-counter" aria-live="polite">
-          {current + 1} / {images.length}
-        </span>
+          <button
+            className="gallery-lightbox-close"
+            onClick={onClose}
+            aria-label="Close gallery"
+            type="button"
+          >
+            <X />
+          </button>
+        </div>
 
-        {/* Image */}
+        {/* Image Display Area with Touch Swipe */}
         <div
           className={`gallery-lightbox-img-wrap${animDir ? ` gallery-lightbox-img-wrap--${animDir}` : ""}`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
         >
           <img
             key={current}
@@ -115,30 +148,30 @@ function GalleryLightbox({
             alt={images[current].alt}
             className="gallery-lightbox-img"
           />
+
+          {/* Prev */}
+          <button
+            className="gallery-lightbox-nav gallery-lightbox-nav--prev"
+            onClick={() => go("prev")}
+            aria-label="Previous image"
+            type="button"
+          >
+            <ChevronLeft />
+          </button>
+
+          {/* Next */}
+          <button
+            className="gallery-lightbox-nav gallery-lightbox-nav--next"
+            onClick={() => go("next")}
+            aria-label="Next image"
+            type="button"
+          >
+            <ChevronRight />
+          </button>
         </div>
 
-        {/* Prev */}
-        <button
-          className="gallery-lightbox-nav gallery-lightbox-nav--prev"
-          onClick={() => go("prev")}
-          aria-label="Previous image"
-          type="button"
-        >
-          <ChevronLeft />
-        </button>
-
-        {/* Next */}
-        <button
-          className="gallery-lightbox-nav gallery-lightbox-nav--next"
-          onClick={() => go("next")}
-          aria-label="Next image"
-          type="button"
-        >
-          <ChevronRight />
-        </button>
-
-        {/* Thumbnails strip */}
-        <div className="gallery-lightbox-thumbs" role="list">
+        {/* Thumbnails Strip */}
+        <div className="gallery-lightbox-thumbs" ref={thumbsRef} role="list">
           {images.map((img, i) => (
             <button
               key={img.src}
