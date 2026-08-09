@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Users, X } from "lucide-react";
 import { PageShell, PageHero } from "@/components/page-shell";
-import globalImg from "@/assets/emwa-replace.jpg";
+import { CompanyGallery } from "@/components/company-gallery";
+import globalImg from "@/assets/emwa-group-photo.png";
 import integrityImg from "@/assets/value-integrity.png";
 import solidarityImg from "@/assets/value-solidarity.png";
 import independenceImg from "@/assets/value-independence.png";
@@ -366,6 +367,8 @@ function About() {
     </section>
 
     <BoardSection />
+
+    <CompanyGallery />
 
     <section className="about2-community">
       <div>

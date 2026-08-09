@@ -4,7 +4,6 @@ import { PageShell } from "@/components/page-shell";
 import YoutubeNewsFeed from "@/components/youtube-news-feed";
 import OurMandate from "@/components/our-mandate";
 import OurBlueprint from "@/components/our-blueprint";
-import VoicesSlider from "@/components/voices-slider";
 import StrategicAlliances from "@/components/strategic-alliances";
 import InspirationalQuotes from "@/components/inspirational-quotes";
 import { CountUp } from "@/components/count-up";
@@ -21,8 +20,6 @@ import {
   ShieldCheck,
   Signal,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   MessageCircleQuestion,
 } from "lucide-react";
 
@@ -86,25 +83,15 @@ type HomeUpdate = {
 };
 
 function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
-  const [slide, setSlide] = useState(0);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setSlide((current) => (current + 1) % 2), 6000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const move = (direction: number) => setSlide((current) => (current + direction + 2) % 2);
+  const slide = 1;
 
   return (
     <section
       className="home-hero-slider"
-      aria-roledescription="carousel"
-      aria-label="EMWA highlights"
+      aria-label="Tribute to Fitsum Alemayehu"
     >
       <div className="home-hero-visual">
-        <img className={slide === 0 ? "is-active" : ""} src={LANDING_IMAGES.hero.src} alt={LANDING_IMAGES.hero.alt} width={1800} height={1200} fetchPriority="high" />
         <img className={slide === 1 ? "is-active is-fitsum" : "is-fitsum"} src="/Fitsum%20Alemayehu.png" alt="Fitsum Alemayehu, the first president of EMWA" width={1200} height={1600} />
-        <span className="home-hero-image-number" aria-hidden="true">0{slide + 1}</span>
       </div>
 
       <div className="home-hero-copy" key={slide} aria-live="polite">
@@ -125,19 +112,14 @@ function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
             <p className="home-hero-tribute">Fitsum Alemayehu, the first president of EMWA, served the association with diligence and competence for which it is forever grateful.</p>
             <blockquote>“I have many happy memories in Ethiopia and sad to leave. But, I am saddened most because I will miss being part of EMWA.”</blockquote>
             <p className="home-hero-signoff">EMWA extends its gratitude to Wzo. Fitsum and wishes her success and all the best.</p>
+            <div className="home-hero-actions">
+              <Link to="/membership">{t("Become a member", "አባል ይሁኑ")} <ArrowUpRight /></Link>
+              <Link to="/programs">{t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}</Link>
+            </div>
           </>
         )}
       </div>
 
-      <div className="home-hero-controls">
-        <button type="button" onClick={() => move(-1)} aria-label="Previous hero slide"><ChevronLeft /></button>
-        <div className="home-hero-dots" role="tablist" aria-label="Choose hero slide">
-          {[0, 1].map((item) => (
-            <button key={item} type="button" className={slide === item ? "is-active" : ""} onClick={() => setSlide(item)} role="tab" aria-selected={slide === item} aria-label={`Show slide ${item + 1}`}><span /></button>
-          ))}
-        </div>
-        <button type="button" onClick={() => move(1)} aria-label="Next hero slide"><ChevronRight /></button>
-      </div>
     </section>
   );
 }
@@ -451,9 +433,6 @@ function Home() {
           )}
         </div>
       </section>
-
-      {/* TESTIMONIALS SLIDER */}
-      <VoicesSlider />
 
       {/* STRATEGIC ALLIANCES */}
       <StrategicAlliances />

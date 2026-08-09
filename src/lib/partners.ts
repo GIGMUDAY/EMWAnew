@@ -27,4 +27,14 @@ export const EMWA_PARTNERS: EmwaPartner[] = [
     focus: "International Programme for the Development of Communication",
     logo: "/partnership/photo_2026-07-26_10-51-12.jpg",
   },
+  {
+    name: "BBC Media Action",
+    focus: "Media development and social impact",
+    logo: "/partnership/bbc_media_action.jpg",
+  },
+  {
+    name: "Grassroot Soccer",
+    focus: "Adolescent health through sport",
+    logo: "/partnership/grassroot_soccer.jpg",
+  },
 ];
