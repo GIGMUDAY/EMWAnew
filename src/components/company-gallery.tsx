@@ -250,11 +250,7 @@ export function CompanyGallery() {
           ))}
         </div>
 
-        <div className="company-gallery-footer">
-          <span className="gallery-count-badge">
-            {GALLERY_IMAGES.length} {t("photos", "ፎቶዎች")}
-          </span>
-        </div>
+
       </section>
 
       {lightboxIndex !== null && (
