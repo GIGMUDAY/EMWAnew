@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { type FormEvent, useEffect, useState } from "react";
+import React, { type FormEvent, useEffect, useState } from "react";
 import { PageShell } from "@/components/page-shell";
 import YoutubeNewsFeed from "@/components/youtube-news-feed";
 import OurMandate from "@/components/our-mandate";
@@ -83,44 +83,163 @@ type HomeUpdate = {
 };
 
 function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
-  const slide = 1;
+  const [isExiting, setIsExiting] = useState(false);
+  const [loopKey, setLoopKey] = useState(0);
+  const INTERVAL_MS = 18000; // 18 s between loops
+  const EXIT_MS     = 600;   // exit is crisp and fast
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIsExiting(true);
+      setTimeout(() => {
+        setIsExiting(false);
+        setLoopKey((k) => k + 1);
+      }, EXIT_MS);
+    }, INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── Premium easing curves ──────────────────────────────────────────────────
+  // Expo Out  — fast start, silky deceleration (used for entrances)
+  const EASE_ENTER = "cubic-bezier(0.16, 1, 0.3, 1)";
+  // Expo In   — slow start, sharp acceleration (used for exits)
+  const EASE_EXIT  = "cubic-bezier(0.7, 0, 1, 0.6)";
+
+  const exitTransition = isExiting
+    ? `opacity ${EXIT_MS}ms ${EASE_EXIT}, transform ${EXIT_MS}ms ${EASE_EXIT}, filter ${EXIT_MS}ms ${EASE_EXIT}`
+    : "none"; // entrance handled by CSS keyframe animation
+
+  const imgStyle: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    objectPosition: "center",
+    padding: "clamp(1rem, 2.5vw, 2.5rem)",
+    // Exit state values
+    opacity:   isExiting ? 0 : 1,
+    transform: isExiting ? "scale(0.94)" : "scale(1)",
+    filter:    isExiting ? "blur(6px) saturate(0.4)" : "blur(0px) saturate(1)",
+    transition: exitTransition,
+    // Entrance + Ken Burns via keyframe on re-mount
+    animation: isExiting
+      ? "none"
+      : `hero-enter-img 1.1s ${EASE_ENTER} both, ken-burns 20s ease-in-out 1.1s infinite alternate`,
+    willChange: "transform, opacity, filter",
+  };
+
+  const textStyle: React.CSSProperties = {
+    opacity:    isExiting ? 0 : 1,
+    transform:  isExiting ? "translateY(-16px) scale(0.98)" : "translateY(0) scale(1)",
+    filter:     isExiting ? "blur(3px)" : "blur(0px)",
+    transition: exitTransition,
+    animation:  isExiting ? "none" : `hero-enter-text 1.1s ${EASE_ENTER} both`,
+  };
 
   return (
-    <section
-      className="home-hero-slider"
-      aria-label="Tribute to Fitsum Alemayehu"
-    >
-      <div className="home-hero-visual">
-        <img className={slide === 1 ? "is-active is-fitsum" : "is-fitsum"} src="/Fitsum%20Alemayehu.png" alt="Fitsum Alemayehu, the first president of EMWA" width={1200} height={1600} />
-      </div>
+    <>
+      <style>{`
+        /* ── Image entrance: rises up + un-blurs + un-saturates ── */
+        @keyframes hero-enter-img {
+          0%   { opacity: 0; transform: scale(1.06) translateY(8px);  filter: blur(8px) saturate(0.3); }
+          60%  { opacity: 1; filter: blur(1px) saturate(0.85); }
+          100% { opacity: 1; transform: scale(1)    translateY(0);    filter: blur(0px) saturate(1); }
+        }
 
-      <div className="home-hero-copy" key={slide} aria-live="polite">
-        {slide === 0 ? (
-          <>
-            <p className="label-mono text-primary">{t("Est. 1998 · Addis Ababa", "ተመሠረተ 1998 · አዲስ አበባ")}</p>
-            <h1>{t("The Voice", "የኢትዮጵያ")}<br />{t("of Ethiopia's", "ፈር ቀዳጅ")}<br /><span>{t("Vanguard", "የሴቶች ድምፅ")}</span></h1>
-            <p className="home-hero-lede">{t("Empowering Ethiopian women in media through strategic advocacy, professional development, and a collective voice that echoes across the Horn of Africa.", "በስትራቴጂያዊ ቅስቀሳ፣ በሙያ ማበልጸግና በጋራ ድምፅ በሚዲያ ውስጥ የሚሠሩ ኢትዮጵያዊ ሴቶችን እናበረታታለን።")}</p>
-            <div className="home-hero-actions">
-              <Link to="/membership">{t("Become a member", "አባል ይሁኑ")} <ArrowUpRight /></Link>
-              <Link to="/programs">{t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}</Link>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="label-mono text-primary">EMWA legacy · Founding leadership</p>
-            <h1 className="is-tribute">A legacy of<br /><span>service.</span></h1>
-            <p className="home-hero-tribute">Fitsum Alemayehu, the first president of EMWA, served the association with diligence and competence for which it is forever grateful.</p>
-            <blockquote>“I have many happy memories in Ethiopia and sad to leave. But, I am saddened most because I will miss being part of EMWA.”</blockquote>
-            <p className="home-hero-signoff">EMWA extends its gratitude to Wzo. Fitsum and wishes her success and all the best.</p>
-            <div className="home-hero-actions">
-              <Link to="/membership">{t("Become a member", "አባል ይሁኑ")} <ArrowUpRight /></Link>
-              <Link to="/programs">{t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}</Link>
-            </div>
-          </>
-        )}
-      </div>
+        /* ── Text entrance: rises up + un-blurs, slightly faster feel ── */
+        @keyframes hero-enter-text {
+          0%   { opacity: 0; transform: translateY(20px) scale(0.97); filter: blur(4px); }
+          100% { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0px); }
+        }
 
-    </section>
+        /* ── Ken Burns: slow cinematic drift ── */
+        @keyframes ken-burns {
+          0%   { transform: scale(1.00) translate(0,     0);    }
+          25%  { transform: scale(1.04) translate(-0.8%, 0.3%); }
+          50%  { transform: scale(1.06) translate(0.3%,  -0.6%);}
+          75%  { transform: scale(1.04) translate(-0.4%, 0.5%); }
+          100% { transform: scale(1.07) translate(0.2%,  0.8%); }
+        }
+
+        /* ── Progress bar with shimmer ── */
+        @keyframes hero-progress {
+          from { width: 0; }
+          to   { width: 100%; }
+        }
+        @keyframes progress-shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .hero-progress-bar {
+          display: block; height: 100%; width: 0;
+          background: linear-gradient(
+            90deg,
+            var(--color-primary, #8c2d3c) 0%,
+            color-mix(in srgb, var(--color-primary, #8c2d3c) 60%, #e9a84c) 50%,
+            var(--color-primary, #8c2d3c) 100%
+          );
+          background-size: 200% 100%;
+          animation:
+            hero-progress ${INTERVAL_MS}ms linear forwards,
+            progress-shimmer 2.5s ease-in-out infinite;
+        }
+
+        /* ── Reduced motion ── */
+        @media (prefers-reduced-motion: reduce) {
+          .hero-progress-bar { animation: none; width: 100%; }
+        }
+      `}</style>
+
+      <section
+        className="home-hero-slider"
+        aria-label="Tribute to Fitsum Alemayehu"
+      >
+        {/* Image */}
+        <div
+          className="home-hero-visual"
+          style={{ background: "linear-gradient(145deg, #171310, #2b211b)" }}
+        >
+          <img
+            key={loopKey}
+            src="/Fitsum%20Alemayehu.png"
+            alt="Fitsum Alemayehu, the first president of EMWA"
+            width={1200}
+            height={1600}
+            style={imgStyle}
+          />
+        </div>
+
+        {/* Text */}
+        <div
+          key={loopKey}
+          className="home-hero-copy"
+          style={textStyle}
+          aria-live="polite"
+        >
+          <p className="label-mono text-primary">EMWA legacy · Founding leadership</p>
+          <h1 className="is-tribute">A legacy of<br /><span>service.</span></h1>
+          <p className="home-hero-tribute">
+            Fitsum Alemayehu, the first president of EMWA, served the association with diligence and competence for which it is forever grateful.
+          </p>
+          <blockquote>"I have many happy memories in Ethiopia and sad to leave. But, I am saddened most because I will miss being part of EMWA."</blockquote>
+          <p className="home-hero-signoff">EMWA extends its gratitude to Wzo. Fitsum and wishes her success and all the best.</p>
+          <div className="home-hero-actions">
+            <Link to="/membership">{t("Become a member", "አባል ይሁኑ")} <ArrowUpRight /></Link>
+            <Link to="/programs">{t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}</Link>
+          </div>
+
+          {/* Progress bar */}
+          <div
+            aria-hidden="true"
+            style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "2px", background: "rgb(255 255 255 / 8%)", overflow: "hidden" }}
+          >
+            <span key={loopKey} className="hero-progress-bar" />
+          </div>
+        </div>
+
+      </section>
+    </>
   );
 }
 
@@ -233,49 +352,49 @@ function Home() {
       {/* HERO */}
       <HomeHero t={t} />
       {false && (
-      <section className="relative flex flex-col md:flex-row min-h-[calc(100svh-65px)] border-b border-border">
-        <div className="md:w-7/12 relative order-2 md:order-1 overflow-hidden min-h-[42svh] md:min-h-0 bg-muted">
-          <img
-            src={LANDING_IMAGES.hero.src}
-            alt={LANDING_IMAGES.hero.alt}
-            width={1800}
-            height={1200}
-            fetchPriority="high"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.5s] hover:scale-[1.02]"
-          />
-        </div>
-        <div className="md:w-5/12 flex flex-col justify-center px-5 py-14 sm:px-8 md:p-12 lg:p-16 xl:p-20 order-1 md:order-2">
-          <p className="label-mono text-primary mb-6 animate-reveal">{t("Est. 1998 · Addis Ababa", "ተመሠረተ 1998 · አዲስ አበባ")}</p>
-          <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl leading-[0.88] tracking-tighter mb-7 md:mb-8 text-balance animate-reveal">
-            {t("The Voice", "የኢትዮጵያ")}<br />
-            {t("of Ethiopia's", "ፈር ቀዳጅ")}<br />
-            <span className="text-secondary">{t("Vanguard", "የሴቶች ድምፅ")}</span>
-          </h1>
-          <p className="text-lg leading-snug max-w-md text-muted-foreground animate-reveal">
-            {t(
-              "Empowering Ethiopian women in media through strategic advocacy, professional development, and a collective roar that echoes across the Horn of Africa.",
-              "በስትራቴጂያዊ ቅስቀሳ፣ በሙያ ማበልጸግና በጋራ ድምፅ በሚዲያ ውስጥ የሚሠሩ ኢትዮጵያዊ ሴቶችን እናበረታታለን።",
-            )}
-          </p>
-          <div className="mt-10 flex flex-wrap gap-3 animate-reveal">
-            <Link
-              to="/membership"
-              className="bg-foreground text-background px-6 py-3 label-mono hover:bg-primary transition-colors inline-flex items-center gap-2"
-            >
-              {t("Become a member", "አባል ይሁኑ")} <ArrowUpRight className="size-3" />
-            </Link>
-            <Link
-              to="/programs"
-              className="border border-foreground px-6 py-3 label-mono hover:bg-foreground hover:text-background transition-colors"
-            >
-              {t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}
-            </Link>
+        <section className="relative flex flex-col md:flex-row min-h-[calc(100svh-65px)] border-b border-border">
+          <div className="md:w-7/12 relative order-2 md:order-1 overflow-hidden min-h-[42svh] md:min-h-0 bg-muted">
+            <img
+              src={LANDING_IMAGES.hero.src}
+              alt={LANDING_IMAGES.hero.alt}
+              width={1800}
+              height={1200}
+              fetchPriority="high"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1.5s] hover:scale-[1.02]"
+            />
           </div>
-          <div className="mt-10 lg:mt-16 hidden md:flex items-center gap-3 label-mono text-muted-foreground animate-reveal">
-            <ArrowDown className="size-3 animate-bounce" /> {t("Scroll", "ወደ ታች ይሂዱ")}
+          <div className="md:w-5/12 flex flex-col justify-center px-5 py-14 sm:px-8 md:p-12 lg:p-16 xl:p-20 order-1 md:order-2">
+            <p className="label-mono text-primary mb-6 animate-reveal">{t("Est. 1998 · Addis Ababa", "ተመሠረተ 1998 · አዲስ አበባ")}</p>
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl leading-[0.88] tracking-tighter mb-7 md:mb-8 text-balance animate-reveal">
+              {t("The Voice", "የኢትዮጵያ")}<br />
+              {t("of Ethiopia's", "ፈር ቀዳጅ")}<br />
+              <span className="text-secondary">{t("Vanguard", "የሴቶች ድምፅ")}</span>
+            </h1>
+            <p className="text-lg leading-snug max-w-md text-muted-foreground animate-reveal">
+              {t(
+                "Empowering Ethiopian women in media through strategic advocacy, professional development, and a collective roar that echoes across the Horn of Africa.",
+                "በስትራቴጂያዊ ቅስቀሳ፣ በሙያ ማበልጸግና በጋራ ድምፅ በሚዲያ ውስጥ የሚሠሩ ኢትዮጵያዊ ሴቶችን እናበረታታለን።",
+              )}
+            </p>
+            <div className="mt-10 flex flex-wrap gap-3 animate-reveal">
+              <Link
+                to="/membership"
+                className="bg-foreground text-background px-6 py-3 label-mono hover:bg-primary transition-colors inline-flex items-center gap-2"
+              >
+                {t("Become a member", "አባል ይሁኑ")} <ArrowUpRight className="size-3" />
+              </Link>
+              <Link
+                to="/programs"
+                className="border border-foreground px-6 py-3 label-mono hover:bg-foreground hover:text-background transition-colors"
+              >
+                {t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}
+              </Link>
+            </div>
+            <div className="mt-10 lg:mt-16 hidden md:flex items-center gap-3 label-mono text-muted-foreground animate-reveal">
+              <ArrowDown className="size-3 animate-bounce" /> {t("Scroll", "ወደ ታች ይሂዱ")}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
       )}
 
       {/* WOMEN NEWS FEED (YouTube) */}
@@ -408,24 +527,24 @@ function Home() {
             </Link>
           </div>
           {updates.length > 0 ? (
-          <div className="grid md:grid-cols-3 gap-px bg-border">
-            {updates.map((n) => (
-              <Link key={n.slug} to="/updates" hash="stories" className="block no-underline">
-              <article className="h-full bg-background p-8 hover:bg-muted/50 transition-colors cursor-pointer">
-                <div className="flex justify-between label-mono text-muted-foreground mb-6">
-                  <span>{n.date}</span>
-                  <span className="text-primary">Update</span>
-                </div>
-                <h3 className="font-display text-2xl leading-tight mb-4">{n.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{n.excerpt}</p>
-                <div className="mt-6 label-mono inline-flex items-center gap-1 group">
-                  {t("Read", "ያንብቡ")}{" "}
-                  <ArrowUpRight className="size-3 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </article>
-              </Link>
-            ))}
-          </div>
+            <div className="grid md:grid-cols-3 gap-px bg-border">
+              {updates.map((n) => (
+                <Link key={n.slug} to="/updates" hash="stories" className="block no-underline">
+                  <article className="h-full bg-background p-8 hover:bg-muted/50 transition-colors cursor-pointer">
+                    <div className="flex justify-between label-mono text-muted-foreground mb-6">
+                      <span>{n.date}</span>
+                      <span className="text-primary">Update</span>
+                    </div>
+                    <h3 className="font-display text-2xl leading-tight mb-4">{n.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{n.excerpt}</p>
+                    <div className="mt-6 label-mono inline-flex items-center gap-1 group">
+                      {t("Read", "ያንብቡ")}{" "}
+                      <ArrowUpRight className="size-3 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
           ) : (
             <div className="border border-border bg-background px-8 py-12 text-center text-muted-foreground">
               {updatesLoading ? "Loading the latest updates…" : "No published updates yet."}

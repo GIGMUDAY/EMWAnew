@@ -82,197 +82,20 @@ const resolveMediaUrl = (value: unknown, fallback: string) => {
   }
 };
 
+const NEWS_IMG_FALLBACK = "/Fitsum%20Alemayehu.png";
+
 const useNewsImageFallback = (event: React.SyntheticEvent<HTMLImageElement>) => {
   const image = event.currentTarget;
-  if (image.src === PHOTOS.newsroom) return;
+  if (image.src.includes("Fitsum")) return;
   image.onerror = null;
-  image.src = PHOTOS.newsroom;
+  image.src = NEWS_IMG_FALLBACK;
 };
 
-const PHOTOS = {
-  conference:
-    "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1800&q=85",
-  newsroom:
-    "https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&w=1800&q=85",
-  journalist:
-    "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1600&q=85",
-  workshop:
-    "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1600&q=85",
-} as const;
-
-const FALLBACK_STORIES: Story[] = [
-  {
-    d: "12 Nov 2026",
-    t: "Updates",
-    h: "EMWA submits gender-equity brief to Parliament",
-    hAm: "EMWA ለፓርላማ የፆታ እኩልነት ፖሊሲ ሰነድ አቀረበ",
-    e: "A policy agenda for measurable representation, safer newsrooms, and transparent leadership pathways across public broadcasting.",
-    eAm: "በህዝብ ብሮድካስቲንግ ውስጥ ሊለካ የሚችል ተሳትፎን፣ ደህንነቱ የተጠበቀ የዜና ክፍልን እና ግልጽ የአመራር መንገዶችን የሚያስቀምጥ የፖሊሲ አጀንዳ።",
-    img: PHOTOS.newsroom,
-    read: "4 min",
-    readAm: "4 ደቂቃ",
-  },
-  {
-    d: "04 Nov 2026",
-    t: "Photos",
-    h: "Thirty-eight women complete the Leadership Incubator",
-    hAm: "ሰላሳ ስምንት ሴቶች የአመራርነት ማዕከል ስልጠናቸውን አጠናቀቁ",
-    e: "Editors and producers from nine regions mark six months of shared learning and newsroom leadership.",
-    eAm: "ከዘጠኝ ክልሎች የተወጣጡ አዘጋጆች እና ፕሮዲዩሰሮች የFact-Checking እና የዜና ክፍል አመራር ስልጠናቸውን አጠናቀዋል።",
-    img: PHOTOS.conference,
-    read: "Gallery",
-    readAm: "ፎቶዎች",
-  },
-  {
-    d: "27 Oct 2026",
-    t: "Updates",
-    h: "Digital safety support reaches two more regions",
-    hAm: "የዲጂታል ደህንነት ድጋፍ ለሁለት ተጨማሪ ክልሎች ተዳረሰ",
-    e: "Rapid-response legal and technical assistance expands to Amhara and Sidama.",
-    eAm: "አጣዳፊ የህግ እና ቴክኒካዊ ድጋፍ ወደ አማራ እና ሲዳማ ክልሎች ተስፋፍቷል።",
-    img: PHOTOS.workshop,
-    read: "3 min",
-    readAm: "3 ደቂቃ",
-  },
-  {
-    d: "15 Oct 2026",
-    t: "Press",
-    h: "Statement on Ethiopia's 2026 press freedom index",
-    hAm: "በኢትዮጵያ የ2026 የፕሬስ ነፃነት መለኪያ ላይ የተሰጠ መግለጫ",
-    e: "What the latest ranking means for women reporting across the country.",
-    eAm: "የቅርብ ጊዜው ደረጃ በሀገሪቱ ውስጥ ዘገባ በሚያቀርቡ ሴቶች ላይ ያለው ትርጉም።",
-    img: PHOTOS.journalist,
-    read: "Statement",
-    readAm: "መግለጫ",
-  },
-  {
-    d: "02 Oct 2026",
-    t: "Articles",
-    h: "Why regional newsrooms need women editors—now",
-    hAm: "የክልል ዜና ክፍሎች ሴት አዘጋጆች ለምን ያስፈልጓቸዋል?",
-    e: "Representation matters. Editorial authority changes what gets reported and whose experience counts.",
-    eAm: "ተሳትፎ ወሳኝ ነው። የአዘጋጅነት ስልጣን የሚዘገቡ ጉዳዮችን እና የሰዎችን ልምድ ይለውጣል።",
-    img: PHOTOS.newsroom,
-    read: "7 min",
-    readAm: "7 ደቂቃ",
-  },
-  {
-    d: "20 Sep 2026",
-    t: "Video",
-    h: "A new alliance for African women in media",
-    hAm: "ለአፍሪካ ሴቶች በሚዲያ አዲስ ህብረት",
-    e: "Highlights from EMWA's entry into a continental network of eleven associations.",
-    eAm: "EMWA ከአስራ አንድ አህጉራዊ ማህበራት ጋር ያደረገው የትብብር ስምምነት ዋና ዋና ነጥቦች።",
-    img: PHOTOS.conference,
-    read: "06:42",
-    readAm: "06:42",
-  },
-];
-
-const STORY_DETAILS: Record<string, string[]> = {
-  "EMWA submits gender-equity brief to Parliament": [
-    "EMWA has submitted a new gender-equity policy brief calling for measurable representation, safer working environments, and transparent routes into newsroom leadership across Ethiopia's public media institutions.",
-    "The brief draws on consultations with women journalists, editors, producers, regional media leaders, and civil-society partners. It identifies persistent gaps in decision-making roles, workplace protection, professional development, and the treatment of gender in editorial coverage.",
-    "EMWA is asking public institutions to publish representation data, strengthen reporting and accountability systems, and establish funded leadership pathways for women working across national and regional newsrooms.",
-  ],
-  "Thirty-eight women complete the Leadership Incubator": [
-    "Thirty-eight editors and producers from nine regions have completed EMWA's six-month Leadership Incubator, marking a major milestone for the program's newest cohort.",
-    "Participants worked through newsroom leadership, editorial decision-making, team development, digital safety, and audience strategy with mentors from across Ethiopia's media community.",
-    "The closing gathering celebrated the participants' projects and created new connections between regional newsrooms. Graduates will continue through a peer network supported by EMWA.",
-  ],
-  "Digital safety support reaches two more regions": [
-    "EMWA's rapid-response digital safety program has expanded to Amhara and Sidama, giving more women journalists access to urgent technical guidance and coordinated legal support.",
-    "The service helps journalists respond to account compromise, online harassment, doxxing, device risks, and threats connected to their professional work.",
-    "Regional partners will also deliver practical safety sessions so newsrooms can improve everyday security habits before an incident occurs.",
-  ],
-  "Statement on Ethiopia's 2026 press freedom index": [
-    "The latest press freedom index is a reminder that access to reliable information depends on the safety, independence, and diversity of the people producing it.",
-    "Women journalists continue to experience distinct professional and online threats that are often missing from broad assessments of media freedom.",
-    "EMWA calls on public authorities, media owners, platforms, and professional associations to make gender-responsive safety and accountability part of every press-freedom commitment.",
-  ],
-  "Why regional newsrooms need women editors—now": [
-    "Regional newsrooms shape how communities understand public life, yet women remain underrepresented in the editorial positions that decide which stories receive attention.",
-    "When women hold editorial authority, the change reaches beyond representation. Sources broaden, workplace cultures improve, and community experiences that were previously overlooked become part of the public record.",
-    "Building that leadership requires intentional commissioning, mentorship, fair promotion systems, and sustained investment in women journalists outside the capital.",
-  ],
-  "A new alliance for African women in media": [
-    "EMWA has joined a continental alliance bringing together eleven organizations working to advance women in journalism and media leadership across Africa.",
-    "The network will support shared training, research, advocacy, mentorship, and rapid solidarity when women journalists face threats because of their work.",
-    "The partnership gives Ethiopian media women a stronger route into regional conversations while creating opportunities to exchange practical knowledge with peers across the continent.",
-  ],
-};
-
-const FALLBACK_EVENTS: PublicEvent[] = [
-  {
-    day: "22",
-    month: "NOV",
-    title: "Regional Chapter Convening",
-    titleAm: "የክልል ቅርንጫፍ ስብሰባ",
-    type: "Convening",
-    typeAm: "ስብሰባ",
-    loc: "Hawassa University",
-    locAm: "ሀዋሳ ዩኒቨርሲቲ",
-    time: "09:00 EAT",
-    startsAt: "2026-11-22T09:00:00Z",
-    img: PHOTOS.conference,
-    full: false,
-    capacityStatus: "AVAILABLE",
-    description: "Annual regional convening bringing together chapter leadership and members.",
-  },
-  {
-    day: "05",
-    month: "DEC",
-    title: "Media Ethics Symposium 2026",
-    titleAm: "የሚዲያ ሥነ-ምግባር ሲምፖዚየም 2026",
-    type: "Symposium",
-    typeAm: "ሲምፖዚየም",
-    loc: "Skylight Hotel, Addis Ababa",
-    locAm: "ስካይላይት ሆቴል፣ አዲስ አበባ",
-    time: "Full day",
-    startsAt: "2026-12-05T08:30:00Z",
-    img: PHOTOS.newsroom,
-    full: false,
-    capacityStatus: "AVAILABLE",
-    description: "National symposium on media ethics, digital safety, and editorial integrity.",
-  },
-  {
-    day: "11",
-    month: "DEC",
-    title: "Reporting on Climate",
-    titleAm: "በአየር ንብረት ዙሪያ ዘገባ ማቅረብ",
-    type: "Webinar",
-    typeAm: "ዌቢናር",
-    loc: "Online",
-    locAm: "ኦንላይን",
-    time: "16:00 EAT",
-    startsAt: "2026-12-11T16:00:00Z",
-    img: PHOTOS.journalist,
-    full: false,
-    capacityStatus: "AVAILABLE",
-    description: "Interactive webinar on gender-sensitive climate reporting in the Horn of Africa.",
-  },
-  {
-    day: "18",
-    month: "DEC",
-    title: "Year-end Members Assembly",
-    titleAm: "የዓመቱ መጨረሻ የአባላት ጠቅላላ ጉባኤ",
-    type: "Assembly",
-    typeAm: "ጠቅላላ ጉባኤ",
-    loc: "EMWA HQ, Addis Ababa",
-    locAm: "የEMWA ዋና ጽሕፈት ቤት፣ አዲስ አበባ",
-    time: "14:00 EAT",
-    startsAt: "2026-12-18T14:00:00Z",
-    img: PHOTOS.workshop,
-    full: true,
-    capacityStatus: "FULL",
-    description: "Year-end reporting, member networking, and strategic outline for the coming year.",
-  },
-];
 
 function Updates() {
   const { t, language } = useLanguage();
-  const [stories, setStories] = useState<Story[]>(FALLBACK_STORIES);
-  const [events, setEvents] = useState<PublicEvent[]>(FALLBACK_EVENTS);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [events, setEvents] = useState<PublicEvent[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState("");
   const [tab, setTab] = useState<(typeof TABS)[number]>("All");
@@ -658,7 +481,7 @@ function Updates() {
               <div className="updates-story-body">
                 {(selectedStory.content
                   ? selectedStory.content.split(/\n{2,}/).filter(Boolean)
-                  : (STORY_DETAILS[selectedStory.h] ?? [selectedStory.e])
+                  : [selectedStory.e]
                 ).map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
