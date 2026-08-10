@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight, Calendar, Clock, MapPin, Play, Search, X } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
 import { useLanguage } from "@/lib/language-context";
@@ -102,6 +102,8 @@ function Updates() {
   const [query, setQuery] = useState("");
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<PublicEvent | null>(null);
+  const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [newsletterMessage, setNewsletterMessage] = useState("");
 
   const lead = stories.find((story) => story.featured) ?? stories[0];
 
@@ -220,6 +222,39 @@ function Updates() {
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [selectedStory, selectedEvent]);
+
+  const handleSubscribe = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const email = String(new FormData(form).get("email") ?? "").trim();
+
+    if (!email) {
+      setNewsletterStatus("error");
+      setNewsletterMessage(t("Please enter a valid email address.", "እባክዎ የትክክለኛ ኢሜይል አድራሻ ያስገቡ።"));
+      return;
+    }
+
+    setNewsletterStatus("submitting");
+    setNewsletterMessage("");
+
+    try {
+      const response = await fetch(`${API_BASE}/public/newsletter-subscriptions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error?.message ?? t("Unable to subscribe right now.", "አሁን ለማስመዝገብ አንችልም።"));
+      }
+      setNewsletterStatus("success");
+      setNewsletterMessage(t("You’re subscribed to The Narrative Shift.", "ወደ The Narrative Shift ተመዝግበዋል።"));
+      form.reset();
+    } catch (error) {
+      setNewsletterStatus("error");
+      setNewsletterMessage(error instanceof Error ? error.message : t("Unable to subscribe.", "ማስመዝገብ አልተቻለም።"));
+    }
+  };
 
   return (
     <PageShell>
@@ -441,15 +476,24 @@ function Updates() {
           </h2>
           <p>{t("A concise update on EMWA programs, policy, events, and opportunities.", "በEMWA ፕሮግራሞች፣ ፖሊሲ፣ ዝግጅቶች እና ዕድሎች ዙሪያ አጭር መረጃ።")}</p>
         </div>
-        <form onSubmit={(event) => event.preventDefault()}>
+        <form className="updates2-subscribe-form" onSubmit={handleSubscribe}>
           <label>
             <span>{t("Email address", "የኢሜይል አድራሻ")}</span>
-            <input type="email" required placeholder="name@example.com" />
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="name@example.com"
+              disabled={newsletterStatus === "submitting"}
+            />
           </label>
-          <button>
-            {t("Join the list", "ዝርዝሩን ይቀላቀሉ")} <ArrowRight />
+          <button type="submit" disabled={newsletterStatus === "submitting"}>
+            {newsletterStatus === "submitting" ? t("Joining…", "በማስቀላቀል ላይ…") : t("Join the list", "ዝርዝሩን ይቀላቀሉ")} <ArrowRight />
           </button>
           <small>{t("One email each month. Unsubscribe anytime.", "በወር አንድ ኢሜይል ብቻ። በፈለጉት ጊዜ ይውጡ።")}</small>
+          <p className={`updates2-subscribe-note${newsletterStatus === "success" ? " is-success" : newsletterStatus === "error" ? " is-error" : ""}`} role={newsletterMessage ? "status" : undefined}>
+            {newsletterMessage || ""}
+          </p>
         </form>
       </section>
 
