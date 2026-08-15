@@ -9,7 +9,10 @@ import {
   CircleUserRound,
   Clock3,
   Download,
+  Eye,
+  EyeOff,
   FileText,
+  Image as ImageIcon,
   Inbox,
   LayoutDashboard,
   LoaderCircle,
@@ -17,6 +20,8 @@ import {
   Menu,
   MessageSquare,
   Newspaper,
+  Pencil,
+  Plus,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -55,7 +60,8 @@ type Section =
   | "resources"
   | "messages"
   | "subscribers"
-  | "administrators";
+  | "administrators"
+  | "hero-slides";
 type AdminSession = {
   token: string;
   refreshToken: string;
@@ -184,6 +190,25 @@ type NewsletterSubscriber = {
   created_at: string;
   updated_at: string;
 };
+type HeroSlideItem = {
+  id: string;
+  imageUrl: string;
+  title?: string;
+  titleAm?: string;
+  description?: string;
+  descriptionAm?: string;
+  text: string;
+  textAm: string;
+  signoff?: string;
+  signoffAm?: string;
+  author: string;
+  role: string;
+  roleAm: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const navItems: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -196,6 +221,7 @@ const navItems: { id: Section; label: string; icon: typeof LayoutDashboard }[] =
   { id: "messages", label: "Contact messages", icon: MessageSquare },
   { id: "subscribers", label: "Email subscribers", icon: Inbox },
   { id: "administrators", label: "Administrators", icon: ShieldCheck },
+  { id: "hero-slides", label: "Hero slides", icon: ImageIcon },
 ];
 
 const fmtDate = (value: string) =>
@@ -206,8 +232,10 @@ const fmtDate = (value: string) =>
 const uploadUrl = (value?: string) => {
   if (!value) return "";
   try {
-    const path = new URL(value).pathname;
-    return `${new URL(API_BASE).origin}${path}`;
+    const str = String(value);
+    const origin = new URL(API_BASE).origin;
+    const url = new URL(str, origin);
+    return url.pathname.startsWith("/uploads/") ? `${origin}${url.pathname}` : str;
   } catch {
     return value;
   }
@@ -462,6 +490,7 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [heroSlides, setHeroSlides] = useState<HeroSlideItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -489,6 +518,7 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
           id: "demo-member-1",
           full_name: "Marta Tesfaye",
           email: "marta@example.com",
+          phone_number: "+251911000000",
           outlet_or_institution: "Addis Media Network",
           current_position: "Producer",
           region_or_chapter: "Addis Ababa",
@@ -561,6 +591,21 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
           created_at: now,
         },
       ]);
+      setHeroSlides([
+        {
+          id: "demo-slide-1",
+          imageUrl: "https://images.unsplash.com/photo-1585637071663-799845ad5212?w=1600&q=80",
+          text: "Women journalists on the frontlines are reshaping how the world sees conflict.",
+          textAm: "በግንባር ላይ ያሉ ሴት ጋዜጠኞች ዓለም ግጭትን የሚያይበትን መንገድ እየቀየሩ ይገኛሉ።",
+          author: "Reuters Institute",
+          role: "Global Press Freedom Report 2026",
+          roleAm: "ዓለም አቀፍ የፕሬስ ነፃነት ሪፖርት 2026",
+          displayOrder: 1,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
       setLoading(false);
       return;
     }
@@ -576,6 +621,7 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
         eventList,
         administratorList,
         subscriberList,
+        heroList,
       ] = await Promise.all([
         adminApi<Dashboard>("/admin/dashboard", session.token),
         listData<Expert>("/admin/expert-applications?page=1&limit=100", session.token),
@@ -590,6 +636,7 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
           "/admin/newsletter-subscribers?page=1&limit=100",
           session.token,
         ),
+        adminApi<HeroSlideItem[]>("/admin/hero-slides", session.token).catch(() => ({ success: true, data: [] })),
       ]);
       setDashboard(dash.data);
       setExperts(expertList.rows);
@@ -601,6 +648,7 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
       setEvents(eventList.rows);
       setAdministrators(administratorList.rows);
       setSubscribers(subscriberList.rows);
+      setHeroSlides(heroList.data ?? []);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) return onLogout();
       setError(cause instanceof Error ? cause.message : "Unable to load administration data");
@@ -766,6 +814,9 @@ function AdminWorkspace({ session, onLogout }: { session: AdminSession; onLogout
                   currentAdmin={session.admin}
                   reload={load}
                 />
+              )}
+              {section === "hero-slides" && (
+                <HeroSlidesPanel rows={heroSlides} token={session.token} reload={load} />
               )}
             </>
           )}
@@ -2992,5 +3043,400 @@ function LightInput({
         className="mt-2 w-full border border-black/15 bg-[#fbf9f4] px-4 py-3 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
       />
     </label>
+  );
+}
+
+function HeroSlidesPanel({
+  rows,
+  token,
+  reload,
+}: {
+  rows: HeroSlideItem[];
+  token: string;
+  reload: () => Promise<void>;
+}) {
+  const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<HeroSlideItem | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const demo = token === "frontend-demo-session";
+
+  const submitForm = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+
+    if (!data.get("author")) {
+      data.set("author", "EMWA");
+    }
+    if (data.get("imageUrl") === "") {
+      data.delete("imageUrl");
+    }
+    const isActiveInput = form.querySelector<HTMLInputElement>('#isActiveCheck');
+    if (isActiveInput) {
+      data.set("isActive", String(isActiveInput.checked));
+    }
+
+    try {
+      if (!demo) {
+        const path = editing ? `/admin/hero-slides/${editing.id}` : "/admin/hero-slides";
+        const method = editing ? "PATCH" : "POST";
+        await adminApi(path, token, { method, body: data });
+      }
+      setCreating(false);
+      setEditing(null);
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save hero slide");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleActive = async (slide: HeroSlideItem) => {
+    setBusy(true);
+    setError("");
+    try {
+      if (!demo) {
+        const data = new FormData();
+        data.set("isActive", String(!slide.isActive));
+        await adminApi(`/admin/hero-slides/${slide.id}`, token, {
+          method: "PATCH",
+          body: data,
+        });
+      }
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to toggle status");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeSlide = async (slide: HeroSlideItem) => {
+    if (!confirm("Are you sure you want to delete this hero slide?")) return;
+    setDeleting(slide.id);
+    setError("");
+    try {
+      if (!demo) {
+        await adminApi(`/admin/hero-slides/${slide.id}`, token, { method: "DELETE" });
+      }
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete hero slide");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const activeForm = creating || editing;
+
+  return (
+    <PagePanel
+      title="Homepage Hero Slides"
+      subtitle="Manage quotes, background photos, and display order for the frontpage HeroSlider."
+    >
+      <div className="mb-6 flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            setEditing(null);
+            setCreating(true);
+          }}
+          className="inline-flex items-center gap-2 bg-[#8c2d3c] px-4 py-2.5 font-[var(--font-body)] text-sm font-bold text-white transition hover:bg-[#6e222e]"
+        >
+          <Plus className="size-4" /> Add new hero slide
+        </button>
+      </div>
+      {error && (
+        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {error}
+        </div>
+      )}
+
+      {activeForm && (
+        <div className="mb-8 rounded-2xl border border-black/10 bg-[#fbf9f4] p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between border-b border-black/10 pb-4">
+            <h3 className="font-display text-xl font-bold">
+              {editing ? "Edit Hero Slide" : "Create New Hero Slide"}
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                setCreating(false);
+                setEditing(null);
+              }}
+              className="text-black/50 hover:text-black"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+
+          <form onSubmit={submitForm} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="label-mono text-black/60">Headline Title (English)</span>
+                <input
+                  type="text"
+                  name="title"
+                  defaultValue={editing?.title ?? ""}
+                  placeholder="e.g. A legacy of service."
+                  className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2.5 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="label-mono text-black/60">Headline Title (Amharic)</span>
+                <input
+                  type="text"
+                  name="titleAm"
+                  defaultValue={editing?.titleAm ?? ""}
+                  placeholder="e.g. የአገልግሎት ውርስ።"
+                  className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2.5 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="label-mono text-black/60">Person / Tribute Explanation (English)</span>
+                <textarea
+                  name="description"
+                  defaultValue={editing?.description ?? ""}
+                  placeholder="e.g. Fitsum Alemayehu, the first president of EMWA, served the association with diligence and competence for which it is forever grateful."
+                  className="mt-1.5 w-full border border-black/15 bg-white p-3 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                  rows={2}
+                />
+              </label>
+
+              <label className="block">
+                <span className="label-mono text-black/60">Person / Tribute Explanation (Amharic)</span>
+                <textarea
+                  name="descriptionAm"
+                  defaultValue={editing?.descriptionAm ?? ""}
+                  placeholder="e.g. የEMWA የመጀመሪያዋ ፕሬዝዳንት ፍጹም ዓለማየሁ..."
+                  className="mt-1.5 w-full border border-black/15 bg-white p-3 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                  rows={2}
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="label-mono text-black/60">Quote Text (English)</span>
+                <textarea
+                  name="text"
+                  required
+                  defaultValue={editing?.text ?? ""}
+                  placeholder="e.g. I have many happy memories in Ethiopia..."
+                  className="mt-1.5 w-full border border-black/15 bg-white p-3 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                  rows={2}
+                />
+              </label>
+
+              <label className="block">
+                <span className="label-mono text-black/60">Quote Text (Amharic)</span>
+                <textarea
+                  name="textAm"
+                  required
+                  defaultValue={editing?.textAm ?? ""}
+                  placeholder="e.g. በኢትዮጵያ ውስጥ ብዙ አስደሳች ትዝታዎች አሉኝ..."
+                  className="mt-1.5 w-full border border-black/15 bg-white p-3 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                  rows={2}
+                />
+              </label>
+            </div>
+
+            <input type="hidden" name="author" value="EMWA" />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="label-mono text-black/60">Role / Position (English)</span>
+                <input
+                  type="text"
+                  name="role"
+                  required
+                  defaultValue={editing?.role ?? ""}
+                  placeholder="e.g. First President of EMWA"
+                  className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2.5 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="label-mono text-black/60">Role / Position (Amharic)</span>
+                <input
+                  type="text"
+                  name="roleAm"
+                  required
+                  defaultValue={editing?.roleAm ?? ""}
+                  placeholder="e.g. የEMWA የመጀመሪያዋ ፕሬዝዳንት"
+                  className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2.5 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="label-mono text-black/60">Display Order</span>
+                <input
+                  type="number"
+                  name="displayOrder"
+                  defaultValue={editing?.displayOrder ?? 1}
+                  className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2.5 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="label-mono text-black/60">
+                  {editing ? "Replace Background Image" : "Upload Background Image"}
+                </span>
+                <input
+                  type="file"
+                  name="image"
+                  accept="image/jpeg,image/png"
+                  required={!editing}
+                  className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2 font-[var(--font-body)] text-sm"
+                />
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="isActiveCheck"
+                name="isActive"
+                value="true"
+                defaultChecked={editing?.isActive ?? true}
+                className="size-4 accent-[#8c2d3c]"
+              />
+              <label htmlFor="isActiveCheck" className="text-sm font-medium text-black/80">
+                Active slide (visible on public website)
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-black/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setCreating(false);
+                  setEditing(null);
+                }}
+                className="border border-black/20 px-4 py-2 text-sm font-medium hover:bg-black/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busy}
+                className="bg-[#8c2d3c] px-5 py-2 text-sm font-bold text-white hover:bg-[#6e222e] disabled:opacity-50"
+              >
+                {busy ? "Saving..." : editing ? "Update Slide" : "Create Slide"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {rows.length === 0 ? (
+          <div className="rounded-xl border border-black/10 bg-[#fbf9f4] p-8 text-center text-black/60">
+            No hero slides found. Click &quot;Add new hero slide&quot; to create one.
+          </div>
+        ) : (
+          rows.map((slide) => (
+            <article
+              key={slide.id}
+              className="flex flex-col md:flex-row gap-6 items-start justify-between rounded-xl border border-black/10 bg-[#fbf9f4] p-5 transition hover:shadow-md"
+            >
+              <div className="w-full md:w-48 aspect-[16/9] overflow-hidden rounded-lg bg-black/10 shrink-0">
+                <img
+                  src={uploadUrl(slide.imageUrl)}
+                  alt={slide.author}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "https://images.unsplash.com/photo-1585637071663-799845ad5212?w=1600&q=80";
+                  }}
+                />
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="label-mono text-xs text-[#8c2d3c] bg-[#8c2d3c]/10 px-2 py-0.5 rounded">
+                    Order #{slide.displayOrder}
+                  </span>
+                  <span
+                    className={`label-mono text-xs px-2 py-0.5 rounded ${
+                      slide.isActive
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {slide.isActive ? "Active" : "Inactive"}
+                  </span>
+                  <span className="label-mono text-xs text-black/50">{slide.role}</span>
+                </div>
+
+                {slide.title && (
+                  <h4 className="font-display text-base font-bold text-[#8c2d3c]">
+                    {slide.title}
+                  </h4>
+                )}
+
+                {slide.description && (
+                  <p className="text-sm font-medium text-black/80 leading-relaxed">
+                    {slide.description}
+                  </p>
+                )}
+
+                <blockquote className="font-display text-base font-bold text-black/90 italic">
+                  &ldquo;{slide.text}&rdquo;
+                </blockquote>
+                {slide.textAm && (
+                  <p className="text-xs text-black/60 italic">&ldquo;{slide.textAm}&rdquo;</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => void toggleActive(slide)}
+                  disabled={busy}
+                  className="p-2 text-black/60 hover:text-black border border-black/10 rounded hover:bg-white"
+                  title={slide.isActive ? "Deactivate slide" : "Activate slide"}
+                >
+                  {slide.isActive ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreating(false);
+                    setEditing(slide);
+                  }}
+                  className="p-2 text-black/60 hover:text-black border border-black/10 rounded hover:bg-white"
+                  title="Edit slide"
+                >
+                  <Pencil className="size-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void removeSlide(slide)}
+                  disabled={deleting === slide.id}
+                  className="p-2 text-red-600 hover:text-red-800 border border-red-200 rounded hover:bg-red-50 disabled:opacity-50"
+                  title="Delete slide"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+    </PagePanel>
   );
 }

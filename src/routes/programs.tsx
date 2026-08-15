@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { type CSSProperties, useState } from "react";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
-import heroImg from "@/assets/conference.jpg";
+import heroImg from "@/assets/programs.png";
 import { useLanguage } from "@/lib/language-context";
 
 export const Route = createFileRoute("/programs")({

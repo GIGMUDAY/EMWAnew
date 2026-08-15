@@ -2,13 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Check, Users, X } from "lucide-react";
 import { PageShell, PageHero } from "@/components/page-shell";
-import { CompanyGallery } from "@/components/company-gallery";
 import globalImg from "@/assets/emwa-group-photo.png";
-import integrityImg from "@/assets/value-integrity.png";
-import solidarityImg from "@/assets/value-solidarity.png";
-import independenceImg from "@/assets/value-independence.png";
-import excellenceImg from "@/assets/value-excellence.png";
-import accountabilityImg from "@/assets/value-accountability.png";
 import { useLanguage } from "@/lib/language-context";
 
 export const Route = createFileRoute("/about")({
@@ -120,11 +114,11 @@ const STAKEHOLDERS = [
 ];
 
 const VALUE_IMAGES = [
-  integrityImg,
-  solidarityImg,
-  independenceImg,
-  excellenceImg,
-  accountabilityImg,
+  "/about/integrity.png",
+  "/about/Solidarity.jpg",
+  "/about/inclusiveness.jpg",
+  "/about/Professionalism.jpg",
+  "/about/accountability%20and%20transparency.jpg",
 ];
 
 const BOARD_MEMBERS = [
@@ -197,7 +191,21 @@ type BoardMember = (typeof BOARD_MEMBERS)[number];
 
 function BoardSection() {
   const [selectedMember, setSelectedMember] = useState<BoardMember | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const { t, language } = useLanguage();
+
+  const trackRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const targetOffsetRef = useRef(0);
+  const isNudgingRef = useRef(false);
+  const directionRef = useRef<1 | -1>(1);
+
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartOffsetRef = useRef(0);
+  const hasDraggedRef = useRef(false);
 
   useEffect(() => {
     if (!selectedMember) return;
@@ -212,6 +220,91 @@ function BoardSection() {
     };
   }, [selectedMember]);
 
+  useEffect(() => {
+    let animationFrameId: number;
+    let lastTime = performance.now();
+    const speed = 0.045; // smooth scrolling speed in px/ms
+
+    const animate = (time: number) => {
+      const delta = Math.min(time - lastTime, 64);
+      lastTime = time;
+
+      const track = trackRef.current;
+      if (track) {
+        const singleGroup = track.firstElementChild as HTMLElement | null;
+        const groupWidth = singleGroup ? singleGroup.offsetWidth : track.scrollWidth / 3;
+
+        if (groupWidth > 0) {
+          if (isNudgingRef.current) {
+            const diff = targetOffsetRef.current - offsetRef.current;
+            if (Math.abs(diff) > 0.5) {
+              offsetRef.current += diff * 0.14;
+            } else {
+              offsetRef.current = targetOffsetRef.current;
+              isNudgingRef.current = false;
+            }
+          } else if (!isPaused && !isHovered && !selectedMember && !isDraggingRef.current) {
+            offsetRef.current += directionRef.current * speed * delta;
+          }
+
+          while (offsetRef.current >= groupWidth) {
+            offsetRef.current -= groupWidth;
+            if (isNudgingRef.current) targetOffsetRef.current -= groupWidth;
+          }
+          while (offsetRef.current < 0) {
+            offsetRef.current += groupWidth;
+            if (isNudgingRef.current) targetOffsetRef.current += groupWidth;
+          }
+
+          track.style.transform = `translate3d(${-offsetRef.current}px, 0, 0)`;
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [isPaused, isHovered, selectedMember]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    dragStartXRef.current = e.clientX;
+    dragStartOffsetRef.current = offsetRef.current;
+    isNudgingRef.current = false;
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const dx = dragStartXRef.current - e.clientX;
+    if (Math.abs(dx) > 6) {
+      hasDraggedRef.current = true;
+    }
+    offsetRef.current = dragStartOffsetRef.current + dx;
+    if (dx !== 0) {
+      directionRef.current = dx > 0 ? 1 : -1;
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      setIsDragging(false);
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY * 0.75;
+    if (Math.abs(delta) > 0.5) {
+      offsetRef.current += delta;
+      directionRef.current = delta > 0 ? 1 : -1;
+      isNudgingRef.current = false;
+    }
+  };
+
   return <>
     <section className="about-board" aria-labelledby="board-heading">
       <header className="about-board-header">
@@ -221,12 +314,37 @@ function BoardSection() {
         </div>
         <p>{t("EMWA's Board provides strategic direction, governance, and oversight while championing the Association's commitment to women in media. Select a portrait to learn more.", "የEMWA ቦርድ ስትራቴጂያዊ አቅጣጫን፣ አስተዳደርን እና ቁጥጥርን ይሰጣል፤ በሚዲያ ውስጥ ላሉ ሴቶች ያለውን ቁርጠኝነት ያጎላል። ተጨማሪ ለማወቅ ምስሉን ይምረጡ።")}</p>
       </header>
-      <div className="about-board-carousel">
-        <div className="about-board-track">
-          {[0, 1].map((group) => <div className="about-board-group" aria-hidden={group === 1} key={group}>
+
+      <div
+        className={`about-board-carousel ${isDragging ? "is-dragging" : ""}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          handlePointerUp();
+        }}
+        onFocus={() => setIsHovered(true)}
+        onBlur={() => setIsHovered(false)}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onWheel={handleWheel}
+      >
+        <div className="about-board-track" ref={trackRef}>
+          {[0, 1, 2].map((group) => <div className="about-board-group" aria-hidden={group > 0} key={group}>
             {BOARD_MEMBERS.map((member) => (
               <article className="about-board-card" key={`${group}-${member.name}`}>
-                <button className="about-board-portrait" type="button" onClick={() => setSelectedMember(member)} aria-label={`Read more about ${member.name}`} tabIndex={group === 1 ? -1 : 0}>
+                <button
+                  className="about-board-portrait"
+                  type="button"
+                  onClick={() => {
+                    if (!hasDraggedRef.current) {
+                      setSelectedMember(member);
+                    }
+                  }}
+                  aria-label={`Read more about ${member.name}`}
+                  tabIndex={group > 0 ? -1 : 0}
+                >
                   <img src={member.image} alt="" loading="lazy" />
                   <span>{t("View profile", "መገለጫ ይመልከቱ")}</span>
                 </button>
@@ -367,8 +485,6 @@ function About() {
     </section>
 
     <BoardSection />
-
-    <CompanyGallery />
 
     <section className="about2-community">
       <div>

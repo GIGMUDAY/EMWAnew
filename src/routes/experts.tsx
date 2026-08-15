@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeft,
   ArrowUpRight,
   BadgeCheck,
+  Check,
   ChevronDown,
+  Copy,
   Download,
   Facebook,
   Instagram,
@@ -12,6 +15,7 @@ import {
   MapPin,
   Phone,
   Search,
+  Share2,
   X,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
@@ -122,6 +126,26 @@ const expertSubmissionError = (payload: unknown) => {
   return apiError.error?.message ?? "Unable to submit your application.";
 };
 
+const resolveExpertImage = (value?: string | null) => {
+  if (!value) return undefined;
+  const str = String(value).trim();
+  if (!str) return undefined;
+  if (str.startsWith("data:") || str.startsWith("blob:")) return str;
+  try {
+    const apiOrigin = new URL(API_BASE).origin;
+    if (str.startsWith("http://") || str.startsWith("https://")) {
+      const parsed = new URL(str);
+      const uploadMatch = parsed.pathname.match(/(?:\/api\/v1)?(\/uploads\/.+)$/);
+      if (uploadMatch) return `${apiOrigin}${uploadMatch[1]}`;
+      return str;
+    }
+    const cleanPath = str.startsWith("/") ? str : `/${str}`;
+    return `${apiOrigin}${cleanPath}`;
+  } catch {
+    return str;
+  }
+};
+
 function Experts() {
   const { t, language } = useLanguage();
   const [query, setQuery] = useState("");
@@ -129,12 +153,103 @@ function Experts() {
   const [sort, setSort] = useState<"name" | "field">("name");
   const [registerOpen, setRegisterOpen] = useState(false);
   const [selected, setSelected] = useState<Expert | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [experts, setExperts] = useState<Expert[]>([]);
   const [expertsLoading, setExpertsLoading] = useState(true);
   const [expertsError, setExpertsError] = useState("");
+
+  const selectExpert = (expert: Expert | null, replace = false) => {
+    setSelected(expert);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (expert) {
+      url.searchParams.set("id", expert.id ?? expert.n);
+      url.searchParams.delete("expert");
+      if (replace) {
+        window.history.replaceState({}, "", url.toString());
+      } else {
+        window.history.pushState({}, "", url.toString());
+      }
+    } else {
+      url.searchParams.delete("id");
+      url.searchParams.delete("expert");
+      const cleanUrl = url.pathname + (url.search ? url.search : "");
+      if (replace) {
+        window.history.replaceState({}, "", cleanUrl);
+      } else {
+        window.history.pushState({}, "", cleanUrl);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (expertsLoading || !experts.length) return;
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const targetId = params.get("id") || params.get("expert");
+    if (targetId) {
+      const match = experts.find(
+        (e) =>
+          (e.id && e.id.toLowerCase() === targetId.toLowerCase()) ||
+          e.n.toLowerCase() === decodeURIComponent(targetId).toLowerCase()
+      );
+      if (match) {
+        setSelected(match);
+      }
+    }
+  }, [experts, expertsLoading]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const targetId = params.get("id") || params.get("expert");
+      if (targetId && experts.length) {
+        const match = experts.find(
+          (e) =>
+            (e.id && e.id.toLowerCase() === targetId.toLowerCase()) ||
+            e.n.toLowerCase() === decodeURIComponent(targetId).toLowerCase()
+        );
+        setSelected(match || null);
+      } else {
+        setSelected(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [experts]);
+
+  useEffect(() => {
+    if (selected) {
+      document.title = `${selected.n} — EMWA Experts Directory`;
+    } else {
+      document.title = "Experts Directory — EMWA";
+    }
+  }, [selected]);
+
+  const copyProfileLink = async (expert: Expert) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set("id", expert.id ?? expert.n);
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch {
+      const input = document.createElement("input");
+      input.value = url.toString();
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -170,9 +285,7 @@ function Experts() {
             r: row.location,
             c: row.primary_expertise,
             bio: row.professional_biography,
-            img: row.profile_photo_url
-              ? `${apiOrigin}${new URL(row.profile_photo_url, apiOrigin).pathname}`
-              : undefined,
+            img: resolveExpertImage(row.profile_photo_url),
             email: row.email,
             phone: row.phone_number,
             linkedinUrl: row.linkedin_url,
@@ -239,12 +352,12 @@ function Experts() {
   };
 
   useEffect(() => {
-    const locked = registerOpen || selected;
+    const locked = registerOpen;
     document.body.style.overflow = locked ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [registerOpen, selected]);
+  }, [registerOpen]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -362,6 +475,221 @@ function Experts() {
     pdf.save(`${filename}-expert-profile.pdf`);
   };
 
+  if (selected) {
+    const relatedExperts = experts
+      .filter((e) => e.id !== selected.id && e.n !== selected.n)
+      .slice(0, 3);
+
+    return (
+      <PageShell>
+        <div className="expert-detail-page">
+          <div className="expert-detail-nav">
+            <button
+              type="button"
+              className="expert-detail-back"
+              onClick={() => selectExpert(null)}
+              aria-label="Back to experts directory"
+            >
+              <ArrowLeft aria-hidden="true" />
+              <span>{t("Back to Directory", "ወደ ማውጫው ተመለስ")}</span>
+            </button>
+
+            <div className="expert-detail-actions">
+              <button
+                type="button"
+                className={`expert-detail-action-btn${copiedLink ? " is-active" : ""}`}
+                onClick={() => void copyProfileLink(selected)}
+                aria-label={copiedLink ? t("Link copied!", "ሊንኩ ተገልብጧል!") : t("Copy profile link", "የመገለጫ ሊንክ ቅዳ")}
+                title={copiedLink ? t("Link copied to clipboard!", "ሊንኩ ተገልብጧል!") : t("Copy profile link to share", "ሊንክ ገልብጥና አጋራ")}
+              >
+                {copiedLink ? <Check /> : <Share2 />}
+                <span>{copiedLink ? t("Link copied!", "ተገልብጧል!") : t("Share profile", "መገለጫ አጋራ")}</span>
+              </button>
+
+              <button
+                type="button"
+                className="expert-detail-action-btn"
+                onClick={() => void downloadExpert(selected)}
+                aria-label={`Download ${selected.n}'s expert profile PDF`}
+                title={t("Download PDF", "ፒዲኤፍ አውርድ")}
+              >
+                <Download />
+                <span>{t("Download PDF", "ፒዲኤፍ አውርድ")}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="expert-detail-grid">
+            <aside className="expert-detail-sidebar">
+              <div className="expert-detail-media">
+                <div className="expert-detail-photo">
+                  <span className="grid size-full place-items-center bg-muted font-display text-8xl text-primary/35">
+                    {selected.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
+                  </span>
+                  {selected.img && (
+                    <img
+                      src={selected.img}
+                      alt={selected.n}
+                      onError={(event) => event.currentTarget.remove()}
+                    />
+                  )}
+                </div>
+              </div>
+            </aside>
+
+            <main className="expert-detail-main">
+              <p className="expert-detail-eyebrow">
+                <BadgeCheck /> {t("EMWA verified expert", "የEMWA የተረጋገጠ ባለሙያ")}
+              </p>
+              <h1 className="expert-detail-title">{selected.n}</h1>
+              <p className="expert-detail-field">{selected.f}</p>
+              <p className="expert-detail-region">
+                <MapPin /> {selected.r}
+              </p>
+              <div className="expert-detail-rule" />
+
+              <h2 className="expert-detail-section-title">{t("Professional Biography", "የሙያ ታሪክ")}</h2>
+              <p className="expert-detail-bio">{selected.bio}</p>
+
+              <h2 className="expert-detail-section-title">{t("Core Competencies & Services", "ዋና ዋና ሙያዎች እና አገልግሎቶች")}</h2>
+              <div className="expert-detail-tags">
+                <span>{language === "am" ? CATEGORY_MAP_AM[selected.c] ?? selected.c : selected.c}</span>
+                <span>{t("Available for interviews", "ለቃለ-መጠይቅ የሚገኙ")}</span>
+                <span>{t("Mentorship & Training", "የአማካሪነትና ስልጠና ድጋፍ")}</span>
+                <span>{t("Panelist & Keynote", "የውይይት ተናጋሪ")}</span>
+                <span>{t("Policy & Research", "ፖሊሲ እና ምርምር")}</span>
+              </div>
+
+              {(selected.email || selected.phone || selected.linkedinUrl || selected.instagramUrl || selected.facebookUrl) && (
+                <div className="expert-detail-contact-box">
+                  <h3 className="expert-detail-contact-heading">{t("Direct Connect & Collaboration", "ቀጥታ ግንኙነት እና ትብብር")}</h3>
+                  <div className="expert-detail-socials">
+                    {selected.email && (
+                      <a href={`mailto:${selected.email}`} className="expert-detail-social-link" aria-label="Email">
+                        <Mail />
+                        <span>{selected.email}</span>
+                      </a>
+                    )}
+                    {selected.phone && (
+                      <a href={`tel:${selected.phone}`} className="expert-detail-social-link" aria-label="Phone">
+                        <Phone />
+                        <span>{selected.phone}</span>
+                      </a>
+                    )}
+                    {selected.linkedinUrl && (
+                      <a href={selected.linkedinUrl} target="_blank" rel="noreferrer" className="expert-detail-social-link" aria-label="LinkedIn">
+                        <Linkedin />
+                        <span>LinkedIn</span>
+                      </a>
+                    )}
+                    {selected.instagramUrl && (
+                      <a href={selected.instagramUrl} target="_blank" rel="noreferrer" className="expert-detail-social-link" aria-label="Instagram">
+                        <Instagram />
+                        <span>Instagram</span>
+                      </a>
+                    )}
+                    {selected.facebookUrl && (
+                      <a href={selected.facebookUrl} target="_blank" rel="noreferrer" className="expert-detail-social-link" aria-label="Facebook">
+                        <Facebook />
+                        <span>Facebook</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </main>
+          </div>
+
+          {relatedExperts.length > 0 && (
+            <section className="expert-detail-related">
+              <div className="expert-detail-related-header">
+                <div>
+                  <p className="experts-eyebrow">{t("Expand Your Network", "መረብዎን ያስፉ")}</p>
+                  <h2>{t("Explore More Experts", "ተጨማሪ ባለሙያዎችን ያስሱ")}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="expert-detail-back"
+                  onClick={() => selectExpert(null)}
+                >
+                  {t("View All in Directory", "ሁሉንም በማውጫው ይመልከቱ")} <ArrowUpRight aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="expert-detail-related-grid">
+                {relatedExperts.map((exp) => (
+                  <article className="expert-card" key={exp.id ?? exp.n}>
+                    <button
+                      type="button"
+                      className="expert-card-image"
+                      onClick={() => {
+                        selectExpert(exp);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      aria-label={`View ${exp.n}'s profile`}
+                    >
+                      <span className="grid size-full place-items-center bg-muted font-display text-7xl text-primary/35">
+                        {exp.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
+                      </span>
+                      {exp.img && (
+                        <img
+                          src={exp.img}
+                          alt={exp.n}
+                          loading="lazy"
+                          className="absolute inset-0 size-full object-contain"
+                          onError={(event) => event.currentTarget.remove()}
+                        />
+                      )}
+                      <span className="expert-card-category">{language === "am" ? CATEGORY_MAP_AM[exp.c] ?? exp.c : exp.c}</span>
+                      <span className="expert-card-open">
+                        <ArrowUpRight aria-hidden="true" />
+                      </span>
+                    </button>
+                    <div className="expert-card-copy">
+                      <p className="expert-card-verified">
+                        <BadgeCheck aria-hidden="true" /> {t("EMWA verified", "የEMWA የተረጋገጠ")}
+                      </p>
+                      <h3>{exp.n}</h3>
+                      <p className="expert-card-field">{exp.f}</p>
+                      <p className="expert-card-region">
+                        <MapPin aria-hidden="true" /> {exp.r}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectExpert(exp);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        {t("View expertise", "ሙያን ይመልከቱ")} <ArrowUpRight aria-hidden="true" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="expert-detail-cta-banner">
+            <div>
+              <p className="experts-eyebrow">{t("Collaboration & Media Inquiries", "ትብብር እና የሚዲያ ጥያቄዎች")}</p>
+              <h3>{t("Engage with Ethiopian Women in Media", "በኢትዮጵያ ሴቶች የሚዲያ ባለሙያዎች ጋር ይገናኙ")}</h3>
+              <p>{t("EMWA connects media organizations, civil society, and policymakers with authoritative women voices across diverse sectors.", "EMWA የሚዲያ ድርጅቶችን፣ የሲቪል ማህበራትንና የፖሊሲ አውጪዎችን በተለያዩ ዘርፎች ካሉ ባለሙያ ሴቶች ጋር ያገናኛል።")}</p>
+            </div>
+            <button
+              type="button"
+              className="expert-detail-cta-btn"
+              onClick={() => selectExpert(null)}
+            >
+              <span>{t("Browse Full Directory", "ሙሉ ማውጫውን ያስሱ")}</span>
+              <ArrowUpRight />
+            </button>
+          </section>
+        </div>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell>
       <section className="experts-hero">
@@ -392,7 +720,14 @@ function Experts() {
             <button onClick={() => setRegisterOpen(true)}>{t("Submit your profile", "መገለጫዎን ያስገቡ")}</button>
           </div>
         </div>
-        <div className="experts-hero-portrait">
+        <a
+          className="experts-hero-portrait"
+          href={featuredExpert ? `/experts?id=${encodeURIComponent(featuredExpert.id ?? featuredExpert.n)}` : undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ cursor: featuredExpert ? "pointer" : undefined, textDecoration: "none" }}
+          aria-label={featuredExpert ? `View ${featuredExpert.n}'s profile in new tab` : undefined}
+        >
           <span className="grid size-full place-items-center bg-muted font-display text-9xl text-primary/35">
             {featuredExpert
               ? featuredExpert.n.split(" ").slice(0, 2).map((part) => part[0]).join("")
@@ -416,7 +751,7 @@ function Experts() {
           <span className="experts-hero-index" aria-hidden="true">
             E/01
           </span>
-        </div>
+        </a>
       </section>
 
       <section
@@ -509,10 +844,12 @@ function Experts() {
           <div className="experts-grid">
             {filtered.map((expert) => (
                 <article className="expert-card" key={expert.id ?? expert.n}>
-                  <button
+                  <a
                     className="expert-card-image"
-                    onClick={() => setSelected(expert)}
-                    aria-label={`View ${expert.n}'s profile`}
+                    href={`/experts?id=${encodeURIComponent(expert.id ?? expert.n)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`View ${expert.n}'s profile in new tab`}
                   >
                     <span className="grid size-full place-items-center bg-muted font-display text-7xl text-primary/35">
                       {expert.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
@@ -530,7 +867,7 @@ function Experts() {
                     <span className="expert-card-open">
                       <ArrowUpRight aria-hidden="true" />
                     </span>
-                  </button>
+                  </a>
                   <div className="expert-card-copy">
                     <p className="expert-card-verified">
                       <BadgeCheck aria-hidden="true" /> {t("EMWA verified", "የEMWA የተረጋገጠ")}
@@ -540,9 +877,13 @@ function Experts() {
                     <p className="expert-card-region">
                       <MapPin aria-hidden="true" /> {expert.r}
                     </p>
-                    <button onClick={() => setSelected(expert)}>
+                    <a
+                      href={`/experts?id=${encodeURIComponent(expert.id ?? expert.n)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       {t("View expertise", "ሙያን ይመልከቱ")} <ArrowUpRight aria-hidden="true" />
-                    </button>
+                    </a>
                   </div>
                 </article>
             ))}
@@ -590,90 +931,7 @@ function Experts() {
         </button>
       </section>
 
-      {selected && (
-        <div className="expert-panel-backdrop" onMouseDown={() => setSelected(null)}>
-          <aside
-            className="expert-profile-panel"
-            onMouseDown={(event) => event.stopPropagation()}
-            aria-modal="true"
-            role="dialog"
-            aria-label={`${selected.n}'s expert profile`}
-          >
-            <button
-              className="expert-panel-close"
-              onClick={() => setSelected(null)}
-              aria-label="Close profile"
-            >
-              <X />
-            </button>
-            <div className="expert-panel-photo">
-              <span className="grid size-full place-items-center bg-muted font-display text-8xl text-primary/35">
-                {selected.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
-              </span>
-              {selected.img && (
-                <img
-                  src={selected.img}
-                  alt={selected.n}
-                  className="absolute inset-0 size-full object-contain"
-                  onError={(event) => event.currentTarget.remove()}
-                />
-              )}
-            </div>
-            <div className="expert-panel-content">
-              <p className="expert-card-verified">
-                <BadgeCheck /> {t("EMWA verified expert", "የEMWA የተረጋገጠ ባለሙያ")}
-              </p>
-              <h2>{selected.n}</h2>
-              <p className="expert-panel-field">{selected.f}</p>
-              <p className="expert-card-region">
-                <MapPin /> {selected.r}
-              </p>
-              <div className="expert-panel-rule" />
-              <p className="expert-panel-bio">{selected.bio}</p>
-              <div className="expert-panel-tags">
-                <span>{language === "am" ? CATEGORY_MAP_AM[selected.c] ?? selected.c : selected.c}</span>
-                <span>{t("Available for interviews", "ለቃለ-መጠይቅ የሚገኙ")}</span>
-                <span>{t("Mentorship", "የአማካሪነት ድጋፍ")}</span>
-              </div>
-              <div className="expert-panel-socials" aria-label={`${selected.n}'s social links`}>
-                <button
-                  type="button"
-                  onClick={() => void downloadExpert(selected)}
-                  aria-label={`Download ${selected.n}'s expert profile`}
-                  title={t("Download profile", "መገለጫ ያውርዱ")}
-                >
-                  <Download />
-                </button>
-                {selected.instagramUrl && (
-                  <a href={selected.instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram">
-                    <Instagram />
-                  </a>
-                )}
-                {selected.email && (
-                  <a href={`mailto:${selected.email}`} aria-label="Email">
-                    <Mail />
-                  </a>
-                )}
-                {selected.phone && (
-                  <a href={`tel:${selected.phone}`} aria-label="Phone">
-                    <Phone />
-                  </a>
-                )}
-                {selected.linkedinUrl && (
-                  <a href={selected.linkedinUrl} target="_blank" rel="noreferrer" aria-label="LinkedIn">
-                    <Linkedin />
-                  </a>
-                )}
-                {selected.facebookUrl && (
-                  <a href={selected.facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook">
-                    <Facebook />
-                  </a>
-                )}
-              </div>
-            </div>
-          </aside>
-        </div>
-      )}
+
 
       {registerOpen && (
         <div className="expert-panel-backdrop" onMouseDown={() => setRegisterOpen(false)}>

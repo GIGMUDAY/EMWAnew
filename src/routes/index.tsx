@@ -20,6 +20,8 @@ import {
   ShieldCheck,
   Signal,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   MessageCircleQuestion,
 } from "lucide-react";
 
@@ -82,32 +84,130 @@ type HomeUpdate = {
   excerpt: string;
 };
 
-function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
+type HeroSlide = {
+  id?: string;
+  img: string;
+  title?: string;
+  titleAm?: string;
+  description?: string;
+  descriptionAm?: string;
+  text: string;
+  textAm: string;
+  signoff?: string;
+  signoffAm?: string;
+  author: string;
+  role: string;
+  roleAm: string;
+};
+
+const DEFAULT_HERO_SLIDES: HeroSlide[] = [
+  {
+    img: "/Fitsum%20Alemayehu.png",
+    title: "A legacy of service.",
+    titleAm: "የአገልግሎት ውርስ።",
+    description: "Fitsum Alemayehu, the first president of EMWA, served the association with diligence and competence for which it is forever grateful.",
+    descriptionAm: "የEMWA የመጀመሪያዋ ፕሬዝዳንት ፍጹም ዓለማየሁ ማህበሩን በትጋትና በብቃት ያገለገሉ ሲሆን ማህበሩ ዘወትር ምስጋናውን ያቀርባል።",
+    text: "I have many happy memories in Ethiopia and sad to leave. But, I am saddened most because I will miss being part of EMWA.",
+    textAm: "በኢትዮጵያ ውስጥ ብዙ አስደሳች ትዝታዎች አሉኝ፤ በመለየቴም አዝናለሁ። ይሁን እንጂ ከሁሉ በላይ የሚያሳዝነኝ የEMWA አካል መሆኔ ስለሚቀር ነው።",
+    signoff: "EMWA extends its gratitude to Wzo. Fitsum and wishes her success and all the best.",
+    signoffAm: "EMWA ለወ/ሮ ፍጹም ያለውን ልባዊ ምስጋና እያቀረበ ስኬትና መልካሙን ሁሉ ይመኛል።",
+    author: "Fitsum Alemayehu",
+    role: "Founding leadership",
+    roleAm: "የመሥራች አመራር",
+  },
+];
+
+function HomeHero({ t, language }: { t: (english: string, amharic: string) => string; language: string }) {
+  const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_HERO_SLIDES);
+  const [slideIndex, setSlideIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(true);
   const [loopKey, setLoopKey] = useState(0);
-  const INTERVAL_MS = 18000; // 18 s between loops
-  const EXIT_MS     = 600;   // exit is crisp and fast
+  const INTERVAL_MS = 8000; // 8 seconds per slide
+  const EXIT_MS     = 400;  // fast crisp transition
 
   useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/public/hero-slides?_t=${Date.now()}`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (payload.success && Array.isArray(payload.data) && payload.data.length > 0) {
+          const apiOrigin = new URL(API_BASE).origin;
+          const fetchedSlides: HeroSlide[] = payload.data.map((row: Record<string, unknown>) => {
+            const rawImg = String(row.imageUrl ?? row.image_url ?? "");
+            let img = rawImg;
+            try {
+              if (rawImg.startsWith("/uploads/")) {
+                img = `${apiOrigin}${rawImg}`;
+              } else if (!rawImg.startsWith("http://") && !rawImg.startsWith("https://") && !rawImg.startsWith("/")) {
+                img = `${apiOrigin}/${rawImg}`;
+              }
+            } catch {
+              img = rawImg;
+            }
+            return {
+              id: String(row.id ?? ""),
+              img: img || "/Fitsum%20Alemayehu.png",
+              title: row.title ? String(row.title) : undefined,
+              titleAm: (row.titleAm ?? row.title_am) ? String(row.titleAm ?? row.title_am) : undefined,
+              description: (row.description ?? row.description_text) ? String(row.description ?? row.description_text) : undefined,
+              descriptionAm: (row.descriptionAm ?? row.description_am) ? String(row.descriptionAm ?? row.description_am) : undefined,
+              text: String(row.text ?? row.quote ?? ""),
+              textAm: String(row.textAm ?? row.text_am ?? row.quote_am ?? row.text ?? ""),
+              signoff: (row.signoff ?? row.signoff_text) ? String(row.signoff ?? row.signoff_text) : undefined,
+              signoffAm: (row.signoffAm ?? row.signoff_am) ? String(row.signoffAm ?? row.signoff_am) : undefined,
+              author: String(row.author ?? "EMWA"),
+              role: String(row.role ?? row.position ?? "Founding leadership"),
+              roleAm: String(row.roleAm ?? row.role_am ?? row.role ?? "የመሥራች አመራር"),
+            };
+          });
+          setSlides(fetchedSlides);
+        }
+      } catch {
+        // Fallback to default slides on error
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  const activeSlides = slides.length > 0 ? slides : DEFAULT_HERO_SLIDES;
+  const currentSlide = activeSlides[slideIndex % activeSlides.length];
+
+  const goToSlide = (nextIndex: number) => {
+    if (isExiting || nextIndex === slideIndex) return;
+    setIsExiting(true);
+    setTimeout(() => {
+      setSlideIndex((nextIndex + activeSlides.length) % activeSlides.length);
+      setIsExiting(false);
+      setLoopKey((k) => k + 1);
+    }, EXIT_MS);
+  };
+
+  useEffect(() => {
+    if (!autoPlay || activeSlides.length <= 1) return;
     const id = setInterval(() => {
       setIsExiting(true);
       setTimeout(() => {
         setIsExiting(false);
+        setSlideIndex((i) => (i + 1) % activeSlides.length);
         setLoopKey((k) => k + 1);
       }, EXIT_MS);
     }, INTERVAL_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [activeSlides.length, autoPlay]);
 
   // ── Premium easing curves ──────────────────────────────────────────────────
-  // Expo Out  — fast start, silky deceleration (used for entrances)
   const EASE_ENTER = "cubic-bezier(0.16, 1, 0.3, 1)";
-  // Expo In   — slow start, sharp acceleration (used for exits)
   const EASE_EXIT  = "cubic-bezier(0.7, 0, 1, 0.6)";
 
   const exitTransition = isExiting
     ? `opacity ${EXIT_MS}ms ${EASE_EXIT}, transform ${EXIT_MS}ms ${EASE_EXIT}, filter ${EXIT_MS}ms ${EASE_EXIT}`
-    : "none"; // entrance handled by CSS keyframe animation
+    : "none";
 
   const imgStyle: React.CSSProperties = {
     position: "absolute",
@@ -117,15 +217,13 @@ function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
     objectFit: "contain",
     objectPosition: "center",
     padding: "clamp(1rem, 2.5vw, 2.5rem)",
-    // Exit state values
     opacity:   isExiting ? 0 : 1,
     transform: isExiting ? "scale(0.94)" : "scale(1)",
     filter:    isExiting ? "blur(6px) saturate(0.4)" : "blur(0px) saturate(1)",
     transition: exitTransition,
-    // Entrance + Ken Burns via keyframe on re-mount
     animation: isExiting
       ? "none"
-      : `hero-enter-img 1.1s ${EASE_ENTER} both, ken-burns 20s ease-in-out 1.1s infinite alternate`,
+      : `hero-enter-img 0.9s ${EASE_ENTER} both, ken-burns 16s ease-in-out 0.9s infinite alternate`,
     willChange: "transform, opacity, filter",
   };
 
@@ -134,26 +232,23 @@ function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
     transform:  isExiting ? "translateY(-16px) scale(0.98)" : "translateY(0) scale(1)",
     filter:     isExiting ? "blur(3px)" : "blur(0px)",
     transition: exitTransition,
-    animation:  isExiting ? "none" : `hero-enter-text 1.1s ${EASE_ENTER} both`,
+    animation:  isExiting ? "none" : `hero-enter-text 0.9s ${EASE_ENTER} both`,
   };
 
   return (
     <>
       <style>{`
-        /* ── Image entrance: rises up + un-blurs + un-saturates ── */
         @keyframes hero-enter-img {
           0%   { opacity: 0; transform: scale(1.06) translateY(8px);  filter: blur(8px) saturate(0.3); }
           60%  { opacity: 1; filter: blur(1px) saturate(0.85); }
           100% { opacity: 1; transform: scale(1)    translateY(0);    filter: blur(0px) saturate(1); }
         }
 
-        /* ── Text entrance: rises up + un-blurs, slightly faster feel ── */
         @keyframes hero-enter-text {
           0%   { opacity: 0; transform: translateY(20px) scale(0.97); filter: blur(4px); }
           100% { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0px); }
         }
 
-        /* ── Ken Burns: slow cinematic drift ── */
         @keyframes ken-burns {
           0%   { transform: scale(1.00) translate(0,     0);    }
           25%  { transform: scale(1.04) translate(-0.8%, 0.3%); }
@@ -162,7 +257,6 @@ function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
           100% { transform: scale(1.07) translate(0.2%,  0.8%); }
         }
 
-        /* ── Progress bar with shimmer ── */
         @keyframes hero-progress {
           from { width: 0; }
           to   { width: 100%; }
@@ -185,49 +279,116 @@ function HomeHero({ t }: { t: (english: string, amharic: string) => string }) {
             progress-shimmer 2.5s ease-in-out infinite;
         }
 
-        /* ── Reduced motion ── */
         @media (prefers-reduced-motion: reduce) {
           .hero-progress-bar { animation: none; width: 100%; }
         }
       `}</style>
 
       <section
-        className="home-hero-slider"
-        aria-label="Tribute to Fitsum Alemayehu"
+        className="home-hero-slider relative group"
+        aria-label="EMWA Hero Slider"
+        onMouseEnter={() => setAutoPlay(false)}
+        onMouseLeave={() => setAutoPlay(true)}
       >
-        {/* Image */}
+        {/* Image / Visual Side */}
         <div
-          className="home-hero-visual"
+          className="home-hero-visual relative"
           style={{ background: "linear-gradient(145deg, #171310, #2b211b)" }}
         >
           <img
             key={loopKey}
-            src="/Fitsum%20Alemayehu.png"
-            alt="Fitsum Alemayehu, the first president of EMWA"
+            src={currentSlide.img}
+            alt={currentSlide.author || "EMWA"}
             width={1200}
             height={1600}
             style={imgStyle}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/Fitsum%20Alemayehu.png";
+            }}
           />
+
+          {/* Slide Arrow Navigation Overlay */}
+          {activeSlides.length > 1 && (
+            <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-20">
+              <button
+                type="button"
+                onClick={() => goToSlide(slideIndex - 1)}
+                aria-label="Previous hero slide"
+                className="pointer-events-auto size-10 rounded-full bg-black/40 hover:bg-[#8c2d3c] text-white flex items-center justify-center backdrop-blur-sm transition-all duration-300 shadow-lg border border-white/10 opacity-70 group-hover:opacity-100"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => goToSlide(slideIndex + 1)}
+                aria-label="Next hero slide"
+                className="pointer-events-auto size-10 rounded-full bg-black/40 hover:bg-[#8c2d3c] text-white flex items-center justify-center backdrop-blur-sm transition-all duration-300 shadow-lg border border-white/10 opacity-70 group-hover:opacity-100"
+              >
+                <ChevronRight className="size-5" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Text */}
+        {/* Text Copy Side */}
         <div
           key={loopKey}
-          className="home-hero-copy"
+          className="home-hero-copy relative"
           style={textStyle}
           aria-live="polite"
         >
-          <p className="label-mono text-primary">EMWA legacy · Founding leadership</p>
-          <h1 className="is-tribute">A legacy of<br /><span>service.</span></h1>
-          <p className="home-hero-tribute">
-            Fitsum Alemayehu, the first president of EMWA, served the association with diligence and competence for which it is forever grateful.
+          <p className="label-mono text-primary">
+            EMWA legacy · {language === "am" ? (currentSlide.roleAm || currentSlide.role) : currentSlide.role}
           </p>
-          <blockquote>"I have many happy memories in Ethiopia and sad to leave. But, I am saddened most because I will miss being part of EMWA."</blockquote>
-          <p className="home-hero-signoff">EMWA extends its gratitude to Wzo. Fitsum and wishes her success and all the best.</p>
+
+          <h1 className="is-tribute">
+            {language === "am"
+              ? (currentSlide.titleAm || currentSlide.title || "የአገልግሎት ውርስ።")
+              : (currentSlide.title || "A legacy of service.")}
+          </h1>
+
+          {currentSlide.description && (
+            <p className="home-hero-tribute">
+              {language === "am" ? (currentSlide.descriptionAm || currentSlide.description) : currentSlide.description}
+            </p>
+          )}
+
+          {currentSlide.text && (
+            <blockquote>
+              &ldquo;{language === "am" ? (currentSlide.textAm || currentSlide.text) : currentSlide.text}&rdquo;
+            </blockquote>
+          )}
+
+          {currentSlide.signoff && (
+            <p className="home-hero-signoff">
+              {language === "am" ? (currentSlide.signoffAm || currentSlide.signoff) : currentSlide.signoff}
+            </p>
+          )}
+
           <div className="home-hero-actions">
             <Link to="/membership">{t("Become a member", "አባል ይሁኑ")} <ArrowUpRight /></Link>
             <Link to="/programs">{t("Explore programs", "ፕሮግራሞችን ይመልከቱ")}</Link>
           </div>
+
+          {/* Dots Indicator */}
+          {activeSlides.length > 1 && (
+            <div className="flex items-center gap-2 mt-4 pt-2">
+              {activeSlides.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => goToSlide(idx)}
+                  aria-label={`Go to slide ${idx + 1}`}
+                  className={`h-1.5 transition-all duration-300 rounded-full ${
+                    idx === slideIndex % activeSlides.length
+                      ? "w-8 bg-[#8c2d3c]"
+                      : "w-2 bg-black/20 hover:bg-black/40"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Progress bar */}
           <div
@@ -350,7 +511,7 @@ function Home() {
   return (
     <PageShell>
       {/* HERO */}
-      <HomeHero t={t} />
+      <HomeHero t={t} language={language} />
       {false && (
         <section className="relative flex flex-col md:flex-row min-h-[calc(100svh-65px)] border-b border-border">
           <div className="md:w-7/12 relative order-2 md:order-1 overflow-hidden min-h-[42svh] md:min-h-0 bg-muted">

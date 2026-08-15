@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/lib/language-context";
+import { API_BASE } from "@/lib/admin-api";
 
-const SLIDES = [
+export type HeroSlide = {
+  id?: string;
+  img: string;
+  text: string;
+  textAm: string;
+  author: string;
+  role: string;
+  roleAm: string;
+};
+
+const DEFAULT_SLIDES: HeroSlide[] = [
   {
     img: "https://images.unsplash.com/photo-1585637071663-799845ad5212?w=1600&q=80",
     text: "Women journalists on the frontlines are reshaping how the world sees conflict.",
@@ -28,21 +39,62 @@ const SLIDES = [
   },
 ];
 
+const resolveImageUrl = (value: unknown) => {
+  if (!value) return "";
+  try {
+    const origin = new URL(API_BASE).origin;
+    const url = new URL(String(value), origin);
+    return url.pathname.startsWith("/uploads/") ? `${origin}${url.pathname}` : url.toString();
+  } catch {
+    return String(value);
+  }
+};
+
 export default function HeroSlider() {
+  const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
   const [index, setIndex] = useState(0);
   const [autoPlay, setAutoPlay] = useState(true);
   const { t, language } = useLanguage();
 
   useEffect(() => {
-    if (!autoPlay) return;
-    const id = setInterval(() => setIndex((i) => (i + 1) % SLIDES.length), 2000);
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/public/hero-slides`, { signal: controller.signal });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (payload.success && Array.isArray(payload.data) && payload.data.length > 0) {
+          const fetchedSlides: HeroSlide[] = payload.data.map((row: Record<string, unknown>) => ({
+            id: String(row.id ?? ""),
+            img: resolveImageUrl(row.imageUrl ?? row.image_url),
+            text: String(row.text ?? ""),
+            textAm: String(row.textAm ?? row.text_am ?? row.text ?? ""),
+            author: String(row.author ?? ""),
+            role: String(row.role ?? ""),
+            roleAm: String(row.roleAm ?? row.role_am ?? row.role ?? ""),
+          }));
+          setSlides(fetchedSlides);
+        }
+      } catch {
+        // Fall back to default slides on fetch error or offline mode
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!autoPlay || slides.length === 0) return;
+    const id = setInterval(() => setIndex((i) => (i + 1) % slides.length), 4000);
     return () => clearInterval(id);
-  }, [autoPlay]);
+  }, [autoPlay, slides.length]);
 
   const handleDotClick = (i: number) => {
     setIndex(i);
     setAutoPlay(false);
   };
+
+  const activeSlides = slides.length > 0 ? slides : DEFAULT_SLIDES;
+  const currentSlideIndex = index % activeSlides.length;
 
   return (
     <section 
@@ -57,13 +109,13 @@ export default function HeroSlider() {
 
         <div className="relative aspect-[16/9] md:aspect-[20/9] overflow-hidden bg-foreground">
           {/* Images */}
-          {SLIDES.map((s, i) => (
+          {activeSlides.map((s, i) => (
             <img
-              key={i}
+              key={s.id || i}
               src={s.img}
               alt={s.author}
               className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ease-in-out ${
-                i === index
+                i === currentSlideIndex
                   ? "opacity-100 scale-100"
                   : "opacity-0 scale-105"
               }`}
@@ -75,13 +127,13 @@ export default function HeroSlider() {
           
           {/* Navigation Dots - Bottom */}
           <div className="absolute bottom-8 left-8 right-8 flex gap-3">
-            {SLIDES.map((_, i) => (
+            {activeSlides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => handleDotClick(i)}
                 aria-label={`Slide ${i + 1}`}
                 className={`h-1 transition-all duration-500 ${
-                  i === index 
+                  i === currentSlideIndex 
                     ? "w-12 bg-primary" 
                     : "w-3 bg-background/40 hover:bg-background/70"
                 }`}
@@ -93,13 +145,13 @@ export default function HeroSlider() {
         {/* Quotation Text - Centered Below */}
         <div className="mt-12 max-w-4xl mx-auto text-center">
           <div className="relative overflow-hidden h-40">
-            {SLIDES.map((s, i) => (
+            {activeSlides.map((s, i) => (
               <div
-                key={i}
+                key={s.id || i}
                 className={`absolute inset-x-0 transition-all duration-1000 ease-in-out ${
-                  i === index
+                  i === currentSlideIndex
                     ? "opacity-100 translate-y-0"
-                    : i < index
+                    : i < currentSlideIndex
                     ? "opacity-0 -translate-y-8"
                     : "opacity-0 translate-y-8"
                 }`}
@@ -117,9 +169,10 @@ export default function HeroSlider() {
 
         {/* Slide Counter */}
         <div className="flex justify-center mt-8 label-mono text-muted-foreground">
-          <span>{index + 1} / {SLIDES.length}</span>
+          <span>{currentSlideIndex + 1} / {activeSlides.length}</span>
         </div>
       </div>
     </section>
   );
 }
+
