@@ -6,8 +6,10 @@ import {
   ArrowRight,
   Check,
   ChevronDown,
+  Plus,
   ShieldCheck,
   Sparkles,
+  Trash2,
   Users,
 } from "lucide-react";
 import { PageShell } from "@/components/page-shell";
@@ -127,12 +129,28 @@ const STEPS = {
   en: ["Personal", "Work", "Membership", "Review"],
   am: ["የግል", "የሥራ", "አባልነት", "ማረጋገጫ"],
 } as const;
+export type AdditionalPhone = {
+  id: string;
+  type: "company" | "office" | "home" | "secondary" | "other";
+  number: string;
+  country: CountryCode;
+};
+
+const PHONE_TYPE_LABELS: Record<string, { en: string; am: string }> = {
+  company: { en: "Company / Work Phone", am: "የድርጅት / የሥራ ስልክ" },
+  office: { en: "Office Landline", am: "የቢሮ መደበኛ ስልክ" },
+  home: { en: "Home Landline", am: "የቤት መደበኛ ስልክ" },
+  secondary: { en: "Secondary Mobile", am: "ተጨማሪ ሞባይል" },
+  other: { en: "Other Phone", am: "ሌላ ስልክ" },
+};
+
 type FormData = {
   name: string;
   dateOfBirth: string;
   email: string;
   phone: string;
   phoneCountry: CountryCode;
+  additionalPhones: AdditionalPhone[];
   citySubCity: string;
   woreda: string;
   houseNumber: string;
@@ -144,6 +162,8 @@ type FormData = {
   emergencyContact2Phone: string;
   emergencyContact2Country: CountryCode;
   outlet: string;
+  companyPhone: string;
+  companyPhoneCountry: CountryCode;
   yearsOfExperience: string;
   department: string;
   role: string;
@@ -159,12 +179,51 @@ type MembershipType = {
   price_amount?: string;
   currency?: string;
 };
+type PaymentConfirmation = {
+  fileName: string;
+  mimeType: string;
+  dataUrl: string;
+};
+
+const preparePaymentScreenshot = (file: File): Promise<PaymentConfirmation> =>
+  new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("Please select an image of the payment confirmation."));
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      reject(new Error("The payment screenshot must be smaller than 10 MB."));
+      return;
+    }
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      const maxDimension = 1200;
+      const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      resolve({
+        fileName: file.name,
+        mimeType: "image/jpeg",
+        dataUrl: canvas.toDataURL("image/jpeg", 0.78),
+      });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("This image could not be read. Please choose another screenshot."));
+    };
+    image.src = objectUrl;
+  });
 const INITIAL_FORM: FormData = {
   name: "",
   dateOfBirth: "",
   email: "",
   phone: "",
   phoneCountry: "ET",
+  additionalPhones: [],
   citySubCity: "",
   woreda: "",
   houseNumber: "",
@@ -176,6 +235,8 @@ const INITIAL_FORM: FormData = {
   emergencyContact2Phone: "",
   emergencyContact2Country: "ET",
   outlet: "",
+  companyPhone: "",
+  companyPhoneCountry: "ET",
   yearsOfExperience: "",
   department: "",
   role: "",
@@ -188,7 +249,7 @@ const MEMBERSHIP_FIELD_LABELS: Record<string, string> = {
   membershipTypeId: "Membership type",
   fullName: "Full name",
   email: "Email address",
-  phone: "Mobile number",
+  phone: "Phone number",
   outletOrInstitution: "Organization",
   currentRole: "Current role",
   regionOrChapter: "City or sub-city",
@@ -200,6 +261,20 @@ const MEMBERSHIP_FIELD_LABELS: Record<string, string> = {
   yearsOfExperience: "Years of experience",
   educationLevel: "Level of education",
   fieldOfStudy: "Field of study",
+};
+
+const isValidPhoneNumber = (phone: string, country: CountryCode = "ET"): boolean => {
+  if (!phone || !phone.trim()) return false;
+  const digits = phone.replace(/\D/g, "");
+  // E.164 standard phone length (7 to 15 digits)
+  if (digits.length < 7 || digits.length > 15) return false;
+  try {
+    const parsed = parsePhoneNumberFromString(phone, country);
+    if (parsed && (parsed.isPossible() || parsed.isValid())) return true;
+  } catch {
+    // fallback
+  }
+  return /^\+?\d{7,15}$/.test(phone.replace(/[\s\-()]/g, ""));
 };
 
 const friendlyRuleMessage = (label: string, message: string) => {
@@ -245,83 +320,34 @@ const getMembershipSubmissionError = (payload: unknown, status: number) => {
   return error?.message || "Unable to submit the application. Please try again.";
 };
 
-const countryFlag = (country: CountryCode) =>
-  String.fromCodePoint(...country.split("").map((letter) => 127397 + letter.charCodeAt(0)));
-
 function InternationalPhoneField({
-  country,
   value,
-  onCountryChange,
   onChange,
   required,
-  language,
   label,
+  placeholder = "+251 9... / 09... / 011...",
 }: {
-  country: CountryCode;
+  country?: CountryCode;
   value: string;
-  onCountryChange: (country: CountryCode) => void;
+  onCountryChange?: (country: CountryCode) => void;
   onChange: (value: string) => void;
   required?: boolean;
-  language: "en" | "am";
-  label: string;
+  language?: "en" | "am";
+  label?: string;
+  helperText?: string;
+  placeholder?: string;
 }) {
-  const names = useMemo(
-    () => new Intl.DisplayNames([language], { type: "region" }),
-    [language],
-  );
-  const countries = useMemo(
-    () =>
-      getCountries()
-        .map((code) => ({ code, name: names.of(code) ?? code, dial: `+${getCountryCallingCode(code)}` }))
-        .sort((a, b) => a.name.localeCompare(b.name, language)),
-    [language, names],
-  );
-
-  const changeCountry = (nextCountry: CountryCode) => {
-    const oldDial = `+${getCountryCallingCode(country)}`;
-    const nextDial = `+${getCountryCallingCode(nextCountry)}`;
-    const national = value.startsWith(oldDial)
-      ? value.slice(oldDial.length).replace(/^0+/, "")
-      : value.replace(/^\+?\d*/, "").replace(/^0+/, "");
-    onCountryChange(nextCountry);
-    onChange(national ? `${nextDial}${national}` : "");
-  };
-
-  const changeNumber = (raw: string) => {
-    const cleaned = raw.replace(/[^\d+]/g, "");
-    if (!cleaned) return onChange("");
-    if (cleaned.startsWith("+")) return onChange(`+${cleaned.slice(1).replace(/\D/g, "")}`);
-    onChange(`+${getCountryCallingCode(country)}${cleaned.replace(/^0+/, "")}`);
-  };
-
   return (
-    <label>
-      <span>{label}</span>
+    <label className="membership-phone-field-label">
+      {label ? <span>{label}</span> : null}
       <div className="membership-phone-field">
-        <div className="membership-country-select-wrapper">
-          <span className="membership-country-flag" aria-hidden="true">
-            {countryFlag(country)}
-          </span>
-          <ChevronDown className="membership-country-arrow" aria-hidden="true" />
-          <select
-            value={country}
-            onChange={(event) => changeCountry(event.target.value as CountryCode)}
-            aria-label={language === "am" ? "ሀገር ይምረጡ" : "Select country"}
-          >
-            {countries.map((item) => (
-              <option key={item.code} value={item.code}>
-                {countryFlag(item.code)} {item.name} ({item.dial})
-              </option>
-            ))}
-          </select>
-        </div>
         <input
           required={required}
           type="tel"
           inputMode="tel"
           value={value}
-          onChange={(event) => changeNumber(event.target.value)}
-          placeholder={`+${getCountryCallingCode(country)}`}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
           autoComplete="tel"
         />
       </div>
@@ -340,10 +366,52 @@ function Membership() {
   const [typesLoading, setTypesLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  const [paymentConfirmation, setPaymentConfirmation] = useState<PaymentConfirmation | null>(null);
+  const selectedMembershipType = useMemo(
+    () => membershipTypes.find((item) => item.name === form.tier),
+    [membershipTypes, form.tier],
+  );
+  const requiresPayment = Number(selectedMembershipType?.price_amount ?? 0) > 0;
   const update = (field: keyof FormData, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
     if (formError) setFormError("");
   };
+
+  const addAdditionalPhone = (defaultType: AdditionalPhone["type"] = "company") => {
+    setForm((current) => ({
+      ...current,
+      additionalPhones: [
+        ...current.additionalPhones,
+        {
+          id: Math.random().toString(36).slice(2, 9),
+          type: defaultType,
+          number: "",
+          country: "ET",
+        },
+      ],
+    }));
+  };
+
+  const updateAdditionalPhone = (
+    id: string,
+    updates: Partial<AdditionalPhone>,
+  ) => {
+    setForm((current) => ({
+      ...current,
+      additionalPhones: current.additionalPhones.map((p) =>
+        p.id === id ? { ...p, ...updates } : p,
+      ),
+    }));
+    if (formError) setFormError("");
+  };
+
+  const removeAdditionalPhone = (id: string) => {
+    setForm((current) => ({
+      ...current,
+      additionalPhones: current.additionalPhones.filter((p) => p.id !== id),
+    }));
+  };
+
   const chooseTier = (tier: string) => {
     const activeTier = membershipTypes.find(
       (item) => item.name.toLowerCase() === tier.toLowerCase(),
@@ -384,26 +452,37 @@ function Membership() {
       if (!form.dateOfBirth) return "Date of birth is required.";
       if (!form.email.trim()) return "Email address is required.";
       if (!/^\S+@\S+\.\S+$/.test(form.email)) return "Please enter a valid email address.";
-      if (!form.phone.trim()) return "Mobile number is required.";
-      if (!parsePhoneNumberFromString(form.phone)?.isValid())
-        return "Please enter a valid mobile number for the selected country.";
+      if (!form.phone.trim()) return "Phone number is required.";
+      if (!isValidPhoneNumber(form.phone, form.phoneCountry))
+        return "Please enter a valid phone number (mobile, home, or office).";
+      for (const p of form.additionalPhones) {
+        if (p.number.trim() && !isValidPhoneNumber(p.number, p.country)) {
+          const typeLabel = PHONE_TYPE_LABELS[p.type]?.en || "additional phone";
+          return `Please enter a valid phone number for ${typeLabel.toLowerCase()}.`;
+        }
+      }
       if (!form.citySubCity.trim()) return "City or sub-city is required.";
       if (form.citySubCity.trim().length < 2) return "Please enter a valid city or sub-city.";
       if (!form.emergencyContact1Name.trim()) return "First emergency contact name is required.";
       if (form.emergencyContact1Name.trim().length < 2)
         return "First emergency contact name must contain at least 2 characters.";
       if (!form.emergencyContact1Phone.trim()) return "First emergency contact phone is required.";
-      if (!parsePhoneNumberFromString(form.emergencyContact1Phone)?.isValid())
-        return "Please enter a valid phone number for your first emergency contact's country.";
+      if (!isValidPhoneNumber(form.emergencyContact1Phone, form.emergencyContact1Country))
+        return "Please enter a valid phone number for your first emergency contact.";
       if (
         form.emergencyContact2Phone &&
-        !parsePhoneNumberFromString(form.emergencyContact2Phone)?.isValid()
+        !isValidPhoneNumber(form.emergencyContact2Phone, form.emergencyContact2Country)
       )
-        return "Please enter a valid phone number for your second emergency contact's country.";
+        return "Please enter a valid phone number for your second emergency contact.";
     }
     if (targetStep === 1) {
       if (!form.outlet.trim()) return "Organization is required.";
       if (form.outlet.trim().length < 2) return "Organization must contain at least 2 characters.";
+      if (
+        form.companyPhone &&
+        !isValidPhoneNumber(form.companyPhone, form.companyPhoneCountry)
+      )
+        return "Please enter a valid company or office phone number.";
       if (!form.yearsOfExperience) return "Years of experience is required.";
       if (!/^\d+$/.test(form.yearsOfExperience) || Number(form.yearsOfExperience) > 80)
         return "Years of experience must be a whole number between 0 and 80.";
@@ -414,8 +493,13 @@ function Membership() {
       if (!form.fieldOfStudy.trim()) return "Field of study is required.";
       if (form.fieldOfStudy.trim().length < 2) return "Please enter a valid field of study.";
     }
-    if (targetStep === 2 && !membershipTypes.some((item) => item.name === form.tier)) {
-      return "Please select an active membership type.";
+    if (targetStep === 2) {
+      if (!membershipTypes.some((item) => item.name === form.tier)) {
+        return "Please select an active membership type.";
+      }
+      if (requiresPayment && !paymentConfirmation) {
+        return "Please attach a screenshot of your bank payment confirmation.";
+      }
     }
     return "";
   };
@@ -448,6 +532,20 @@ function Membership() {
     setSubmitting(true);
     setFormError("");
     try {
+      const validAdditionalPhones = form.additionalPhones
+        .filter((p) => p.number.trim())
+        .map((p) => ({
+          type: p.type,
+          number: p.number.trim(),
+          label: PHONE_TYPE_LABELS[p.type]?.en || p.type,
+        }));
+
+      const companyPhoneVal =
+        form.companyPhone ||
+        validAdditionalPhones.find((p) => p.type === "company" || p.type === "office")
+          ?.number ||
+        undefined;
+
       const response = await fetch(`${API_BASE}/public/membership-applications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -465,6 +563,8 @@ function Membership() {
             woreda: form.woreda,
             houseNumber: form.houseNumber,
             additionalSkills: form.additionalSkills,
+            companyPhone: companyPhoneVal,
+            additionalPhones: validAdditionalPhones,
             emergencyContact1: {
               name: form.emergencyContact1Name,
               phone: form.emergencyContact1Phone,
@@ -480,6 +580,7 @@ function Membership() {
             department: form.department,
             educationLevel: form.educationLevel,
             fieldOfStudy: form.fieldOfStudy,
+            paymentConfirmation: requiresPayment ? paymentConfirmation : undefined,
           },
         }),
       });
@@ -738,12 +839,65 @@ function Membership() {
                       <InternationalPhoneField
                         required
                         language={language}
-                        label={t("Mobile number *", "የሞባይል ስልክ ቁጥር *")}
+                        label={t("Phone number *", "የስልክ ቁጥር *")}
                         country={form.phoneCountry}
                         value={form.phone}
                         onCountryChange={(country) => update("phoneCountry", country)}
                         onChange={(value) => update("phone", value)}
                       />
+                      <div className="membership-additional-phones-wrap">
+                        {form.additionalPhones.map((item, idx) => (
+                          <div key={item.id} className="membership-additional-phone-row">
+                            <div className="membership-phone-type-select-wrap">
+                              <label>
+                                <span>{t("Phone type", "የስልክ ዓይነት")}</span>
+                                <select
+                                  value={item.type}
+                                  onChange={(e) =>
+                                    updateAdditionalPhone(item.id, {
+                                      type: e.target.value as AdditionalPhone["type"],
+                                    })
+                                  }
+                                >
+                                  <option value="company">{t("Company / Work Phone", "የድርጅት / የሥራ ስልክ")}</option>
+                                  <option value="office">{t("Office Landline", "የቢሮ መደበኛ ስልክ")}</option>
+                                  <option value="home">{t("Home Landline", "የቤት መደበኛ ስልክ")}</option>
+                                  <option value="secondary">{t("Secondary Mobile", "ተጨማሪ ሞባይል")}</option>
+                                  <option value="other">{t("Other Phone", "ሌላ ስልክ")}</option>
+                                </select>
+                              </label>
+                            </div>
+                            <InternationalPhoneField
+                              value={item.number}
+                              onChange={(v) => updateAdditionalPhone(item.id, { number: v })}
+                              placeholder="+251 9... / 09... / 011..."
+                            />
+                            <button
+                              type="button"
+                              className="membership-remove-phone-btn"
+                              onClick={() => removeAdditionalPhone(item.id)}
+                              aria-label={t("Remove this phone number", "ይህን ስልክ ቁጥር አስወግድ")}
+                              title={t("Remove phone number", "ስልክ ቁጥር አስወግድ")}
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          className="membership-add-phone-btn"
+                          onClick={() => addAdditionalPhone("company")}
+                        >
+                          <Plus className="size-3.5" />
+                          <span>
+                            {t(
+                              "Add another phone number (company, home, or office)",
+                              "ተጨማሪ ስልክ ቁጥር ያክሉ (የድርጅት፣ የቤት ወይም የቢሮ)",
+                            )}
+                          </span>
+                        </button>
+                      </div>
                       <label>
                         <span>{t("City / Sub-city *", "ከተማ / ክፍለ ከተማ *")}</span>
                         <input
@@ -830,6 +984,14 @@ function Membership() {
                           placeholder="Organization name"
                         />
                       </label>
+                      <InternationalPhoneField
+                        language={language}
+                        label={t("Company / Office phone", "የድርጅት / የቢሮ ስልክ ቁጥር")}
+                        country={form.companyPhoneCountry}
+                        value={form.companyPhone}
+                        onCountryChange={(country) => update("companyPhoneCountry", country)}
+                        onChange={(value) => update("companyPhone", value)}
+                      />
                       <label>
                         <span>{t("Years of experience *", "የሥራ ልምድ በዓመት *")}</span>
                         <input
@@ -914,6 +1076,53 @@ function Membership() {
                         team.
                       </p>
                     )}
+                    {requiresPayment && selectedMembershipType && (
+                      <div className="membership-payment-proof">
+                        <div>
+                          <strong>{t("Payment confirmation required", "የክፍያ ማረጋገጫ ያስፈልጋል")}</strong>
+                          <p>
+                            Thank you for the form. Please also attach a screenshot of the bank
+                            payment confirmation for the payment made to Ethiopian Media Women
+                            Association, account number <b>1000002275973</b>.
+                          </p>
+                        </div>
+                        <label className="membership-payment-upload">
+                          <span>{t("Bank payment screenshot *", "የባንክ ክፍያ ስክሪንሾት *")}</span>
+                          <input
+                            required
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={async (event) => {
+                              const file = event.target.files?.[0];
+                              if (!file) {
+                                setPaymentConfirmation(null);
+                                return;
+                              }
+                              setFormError("");
+                              try {
+                                setPaymentConfirmation(await preparePaymentScreenshot(file));
+                              } catch (cause) {
+                                event.target.value = "";
+                                setPaymentConfirmation(null);
+                                setFormError(
+                                  cause instanceof Error ? cause.message : "Unable to read the screenshot.",
+                                );
+                              }
+                            }}
+                          />
+                          <small>JPG, PNG or WebP, up to 10 MB.</small>
+                        </label>
+                        {paymentConfirmation && (
+                          <div className="membership-payment-preview">
+                            <img src={paymentConfirmation.dataUrl} alt="Selected bank payment confirmation" />
+                            <span>{paymentConfirmation.fileName}</span>
+                            <button type="button" onClick={() => setPaymentConfirmation(null)}>
+                              <Trash2 aria-hidden="true" /> Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </fieldset>
                 )}
                 {step === 3 && (
@@ -930,9 +1139,21 @@ function Membership() {
                         <dd>{form.email || notProvided}</dd>
                       </div>
                       <div>
-                        <dt>{t("Mobile", "ሞባይል")}</dt>
+                        <dt>{t("Phone", "ስልክ")}</dt>
                         <dd>{form.phone || notProvided}</dd>
                       </div>
+                      {form.additionalPhones
+                        .filter((p) => p.number.trim())
+                        .map((p) => (
+                          <div key={p.id}>
+                            <dt>
+                              {language === "am"
+                                ? PHONE_TYPE_LABELS[p.type]?.am
+                                : PHONE_TYPE_LABELS[p.type]?.en}
+                            </dt>
+                            <dd>{p.number}</dd>
+                          </div>
+                        ))}
                       <div>
                         <dt>{t("Date of birth", "የትውልድ ቀን")}</dt>
                         <dd>{form.dateOfBirth || notProvided}</dd>
@@ -949,6 +1170,12 @@ function Membership() {
                         <dt>{t("Organization", "ድርጅት")}</dt>
                         <dd>{form.outlet || notProvided}</dd>
                       </div>
+                      {form.companyPhone && (
+                        <div>
+                          <dt>{t("Company phone", "የድርጅት ስልክ")}</dt>
+                          <dd>{form.companyPhone}</dd>
+                        </div>
+                      )}
                       <div>
                         <dt>Role / Experience</dt>
                         <dd>
@@ -974,6 +1201,12 @@ function Membership() {
                         <dt>Membership</dt>
                         <dd>{form.tier}</dd>
                       </div>
+                      {requiresPayment && (
+                        <div>
+                          <dt>Payment confirmation</dt>
+                          <dd>{paymentConfirmation?.fileName || "Not attached"}</dd>
+                        </div>
+                      )}
                     </dl>
                   </fieldset>
                 )}

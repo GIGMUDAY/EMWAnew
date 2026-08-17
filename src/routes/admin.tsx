@@ -77,12 +77,19 @@ type Expert = {
   email?: string;
   phone_number?: string;
   professional_title: string;
-  area_of_expertise: string;
+  area_of_expertise?: string;
+  primary_expertise?: string;
   location: string;
   status: ApplicationStatus;
   created_at: string;
   biography?: string;
+  professional_biography?: string;
   profile_photo_url?: string;
+  profile_photo?: string;
+  profilePhotoUrl?: string;
+  photo_url?: string;
+  photo?: string;
+  image_url?: string;
   last_edited_at?: string;
 };
 type Membership = {
@@ -106,6 +113,11 @@ type Membership = {
     department?: string;
     educationLevel?: string;
     fieldOfStudy?: string;
+    paymentConfirmation?: {
+      fileName?: string;
+      mimeType?: string;
+      dataUrl?: string;
+    };
   };
   membership_type_id: string;
   status: ApplicationStatus;
@@ -229,15 +241,23 @@ const fmtDate = (value: string) =>
     new Date(value),
   );
 
-const uploadUrl = (value?: string) => {
+const uploadUrl = (value?: string | null) => {
   if (!value) return "";
   try {
-    const str = String(value);
+    const str = String(value).trim();
+    if (!str) return "";
+    if (str.startsWith("data:") || str.startsWith("blob:")) return str;
     const origin = new URL(API_BASE).origin;
-    const url = new URL(str, origin);
-    return url.pathname.startsWith("/uploads/") ? `${origin}${url.pathname}` : str;
+    if (str.startsWith("http://") || str.startsWith("https://")) {
+      const parsed = new URL(str);
+      const uploadMatch = parsed.pathname.match(/(?:\/api\/v1)?(\/uploads\/.+)$/);
+      if (uploadMatch) return `${origin}${uploadMatch[1]}`;
+      return str;
+    }
+    const cleanPath = str.startsWith("/") ? str : `/${str}`;
+    return `${origin}${cleanPath}`;
   } catch {
-    return value;
+    return value || "";
   }
 };
 
@@ -1313,86 +1333,101 @@ function ApplicationsPanel({
       <FilterBar query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} />
       {visible.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          {visible.map((row) => (
-            <article
-              key={row.id}
-              className="min-w-0 overflow-visible rounded-2xl border border-black/10 bg-[#fbf9f4] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/8"
-            >
-              <div className="relative mb-6 grid aspect-[16/8] overflow-hidden rounded-xl bg-[linear-gradient(135deg,#e8ded1,#d7c5b3)]">
-                <span className="m-auto text-5xl font-black text-[#8c2d3c]/45">
-                  {row.full_name
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join("")}
-                </span>
-                {row.profile_photo_url && (
-                  <img
-                    src={uploadUrl(row.profile_photo_url)}
-                    alt={`${row.full_name}'s uploaded profile`}
-                    loading="lazy"
-                    className="absolute inset-0 size-full object-contain object-center transition duration-500 hover:scale-[1.02]"
-                    onError={(event) => event.currentTarget.remove()}
-                  />
-                )}
-              </div>
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="label-mono text-[#8c2d3c]">
-                    {row.area_of_expertise || "Expert profile"}
-                  </p>
-                  <h3 className="mt-2 text-2xl font-black">{row.full_name}</h3>
-                  <p className="mt-1 font-[var(--font-body)] text-sm text-black/50">
-                    {row.professional_title} · {row.location}
-                  </p>
+          {visible.map((row) => {
+            const photo =
+              row.profile_photo_url ||
+              row.profile_photo ||
+              row.profilePhotoUrl ||
+              row.photo_url ||
+              row.photo ||
+              row.image_url;
+            const photoSrc = uploadUrl(photo);
+            const expertField = row.area_of_expertise || row.primary_expertise || "Expert profile";
+            const expertBio = row.biography || row.professional_biography || "No biography provided.";
+
+            return (
+              <article
+                key={row.id}
+                className="min-w-0 overflow-visible rounded-2xl border border-black/10 bg-[#fbf9f4] p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/8"
+              >
+                <div className="relative mb-6 grid aspect-[16/8] overflow-hidden rounded-xl bg-[linear-gradient(135deg,#e8ded1,#d7c5b3)]">
+                  <span className="m-auto text-5xl font-black text-[#8c2d3c]/45">
+                    {row.full_name
+                      .split(" ")
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")}
+                  </span>
+                  {photoSrc ? (
+                    <img
+                      src={photoSrc}
+                      alt={`${row.full_name}'s uploaded profile`}
+                      loading="lazy"
+                      className="absolute inset-0 size-full object-cover object-center transition duration-500 hover:scale-[1.02]"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
+                  ) : null}
                 </div>
-                <span className="shrink-0"><StatusBadge value={row.status} /></span>
-              </div>
-              <p className="mt-6 font-[var(--font-body)] text-sm leading-6 text-black/60">
-                {row.biography || "No biography provided."}
-              </p>
-              <p className="mt-3 break-all font-[var(--font-body)] text-sm font-semibold text-[#8c2d3c]">
-                {row.email || row.phone_number || "No contact method"}
-              </p>
-              <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-5">
-                <span className="label-mono text-black/35">{fmtDate(row.created_at)}</span>
-                <div className="flex flex-wrap gap-2">
-                  <ActionButton
-                    label="Edit"
-                    onClick={() => {
-                      setEditError("");
-                      setEditing(row);
-                    }}
-                    variant="outline"
-                  />
-                  {row.status === "PENDING" && (
-                    <>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="label-mono text-[#8c2d3c]">
+                      {expertField}
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black">{row.full_name}</h3>
+                    <p className="mt-1 font-[var(--font-body)] text-sm text-black/50">
+                      {row.professional_title} · {row.location}
+                    </p>
+                  </div>
+                  <span className="shrink-0"><StatusBadge value={row.status} /></span>
+                </div>
+                <p className="mt-6 font-[var(--font-body)] text-sm leading-6 text-black/60">
+                  {expertBio}
+                </p>
+                <p className="mt-3 break-all font-[var(--font-body)] text-sm font-semibold text-[#8c2d3c]">
+                  {row.email || row.phone_number || "No contact method"}
+                </p>
+                <div className="mt-6 flex items-center justify-between border-t border-black/10 pt-5">
+                  <span className="label-mono text-black/35">{fmtDate(row.created_at)}</span>
+                  <div className="flex flex-wrap gap-2">
                     <ActionButton
-                      label="Reject"
-                      busy={busy === row.id + "REJECTED"}
-                      onClick={() => void review(row.id, "REJECTED")}
+                      label="Edit"
+                      onClick={() => {
+                        setEditError("");
+                        setEditing(row);
+                      }}
                       variant="outline"
                     />
-                    <ActionButton
-                      label="Approve"
-                      busy={busy === row.id + "APPROVED"}
-                      onClick={() => void review(row.id, "APPROVED")}
-                    />
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    disabled={busy === row.id + "DELETE"}
-                    onClick={() => void remove(row)}
-                    className="inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
-                  >
-                    <Trash2 className="size-4" />
-                    {busy === row.id + "DELETE" ? "Deleting…" : "Delete"}
-                  </button>
+                    {row.status === "PENDING" && (
+                      <>
+                      <ActionButton
+                        label="Reject"
+                        busy={busy === row.id + "REJECTED"}
+                        onClick={() => void review(row.id, "REJECTED")}
+                        variant="outline"
+                      />
+                      <ActionButton
+                        label="Approve"
+                        busy={busy === row.id + "APPROVED"}
+                        onClick={() => void review(row.id, "APPROVED")}
+                      />
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy === row.id + "DELETE"}
+                      onClick={() => void remove(row)}
+                      className="inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+                    >
+                      <Trash2 className="size-4" />
+                      {busy === row.id + "DELETE" ? "Deleting…" : "Delete"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       ) : (
         <EmptyState text="No expert applications match this view" />
@@ -1415,16 +1450,41 @@ function ApplicationsPanel({
             <div className="grid max-h-[68vh] gap-5 overflow-y-auto px-6 py-6 sm:grid-cols-2 sm:px-8">
               <AdminExpertField label="Full name" name="fullName" defaultValue={editing.full_name} required />
               <AdminExpertField label="Professional title" name="professionalTitle" defaultValue={editing.professional_title} required />
-              <AdminExpertField label="Expert category" name="primaryExpertise" defaultValue={editing.area_of_expertise} required />
+              <AdminExpertField label="Expert category" name="primaryExpertise" defaultValue={editing.area_of_expertise || editing.primary_expertise || ""} required />
               <AdminExpertField label="Location" name="location" defaultValue={editing.location} required />
               <AdminExpertField label="Email address" name="email" type="email" defaultValue={editing.email ?? ""} />
               <AdminExpertField label="Phone number" name="phone" type="tel" defaultValue={editing.phone_number ?? ""} />
               <label className="flex flex-col gap-2 sm:col-span-2">
                 <span className="label-mono text-black/55">Professional biography</span>
-                <textarea name="professionalBiography" required minLength={20} maxLength={10000} rows={7} defaultValue={editing.biography ?? ""} className="rounded-lg border border-black/15 bg-white px-4 py-3 text-black outline-none focus:border-[#8c2d3c]" />
+                <textarea name="professionalBiography" required minLength={20} maxLength={10000} rows={7} defaultValue={editing.biography || editing.professional_biography || ""} className="rounded-lg border border-black/15 bg-white px-4 py-3 text-black outline-none focus:border-[#8c2d3c]" />
               </label>
               <label className="flex flex-col gap-2 sm:col-span-2">
                 <span className="label-mono text-black/55">Replace profile photo</span>
+                {uploadUrl(
+                  editing.profile_photo_url ||
+                  editing.profile_photo ||
+                  editing.profilePhotoUrl ||
+                  editing.photo_url ||
+                  editing.photo ||
+                  editing.image_url
+                ) && (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={uploadUrl(
+                        editing.profile_photo_url ||
+                        editing.profile_photo ||
+                        editing.profilePhotoUrl ||
+                        editing.photo_url ||
+                        editing.photo ||
+                        editing.image_url
+                      )}
+                      alt="Current profile"
+                      className="size-16 rounded-lg object-cover border border-black/10"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                    <span className="text-xs text-black/60">Current profile photo</span>
+                  </div>
+                )}
                 <input name="profilePhoto" type="file" accept="image/jpeg,image/png" className="rounded-lg border border-dashed border-black/20 bg-white px-4 py-4 text-sm text-black" />
                 <small className="text-black/45">Leave empty to keep the current photo.</small>
               </label>
@@ -1463,12 +1523,21 @@ function MembershipPanel({
 }) {
   const [typeId, setTypeId] = useState("ALL");
   const [status, setStatus] = useState<"ALL" | ApplicationStatus>("ALL");
+  const [query, setQuery] = useState("");
   const [busy, setBusy] = useState("");
-  const visible = rows.filter(
-    (row) =>
-      (typeId === "ALL" || row.membership_type_id === typeId) &&
-      (status === "ALL" || row.status === status),
-  );
+  const [selectedMember, setSelectedMember] = useState<Membership | null>(null);
+
+  const visible = rows.filter((row) => {
+    const matchesType = typeId === "ALL" || row.membership_type_id === typeId;
+    const matchesStatus = status === "ALL" || row.status === status;
+    const matchesQuery =
+      !query.trim() ||
+      `${row.full_name} ${row.email} ${row.phone_number} ${row.outlet_or_institution} ${row.current_position} ${row.region_or_chapter}`
+        .toLowerCase()
+        .includes(query.toLowerCase().trim());
+    return matchesType && matchesStatus && matchesQuery;
+  });
+
   const exportToExcel = () => {
     const headings = [
       "Full Name", "Email", "Phone", "Date of Birth", "City / Sub-city", "Woreda",
@@ -1513,6 +1582,7 @@ function MembershipPanel({
     link.remove();
     URL.revokeObjectURL(url);
   };
+
   const review = async (id: string, next: "APPROVED" | "REJECTED") => {
     setBusy(id + next);
     try {
@@ -1524,10 +1594,14 @@ function MembershipPanel({
         }),
       });
       await reload();
+      if (selectedMember?.id === id) {
+        setSelectedMember((prev) => (prev ? { ...prev, status: next } : null));
+      }
     } finally {
       setBusy("");
     }
   };
+
   const remove = async (row: Membership) => {
     if (!window.confirm(`Permanently delete ${row.full_name}'s membership application?`)) return;
     setBusy(row.id + "DELETE");
@@ -1536,109 +1610,395 @@ function MembershipPanel({
         method: "DELETE",
       });
       await reload();
+      if (selectedMember?.id === row.id) {
+        setSelectedMember(null);
+      }
     } finally {
       setBusy("");
     }
   };
+
   return (
     <PagePanel
       title="Membership requests"
-      subtitle="Review applications by membership category and status."
+      subtitle="Review all membership applications individually with complete applicant details."
     >
-      <div className="mb-6 grid gap-3 bg-[#e9e3d9] p-4 sm:grid-cols-3">
-        <Select
-          value={typeId}
-          onChange={setTypeId}
-          options={[
-            { value: "ALL", label: "All membership types" },
-            ...types.map((x) => ({ value: x.id, label: x.name })),
-          ]}
-        />
-        <Select
-          value={status}
-          onChange={(v) => setStatus(v as typeof status)}
-          options={["ALL", "PENDING", "APPROVED", "REJECTED"].map((x) => ({
-            value: x,
-            label: x === "ALL" ? "All statuses" : x,
-          }))}
-        />
-        <button
-          type="button"
-          onClick={exportToExcel}
-          disabled={!visible.length}
-          className="flex min-h-12 items-center justify-center gap-2 bg-[#8c2d3c] px-5 font-[var(--font-mono)] text-[10px] font-bold uppercase tracking-[.14em] text-white transition hover:bg-[#702330] disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          <Download className="h-4 w-4" /> Export to Excel
-        </button>
-      </div>
-      {visible.length ? (
-        <div className="overflow-x-auto rounded-2xl border border-black/10 bg-[#fbf9f4] shadow-sm">
-          <table className="w-full min-w-[850px]">
-            <thead>
-              <tr className="border-b border-black/12 text-left">
-                <Th>Name</Th>
-                <Th>Professional home</Th>
-                <Th>Membership</Th>
-                <Th>Status</Th>
-                <Th>Date</Th>
-                <Th>Action</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((row) => (
-                <tr key={row.id} className="border-b border-black/8 last:border-0">
-                  <Td>
-                    <strong>{row.full_name}</strong>
-                    <small>{row.email}</small>
-                  </Td>
-                  <Td>
-                    <strong>{row.current_position}</strong>
-                    <small>
-                      {row.outlet_or_institution} · {row.region_or_chapter}
-                    </small>
-                  </Td>
-                  <Td>{types.find((x) => x.id === row.membership_type_id)?.name ?? "Unknown"}</Td>
-                  <Td>
-                    <StatusBadge value={row.status} />
-                  </Td>
-                  <Td>{fmtDate(row.created_at)}</Td>
-                  <Td>
-                    <div className="flex flex-wrap gap-2">
-                      {row.status === "PENDING" ? (
-                        <>
-                        <ActionButton
-                          label="Reject"
-                          busy={busy === row.id + "REJECTED"}
-                          onClick={() => void review(row.id, "REJECTED")}
-                          variant="outline"
-                        />
-                        <ActionButton
-                          label="Approve"
-                          busy={busy === row.id + "APPROVED"}
-                          onClick={() => void review(row.id, "APPROVED")}
-                        />
-                        </>
-                      ) : (
-                        <span className="self-center label-mono text-black/30">Reviewed</span>
-                      )}
-                      <button
-                        type="button"
-                        disabled={busy === row.id + "DELETE"}
-                        onClick={() => void remove(row)}
-                        className="inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
-                      >
-                        <Trash2 className="size-4" />
-                        {busy === row.id + "DELETE" ? "Deleting…" : "Delete"}
-                      </button>
-                    </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="space-y-6">
+        <div className="grid gap-3 bg-[#e9e3d9] p-4 sm:grid-cols-4">
+          <div className="relative flex items-center sm:col-span-1">
+            <Search className="pointer-events-none absolute left-3 size-4 text-black/40" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, email, phone…"
+              className="w-full bg-white pl-9 pr-3 py-2.5 font-[var(--font-body)] text-sm border border-black/10 outline-none focus:border-[#8c2d3c]"
+            />
+          </div>
+          <Select
+            value={typeId}
+            onChange={setTypeId}
+            options={[
+              { value: "ALL", label: "All membership types" },
+              ...types.map((x) => ({ value: x.id, label: x.name })),
+            ]}
+          />
+          <Select
+            value={status}
+            onChange={(v) => setStatus(v as typeof status)}
+            options={["ALL", "PENDING", "APPROVED", "REJECTED"].map((x) => ({
+              value: x,
+              label: x === "ALL" ? "All statuses" : x,
+            }))}
+          />
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={!visible.length}
+            className="flex min-h-11 items-center justify-center gap-2 bg-[#8c2d3c] px-5 font-[var(--font-mono)] text-[10px] font-bold uppercase tracking-[.14em] text-white transition hover:bg-[#702330] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <Download className="h-4 w-4" /> Export to Excel
+          </button>
         </div>
-      ) : (
-        <EmptyState text="No membership requests match this view" />
+
+        {visible.length ? (
+          <div className="overflow-x-auto rounded-2xl border border-black/10 bg-[#fbf9f4] shadow-sm">
+            <table className="w-full min-w-[1100px] text-left">
+              <thead>
+                <tr className="border-b border-black/12 bg-black/[0.02]">
+                  <Th>Full Name</Th>
+                  <Th>Email Address</Th>
+                  <Th>Phone Number</Th>
+                  <Th>Organization</Th>
+                  <Th>Current Role</Th>
+                  <Th>City / Region</Th>
+                  <Th>Membership Category</Th>
+                  <Th>Status</Th>
+                  <Th>Date</Th>
+                  <Th>Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((row) => (
+                  <tr key={row.id} className="border-b border-black/8 last:border-0 hover:bg-black/[0.015] transition-colors">
+                    <Td>
+                      <strong className="font-bold text-black whitespace-nowrap block">
+                        {row.full_name}
+                      </strong>
+                    </Td>
+                    <Td>
+                      <a
+                        href={`mailto:${row.email}`}
+                        className="text-[#8c2d3c] hover:underline font-medium break-all"
+                      >
+                        {row.email}
+                      </a>
+                    </Td>
+                    <Td>
+                      <span className="whitespace-nowrap font-mono text-xs text-black/80">
+                        {row.phone_number || "—"}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="whitespace-nowrap text-black/80">
+                        {row.outlet_or_institution || "—"}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="whitespace-nowrap text-black/80">
+                        {row.current_position || "—"}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="whitespace-nowrap text-black/80">
+                        {row.region_or_chapter || (row.dynamic_data?.citySubCity ?? "—")}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="font-semibold text-black whitespace-nowrap">
+                        {types.find((x) => x.id === row.membership_type_id)?.name ?? "Unknown"}
+                      </span>
+                    </Td>
+                    <Td>
+                      <StatusBadge value={row.status} />
+                    </Td>
+                    <Td>
+                      <span className="whitespace-nowrap font-mono text-xs text-black/60">
+                        {fmtDate(row.created_at)}
+                      </span>
+                    </Td>
+                    <Td>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMember(row)}
+                          title="View complete application details"
+                          className="inline-flex items-center gap-1 border border-black/15 bg-white px-2.5 py-1.5 font-[var(--font-body)] text-xs font-semibold text-black hover:bg-black hover:text-white transition rounded"
+                        >
+                          <Eye className="size-3.5" /> Details
+                        </button>
+
+                        {row.status === "PENDING" && (
+                          <>
+                            <button
+                              type="button"
+                              disabled={busy === row.id + "APPROVED"}
+                              onClick={() => void review(row.id, "APPROVED")}
+                              className="inline-flex items-center bg-[#8c2d3c] px-2.5 py-1.5 font-[var(--font-body)] text-xs font-bold text-white hover:bg-[#6f2230] transition rounded disabled:opacity-50"
+                            >
+                              {busy === row.id + "APPROVED" ? "…" : "Approve"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy === row.id + "REJECTED"}
+                              onClick={() => void review(row.id, "REJECTED")}
+                              className="inline-flex items-center border border-black/20 bg-white px-2.5 py-1.5 font-[var(--font-body)] text-xs font-bold text-black hover:bg-black/5 transition rounded disabled:opacity-50"
+                            >
+                              {busy === row.id + "REJECTED" ? "…" : "Reject"}
+                            </button>
+                          </>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={busy === row.id + "DELETE"}
+                          onClick={() => void remove(row)}
+                          title="Delete application"
+                          className="inline-flex items-center justify-center p-1.5 text-red-600 hover:bg-red-50 hover:text-red-800 transition rounded disabled:opacity-50"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState text="No membership requests match this view" />
+        )}
+      </div>
+
+      {/* Member Details Modal */}
+      {selectedMember && (
+        <div
+          className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/65 p-4 backdrop-blur-sm"
+          onMouseDown={() => setSelectedMember(null)}
+        >
+          <div
+            className="my-auto w-full max-w-2xl rounded-2xl bg-[#fbf9f4] shadow-2xl overflow-hidden"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <header className="flex items-start justify-between gap-4 border-b border-black/10 px-6 py-5 sm:px-8">
+              <div>
+                <p className="label-mono text-[#8c2d3c]">Membership Application</p>
+                <h2 className="mt-1 text-2xl font-black text-black">
+                  {selectedMember.full_name}
+                </h2>
+                <p className="text-xs text-black/55">
+                  Applied on {new Date(selectedMember.created_at).toLocaleString()}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="grid size-9 shrink-0 place-items-center rounded-full border border-black/15 text-black hover:bg-black hover:text-white"
+              >
+                <X className="size-4" />
+              </button>
+            </header>
+
+            <div className="max-h-[70vh] overflow-y-auto p-6 sm:p-8 space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Full Name</span>
+                  <strong className="text-black text-sm">{selectedMember.full_name}</strong>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Email Address</span>
+                  <a href={`mailto:${selectedMember.email}`} className="text-[#8c2d3c] text-sm hover:underline font-medium">
+                    {selectedMember.email}
+                  </a>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Phone Number</span>
+                  <span className="text-black text-sm">{selectedMember.phone_number || "—"}</span>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Membership Category</span>
+                  <span className="text-black font-semibold text-sm">
+                    {types.find((x) => x.id === selectedMember.membership_type_id)?.name ?? "Unknown"}
+                  </span>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Organization</span>
+                  <span className="text-black text-sm">{selectedMember.outlet_or_institution || "—"}</span>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Current Role</span>
+                  <span className="text-black text-sm">{selectedMember.current_position || "—"}</span>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Location / Sub-city</span>
+                  <span className="text-black text-sm">
+                    {[
+                      selectedMember.region_or_chapter || selectedMember.dynamic_data?.citySubCity,
+                      selectedMember.dynamic_data?.woreda,
+                      selectedMember.dynamic_data?.houseNumber,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "—"}
+                  </span>
+                </div>
+                <div className="bg-white p-3.5 rounded-lg border border-black/10">
+                  <span className="label-mono text-black/45 text-[10px] block">Status</span>
+                  <div className="mt-1">
+                    <StatusBadge value={selectedMember.status} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic details */}
+              {selectedMember.dynamic_data && (
+                <div className="space-y-4 pt-2 border-t border-black/10">
+                  <h4 className="label-mono text-[#8c2d3c]">Additional Application Details</h4>
+                  <div className="grid gap-3 sm:grid-cols-2 text-xs">
+                    {selectedMember.dynamic_data.dateOfBirth && (
+                      <div>
+                        <span className="text-black/50 block">Date of Birth:</span>
+                        <span className="font-semibold text-black">{selectedMember.dynamic_data.dateOfBirth}</span>
+                      </div>
+                    )}
+                    {selectedMember.dynamic_data.yearsOfExperience !== undefined && (
+                      <div>
+                        <span className="text-black/50 block">Years of Experience:</span>
+                        <span className="font-semibold text-black">{selectedMember.dynamic_data.yearsOfExperience} years</span>
+                      </div>
+                    )}
+                    {selectedMember.dynamic_data.educationLevel && (
+                      <div>
+                        <span className="text-black/50 block">Education Level:</span>
+                        <span className="font-semibold text-black">{selectedMember.dynamic_data.educationLevel}</span>
+                      </div>
+                    )}
+                    {selectedMember.dynamic_data.fieldOfStudy && (
+                      <div>
+                        <span className="text-black/50 block">Field of Study:</span>
+                        <span className="font-semibold text-black">{selectedMember.dynamic_data.fieldOfStudy}</span>
+                      </div>
+                    )}
+                    {selectedMember.dynamic_data.companyPhone && (
+                      <div>
+                        <span className="text-black/50 block">Company Phone:</span>
+                        <span className="font-semibold text-black">{selectedMember.dynamic_data.companyPhone}</span>
+                      </div>
+                    )}
+                    {selectedMember.dynamic_data.emergencyContact1 && (
+                      <div>
+                        <span className="text-black/50 block">Emergency Contact 1:</span>
+                        <span className="font-semibold text-black">
+                          {selectedMember.dynamic_data.emergencyContact1.name} (
+                          {selectedMember.dynamic_data.emergencyContact1.phone})
+                        </span>
+                      </div>
+                    )}
+                    {selectedMember.dynamic_data.emergencyContact2 && (
+                      <div>
+                        <span className="text-black/50 block">Emergency Contact 2:</span>
+                        <span className="font-semibold text-black">
+                          {selectedMember.dynamic_data.emergencyContact2.name} (
+                          {selectedMember.dynamic_data.emergencyContact2.phone})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {Array.isArray(selectedMember.dynamic_data.additionalPhones) &&
+                    selectedMember.dynamic_data.additionalPhones.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-black/5">
+                        <span className="text-black/50 text-xs block mb-1">Additional Phone Numbers:</span>
+                        <div className="space-y-1">
+                          {selectedMember.dynamic_data.additionalPhones.map((p: any, idx: number) => (
+                            <div key={idx} className="text-xs bg-white p-2 rounded border border-black/10 flex justify-between">
+                              <span className="font-medium text-black/70">{p.label || p.type}:</span>
+                              <span className="font-bold text-black">{p.number}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {selectedMember.dynamic_data.additionalSkills && (
+                    <div className="mt-3">
+                      <span className="text-black/50 text-xs block">Additional Skills & Background:</span>
+                      <p className="text-xs text-black/80 mt-1 bg-white p-3 rounded border border-black/10">
+                        {selectedMember.dynamic_data.additionalSkills}
+                      </p>
+                    </div>
+                  )}
+                  {selectedMember.dynamic_data.paymentConfirmation?.dataUrl && (
+                    <div className="mt-4 border-t border-black/10 pt-4">
+                      <span className="label-mono mb-2 block text-[#8c2d3c]">
+                        Bank payment confirmation
+                      </span>
+                      <a
+                        href={selectedMember.dynamic_data.paymentConfirmation.dataUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded-xl border border-black/10 bg-white p-2 transition hover:border-[#8c2d3c]/50"
+                      >
+                        <img
+                          src={selectedMember.dynamic_data.paymentConfirmation.dataUrl}
+                          alt={`Payment confirmation submitted by ${selectedMember.full_name}`}
+                          className="max-h-80 w-full rounded-lg object-contain"
+                        />
+                      </a>
+                      <p className="mt-2 text-xs text-black/50">
+                        {selectedMember.dynamic_data.paymentConfirmation.fileName ||
+                          "Payment confirmation image"}
+                        {" · Click the image to view it full size"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 px-6 py-4 sm:px-8 bg-black/[0.02]">
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="border border-black/20 px-4 py-2 text-xs font-bold text-black hover:bg-black/5 rounded"
+              >
+                Close
+              </button>
+
+              <div className="flex gap-2">
+                {selectedMember.status === "PENDING" && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busy === selectedMember.id + "REJECTED"}
+                      onClick={() => void review(selectedMember.id, "REJECTED")}
+                      className="border border-black/20 bg-white px-4 py-2 text-xs font-bold text-black hover:bg-black/5 rounded disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy === selectedMember.id + "APPROVED"}
+                      onClick={() => void review(selectedMember.id, "APPROVED")}
+                      className="bg-[#8c2d3c] px-4 py-2 text-xs font-bold text-white hover:bg-[#6f2230] rounded disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                  </>
+                )}
+              </div>
+            </footer>
+          </div>
+        </div>
       )}
     </PagePanel>
   );
@@ -1654,6 +2014,7 @@ function MembershipTypesPanel({
   reload: () => Promise<void>;
 }) {
   const [form, setForm] = useState({ name: "", description: "", requirements: "" });
+  const [editing, setEditing] = useState<MembershipType | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState("");
   const [error, setError] = useState("");
@@ -1662,17 +2023,40 @@ function MembershipTypesPanel({
     setBusy(true);
     setError("");
     try {
-      await adminApi("/admin/membership-types", token, {
-        method: "POST",
-        body: JSON.stringify({ ...form, isActive: true }),
-      });
+      await adminApi(
+        editing ? `/admin/membership-types/${editing.id}` : "/admin/membership-types",
+        token,
+        {
+          method: editing ? "PATCH" : "POST",
+          body: JSON.stringify({ ...form, isActive: editing?.is_active ?? true }),
+        },
+      );
       setForm({ name: "", description: "", requirements: "" });
+      setEditing(null);
       await reload();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to create membership type");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : `Unable to ${editing ? "update" : "create"} membership type`,
+      );
     } finally {
       setBusy(false);
     }
+  };
+  const beginEdit = (row: MembershipType) => {
+    setEditing(row);
+    setForm({
+      name: row.name,
+      description: row.description ?? "",
+      requirements: row.requirements ?? "",
+    });
+    setError("");
+  };
+  const cancelEdit = () => {
+    setEditing(null);
+    setForm({ name: "", description: "", requirements: "" });
+    setError("");
   };
   const remove = async (row: MembershipType) => {
     if (!window.confirm(`Delete the "${row.name}" membership type? Existing applications will remain.`))
@@ -1681,6 +2065,7 @@ function MembershipTypesPanel({
     setError("");
     try {
       await adminApi(`/admin/membership-types/${row.id}`, token, { method: "DELETE" });
+      if (editing?.id === row.id) cancelEdit();
       await reload();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Unable to delete membership type");
@@ -1693,38 +2078,61 @@ function MembershipTypesPanel({
       title="Membership types"
       subtitle="Define the membership paths applicants can choose."
     >
-      <div className="grid gap-8 xl:grid-cols-[.8fr_1.2fr]">
+      <div className="grid gap-8 xl:grid-cols-[minmax(330px,0.78fr)_minmax(0,1.22fr)]">
         <form
           onSubmit={submit}
-          className="h-fit rounded-2xl bg-[linear-gradient(145deg,#211e1b,#171513)] p-7 text-white shadow-xl"
+          className="h-fit rounded-2xl bg-[#191715] p-6 sm:p-7 text-white shadow-xl space-y-4"
         >
-          <p className="label-mono text-[#e4ab3a]">Add a category</p>
-          <h3 className="mt-3 text-3xl font-black">New membership type</h3>
-          <div className="mt-8 space-y-5">
-            <DarkInput
+          <p className="label-mono text-[#e4ab3a]">
+            {editing ? "Edit category" : "Add a category"}
+          </p>
+          <h3 className="mt-1 text-2xl font-black">
+            {editing ? `Edit ${editing.name}` : "New membership type"}
+          </h3>
+          <p className="font-[var(--font-body)] text-xs leading-5 text-white/50">
+            Define eligibility and benefits for a membership category.
+          </p>
+          <div className="mt-4 grid gap-4">
+            <PublicationInput
               label="Name"
+              placeholder="e.g. Full Member"
+              required
               value={form.name}
-              onChange={(v) => setForm({ ...form, name: v })}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
-            <DarkInput
+            <PublicationTextarea
               label="Description"
+              placeholder="Brief description of this membership category"
+              rows={3}
               value={form.description}
-              onChange={(v) => setForm({ ...form, description: v })}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
-            <DarkInput
+            <PublicationTextarea
               label="Requirements"
+              placeholder="Eligibility and requirements"
+              rows={3}
               value={form.requirements}
-              onChange={(v) => setForm({ ...form, requirements: v })}
+              onChange={(e) => setForm({ ...form, requirements: e.target.value })}
             />
           </div>
           {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
           <button
             disabled={busy}
-            className="mt-7 flex w-full items-center justify-between bg-[#8c2d3c] px-5 py-4 font-[var(--font-body)] text-sm font-bold hover:bg-[#a53b4d]"
+            className="mt-4 flex w-full items-center justify-between bg-[#8c2d3c] px-5 py-3.5 font-[var(--font-body)] text-sm font-bold text-white transition hover:bg-[#a53b4d] disabled:opacity-50"
           >
-            {busy ? "Creating…" : "Create membership type"}
+            <span>{busy ? "Saving…" : editing ? "Save changes" : "Create membership type"}</span>
             <ArrowRight className="size-4" />
           </button>
+          {editing && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={cancelEdit}
+              className="flex w-full items-center justify-center border border-white/25 px-5 py-3 font-[var(--font-body)] text-sm font-bold text-white/80 transition hover:bg-white/10 disabled:opacity-50"
+            >
+              Cancel editing
+            </button>
+          )}
         </form>
         <div className="space-y-3">
           {rows.map((row, index) => (
@@ -1744,22 +2152,31 @@ function MembershipTypesPanel({
                 <strong className="font-[var(--font-body)]">
                   {Number(row.price_amount) === 0
                     ? "Free"
-                    : `${row.currency} ${Number(row.price_amount).toLocaleString()}`}
+                    : `${row.currency ?? "ETB"} ${Number(row.price_amount).toLocaleString()}`}
                 </strong>
                 <p className="mt-2 label-mono text-emerald-700">
                   {row.is_active ? "Active" : "Inactive"}
                 </p>
-                {row.is_active && (
+                <div className="mt-3 flex items-center gap-3 sm:justify-end">
+                  <button
+                    type="button"
+                    disabled={busy || deleting === row.id}
+                    onClick={() => beginEdit(row)}
+                    className="flex items-center gap-1 font-[var(--font-body)] text-xs text-[#8c2d3c] hover:text-[#6f2230] disabled:opacity-50"
+                  >
+                    <Pencil className="size-3.5" />
+                    Edit
+                  </button>
                   <button
                     type="button"
                     disabled={deleting === row.id}
                     onClick={() => void remove(row)}
-                    className="mt-4 inline-flex items-center gap-2 border border-red-700 px-3 py-2 font-[var(--font-body)] text-sm font-bold text-red-700 transition hover:bg-red-700 hover:text-white disabled:opacity-50"
+                    className="flex items-center gap-1 font-[var(--font-body)] text-xs text-red-600 hover:text-red-800 disabled:opacity-50"
                   >
-                    <Trash2 className="size-4" />
+                    <Trash2 className="size-3.5" />
                     {deleting === row.id ? "Deleting…" : "Delete"}
                   </button>
-                )}
+                </div>
               </div>
             </article>
           ))}
@@ -2329,7 +2746,10 @@ function PublicationSelect({
   label,
   options,
   ...props
-}: { label: string; options: string[] } & React.SelectHTMLAttributes<HTMLSelectElement>) {
+}: {
+  label: string;
+  options: (string | { value: string; label: string })[];
+} & React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <label className="block">
       <span className="label-mono text-white/45">{label}</span>
@@ -2337,9 +2757,15 @@ function PublicationSelect({
         {...props}
         className="mt-2 w-full border border-white/15 bg-[#211f1d] px-3 py-2.5 font-[var(--font-body)] text-sm text-white outline-none focus:border-[#e4ab3a]"
       >
-        {options.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
+        {options.map((option) => {
+          const val = typeof option === "string" ? option : option.value;
+          const lbl = typeof option === "string" ? option : option.label;
+          return (
+            <option key={val} value={val}>
+              {lbl}
+            </option>
+          );
+        })}
       </select>
     </label>
   );

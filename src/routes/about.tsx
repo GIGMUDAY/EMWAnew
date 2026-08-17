@@ -1,6 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Check, Users, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  BadgeCheck,
+  Check,
+  MapPin,
+  Share2,
+  Users,
+  X,
+} from "lucide-react";
 import { PageShell, PageHero } from "@/components/page-shell";
 import globalImg from "@/assets/emwa-group-photo.png";
 import { useLanguage } from "@/lib/language-context";
@@ -189,8 +198,13 @@ const BOARD_MEMBERS = [
 
 type BoardMember = (typeof BOARD_MEMBERS)[number];
 
+const memberSlug = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 function BoardSection() {
-  const [selectedMember, setSelectedMember] = useState<BoardMember | null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -206,19 +220,6 @@ function BoardSection() {
   const dragStartXRef = useRef(0);
   const dragStartOffsetRef = useRef(0);
   const hasDraggedRef = useRef(false);
-
-  useEffect(() => {
-    if (!selectedMember) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedMember(null);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", closeOnEscape);
-      document.body.style.overflow = "";
-    };
-  }, [selectedMember]);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -243,7 +244,7 @@ function BoardSection() {
               offsetRef.current = targetOffsetRef.current;
               isNudgingRef.current = false;
             }
-          } else if (!isPaused && !isHovered && !selectedMember && !isDraggingRef.current) {
+          } else if (!isPaused && !isHovered && !isDraggingRef.current) {
             offsetRef.current += directionRef.current * speed * delta;
           }
 
@@ -265,7 +266,7 @@ function BoardSection() {
 
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isPaused, isHovered, selectedMember]);
+  }, [isPaused, isHovered]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
@@ -305,14 +306,19 @@ function BoardSection() {
     }
   };
 
-  return <>
+  return (
     <section className="about-board" aria-labelledby="board-heading">
       <header className="about-board-header">
         <div>
           <p className="about2-eyebrow">{t("Our leadership", "የእኛ አመራር")}</p>
           <h2 id="board-heading">{t("Meet the Board.", "የቦርድ አባላታችንን ይወቁ።")}</h2>
         </div>
-        <p>{t("EMWA's Board provides strategic direction, governance, and oversight while championing the Association's commitment to women in media. Select a portrait to learn more.", "የEMWA ቦርድ ስትራቴጂያዊ አቅጣጫን፣ አስተዳደርን እና ቁጥጥርን ይሰጣል፤ በሚዲያ ውስጥ ላሉ ሴቶች ያለውን ቁርጠኝነት ያጎላል። ተጨማሪ ለማወቅ ምስሉን ይምረጡ።")}</p>
+        <p>
+          {t(
+            "EMWA's Board provides strategic direction, governance, and oversight while championing the Association's commitment to women in media. Select a portrait to learn more.",
+            "የEMWA ቦርድ ስትራቴጂያዊ አቅጣጫን፣ አስተዳደርን እና ቁጥጥርን ይሰጣል፤ በሚዲያ ውስጥ ላሉ ሴቶች ያለውን ቁርጠኝነት ያጎላል። ተጨማሪ ለማወቅ ምስሉን ይምረጡ።",
+          )}
+        </p>
       </header>
 
       <div
@@ -331,48 +337,55 @@ function BoardSection() {
         onWheel={handleWheel}
       >
         <div className="about-board-track" ref={trackRef}>
-          {[0, 1, 2].map((group) => <div className="about-board-group" aria-hidden={group > 0} key={group}>
-            {BOARD_MEMBERS.map((member) => (
-              <article className="about-board-card" key={`${group}-${member.name}`}>
-                <button
-                  className="about-board-portrait"
-                  type="button"
-                  onClick={() => {
-                    if (!hasDraggedRef.current) {
-                      setSelectedMember(member);
-                    }
-                  }}
-                  aria-label={`Read more about ${member.name}`}
-                  tabIndex={group > 0 ? -1 : 0}
-                >
-                  <img src={member.image} alt="" loading="lazy" />
-                  <span>{t("View profile", "መገለጫ ይመልከቱ")}</span>
-                </button>
-                <div className="about-board-card-body">
-                  <p className="about-board-role">{language === "am" ? member.roleAm : member.role}</p>
-                  <h3>{language === "am" ? member.nameAm : member.name}</h3>
-                </div>
-              </article>
-            ))}
-          </div>)}
+          {[0, 1, 2].map((group) => (
+            <div className="about-board-group" aria-hidden={group > 0} key={group}>
+              {BOARD_MEMBERS.map((member) => (
+                <article className="about-board-card" key={`${group}-${member.name}`}>
+                  <a
+                    className="about-board-portrait"
+                    href={`/about?member=${encodeURIComponent(memberSlug(member.name))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      if (hasDraggedRef.current) {
+                        e.preventDefault();
+                      }
+                    }}
+                    aria-label={`Read more about ${member.name} in a new tab`}
+                    tabIndex={group > 0 ? -1 : 0}
+                  >
+                    <img src={member.image} alt="" loading="lazy" />
+                    <span>{t("View profile", "መገለጫ ይመልከቱ")}</span>
+                  </a>
+                  <div className="about-board-card-body">
+                    <p className="about-board-role">
+                      {language === "am" ? member.roleAm : member.role}
+                    </p>
+                    <h3>
+                      <a
+                        href={`/about?member=${encodeURIComponent(memberSlug(member.name))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          if (hasDraggedRef.current) {
+                            e.preventDefault();
+                          }
+                        }}
+                        tabIndex={group > 0 ? -1 : 0}
+                        style={{ color: "inherit", textDecoration: "none" }}
+                      >
+                        {language === "am" ? member.nameAm : member.name}
+                      </a>
+                    </h3>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </section>
-
-    {selectedMember && <div className="about-board-modal-backdrop" role="presentation" onMouseDown={(event) => {
-      if (event.target === event.currentTarget) setSelectedMember(null);
-    }}>
-      <div className="about-board-modal" role="dialog" aria-modal="true" aria-labelledby="board-modal-name" aria-describedby="board-modal-bio">
-        <button className="about-board-modal-close" type="button" onClick={() => setSelectedMember(null)} aria-label="Close profile"><X /></button>
-        <img src={selectedMember.image} alt="" />
-        <div className="about-board-modal-copy">
-          <p className="about-board-role">{language === "am" ? selectedMember.roleAm : selectedMember.role}</p>
-          <h2 id="board-modal-name">{language === "am" ? selectedMember.nameAm : selectedMember.name}</h2>
-          <p id="board-modal-bio">{language === "am" && selectedMember.bioAm ? selectedMember.bioAm : selectedMember.bio}</p>
-        </div>
-      </div>
-    </div>}
-  </>;
+  );
 }
 
 function ValueStory({ value, index }: { value: { en: string[]; am: string[] }; index: number }) {
@@ -404,108 +417,363 @@ function ValueStory({ value, index }: { value: { en: string[]; am: string[] }; i
 
 function About() {
   const { t, language } = useLanguage();
+  const [selectedMember, setSelectedMember] = useState<BoardMember | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
-  return <PageShell>
-    <PageHero
-      eyebrow={t("About the Association / Since 1998", "ስለ ማህበሩ / ከ1998 ጀምሮ")}
-      title={<>{t("Women shaping media.", "ሴቶች ሚዲያን ይቀርጻሉ።")}<br /><span className="text-primary">{t("Media shaping equality.", "ሚዲያ እኩልነትን ይገነባል።")}</span></>}
-      lede={t(
-        "The Ethiopian Media Women Association is a membership organization advancing gender equality, professional excellence, and inclusive practices across Ethiopia's media sector.",
-        "የኢትዮጵያ ሚዲያ ሴቶች ማህበር በኢትዮጵያ የሚዲያ ዘርፍ የፆታ እኩልነትን፣ የሙያ ልቀትንና አካታች አሠራሮችን የሚያራምድ የአባልነት ማህበር ነው።",
-      )}
-    />
+  const selectMember = (member: BoardMember | null, replace = false) => {
+    setSelectedMember(member);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (member) {
+      url.searchParams.set("member", memberSlug(member.name));
+      if (replace) {
+        window.history.replaceState({}, "", url.toString());
+      } else {
+        window.history.pushState({}, "", url.toString());
+      }
+    } else {
+      url.searchParams.delete("member");
+      url.searchParams.delete("board");
+      const cleanUrl = url.pathname + (url.search ? url.search : "");
+      if (replace) {
+        window.history.replaceState({}, "", cleanUrl);
+      } else {
+        window.history.pushState({}, "", cleanUrl);
+      }
+    }
+  };
 
-    <section className="about2-intro">
-      <div className="about2-image"><img src={globalImg} alt="Women media professionals working together" loading="eager" /><span>{t("Established / 1998", "ተመሠረተ / 1998 ዓ.ም")}</span></div>
-      <div className="about2-story">
-        <p className="about2-eyebrow">{t("Who we are", "እኛ ማን ነን")}</p>
-        <h2>{t("Built by women journalists.", "በሴት ጋዜጠኞች የተገነባ።")}<br />{t("Driven by lasting change.", "በዘላቂ ለውጥ የሚመራ።")}</h2>
-        <p>{t(
-          "The Ethiopian Media Women Association (EMWA), established in 1998, is a membership organization with members across all regions of Ethiopia. Guided by its bylaw, EMWA offers full membership to women media practitioners, while also welcoming associate members—individuals interested in media as well as male practitioners—who share our vision of advancing gender equality in the sector.",
-          "በ1998 የተመሠረተው የኢትዮጵያ ሚዲያ ሴቶች ማህበር (EMWA) በሁሉም የኢትዮጵያ ክልሎች አባላት ያሉት የአባልነት ድርጅት ነው። በመተዳደሪያ ደንቡ መሠረት ለሴት የሚዲያ ባለሙያዎች ሙሉ አባልነት ይሰጣል፤ በሚዲያ ፍላጎት ያላቸውን ግለሰቦችና ወንድ ባለሙያዎችንም በተባባሪ አባልነት ይቀበላል።",
-        )}</p>
-        <p>{t(
-          "EMWA's strategic priorities are anchored in capacity building, evidence-based research and advocacy, strategic partnerships, and resource mobilization. Through these pillars, we empower women media practitioners, support media institutions in creating enabling workplaces, and promote inclusive practices that reflect the full diversity of Ethiopian society.",
-          "የEMWA ስትራቴጂያዊ ቅድሚያዎች የአቅም ግንባታ፣ በማስረጃ የተመሠረተ ጥናትና ቅስቀሳ፣ ስትራቴጂያዊ አጋርነት እና የሀብት ማሰባሰብ ናቸው። በእነዚህ ምሰሶዎች ሴት የሚዲያ ባለሙያዎችን እናበረታታለን፣ የሚዲያ ተቋማት ምቹ የሥራ ቦታዎችን እንዲፈጥሩ እንደግፋለን።",
-        )}</p>
-        <p>{t(
-          "EMWA is working to position itself as a hub at the nexus of gender and media, serving as a platform for knowledge, collaboration, and transformation. By advancing professional excellence and advocating for women's rights, we aim to build a vibrant, equitable, and gender-responsive media landscape in Ethiopia.",
-          "EMWA በፆታና በሚዲያ መገናኛ ላይ የእውቀት፣ የትብብርና የለውጥ ማዕከል ለመሆን እየሠራ ነው። የሙያ ልቀትን በማሳደግና ለሴቶች መብት በመሟገት በኢትዮጵያ ንቁ፣ ፍትሐዊና ለፆታ ምላሽ ሰጪ የሚዲያ ምህዳር ለመገንባት እንጥራለን።",
-        )}</p>
-        <p>{t(
-          "Our work is guided by a commitment to innovation, accountability, and inclusivity—empowering women media practitioners, amplifying their voices, and advancing a gender-responsive media sector that reflects Ethiopia's diverse society.",
-          "ሥራችን በፈጠራ፣ በተጠያቂነትና በአካታችነት ቁርጠኝነት ይመራል፤ ሴት የሚዲያ ባለሙያዎችን እናበረታታለን፣ ድምፃቸውን እናጎላለን፣ የኢትዮጵያን ብዝሃነት የሚያንጸባርቅ ለፆታ ምላሽ ሰጪ የሚዲያ ዘርፍ እናራምዳለን።",
-        )}</p>
-        <blockquote><span>{t("Our motto", "መottoችን")}</span>“{t("Empowering Women in and Through the Media!", "በሚዲያ ውስጥ እና በሚዲያ አማካይነት ሴቶችን ማብቃት!")}”</blockquote>
-      </div>
-    </section>
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const target = params.get("member") || params.get("board");
+    if (target) {
+      const match = BOARD_MEMBERS.find(
+        (m) =>
+          memberSlug(m.name) === target.toLowerCase() ||
+          m.name.toLowerCase() === decodeURIComponent(target).toLowerCase() ||
+          (m.nameAm && m.nameAm === decodeURIComponent(target)),
+      );
+      if (match) {
+        setSelectedMember(match);
+      }
+    }
+  }, []);
 
-    <section className="about-vmr-section">
-      <div className="about-vmr-container"><div className="about-vmr-grid">
-        <article className="about-vmr-card"><p className="about-vmr-badge">{t("Vision", "ራዕይ")}</p><h2 className="about-vmr-heading">{t("A secure, inclusive and vibrant media sector.", "ደህንነቱ የተጠበቀ፣ አካታች እና ንቁ የሚዲያ ዘርፍ።")}</h2><p className="about-vmr-body">{t("To see a vibrant media profession and media sector that is secure, inclusive, and conducive for women media professionals.", "ደህንነቱ የተጠበቀ፣ አካታች እና ለሴት የሚዲያ ባለሙያዎች ምቹ የሆነ ንቁ የሚዲያ ሙያ እና ዘርፍ ማየት።")}</p></article>
-        <article className="about-vmr-card"><p className="about-vmr-badge">{t("Mission", "ተልዕኮ")}</p><h2 className="about-vmr-heading">{t("Capacity. Equality. Positive change.", "አቅም፤ እኩልነት፤ አዎንታዊ ለውጥ።")}</h2><p className="about-vmr-body">{t("To empower women media professionals through continuous capacity building, advocacy for gender equality and equity, and positive change that advances ethical, safe, and professional media development.", "በተ निरंतर የአቅም ግንባታ፣ ለፆታ እኩልነት ተሟጋችነት እና ሥነ-ምግባራዊ፣ ደህንነቱ የተጠበቀ እና ሙያዊ የሚዲያ ልማት አዎንታዊ ለውጥ በማምጣት ሴት የሚዲያ ባለሙያዎችን ማብቃት።")}</p></article>
-        <article className="about-vmr-card about-vmr-card--statement"><p className="about-vmr-badge">{t("Our mandate", "የእኛ ተልዕኮ")}</p><h2 className="about-vmr-heading">{t("In media and through media.", "በሚዲያ ውስጥ እና በሚዲያ አማካይነት።")}</h2><p className="about-vmr-body">{t("We connect professional empowerment with the wider transformation of how women are represented, heard, protected, and supported across the media sector.", "የሙያ ማብቃትን ሴቶች በሚዲያ ዘርፍ የሚወከሉበት፣ የሚሰሙበት፣ የሚጠበቁበት እና የሚደገፉበት ሰፊ ለውጥ ጋር እናገናኛለን።")}</p></article>
-      </div></div>
-    </section>
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const target = params.get("member") || params.get("board");
+      if (target) {
+        const match = BOARD_MEMBERS.find(
+          (m) =>
+            memberSlug(m.name) === target.toLowerCase() ||
+            m.name.toLowerCase() === decodeURIComponent(target).toLowerCase() ||
+            (m.nameAm && m.nameAm === decodeURIComponent(target)),
+        );
+        setSelectedMember(match || null);
+      } else {
+        setSelectedMember(null);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
-    <section className="about-values-section" aria-labelledby="values-heading"><div className="about-values-container">
-      <header className="about-values-header"><div><p className="about-values-eyebrow">{t("Core values", "መሰረታዊ እሴቶች")}</p><h2 className="about-values-title" id="values-heading">{t("Principles that guide", "ሥራችንን የሚመሩ")} <span>{t("the work.", "መሰረታዊ መبادዎች።")}</span></h2></div><p className="about-values-intro">{t("Five commitments shape how EMWA governs, collaborates, advocates, and serves its community.", "አምስት ቁርጠኝነቶች EMWA የሚያስተዳድርበትን፣ የሚያበራውን፣ የሚሟገትበትን እና ማህበረሰቡን የሚያገለግልበትን መንገድ ይቀርፃሉ።")}</p></header>
-      <div className="about-values-manifesto">{VALUES.map((value, index) => <ValueStory value={value} index={index} key={value.en[0]} />)}</div>
-    </div></section>
+  useEffect(() => {
+    if (selectedMember) {
+      document.title = `${language === "am" ? selectedMember.nameAm : selectedMember.name} — EMWA Board of Directors`;
+    } else {
+      document.title = "About EMWA — Ethiopian Media Women Association";
+    }
+  }, [selectedMember, language]);
 
-    <section className="about2-work">
-      <header>
-        <p className="about2-eyebrow">{t("What we do", "ምን እንሰራለን")}</p>
-        <h2>{t("Turning commitment", "ቁርጠኝነትን ወደ")} <br />{t("into sector-wide action.", "ዘርፍ አቀፍ ተግባር መለወጥ።")}</h2>
-        <p>{t("EMWA works across professional development, evidence, advocacy, safety, leadership, and collective action.", "EMWA በሙያ ማበልጸግ፣ በማስረጃ፣ በተሟጋችነት፣ በደህንነት፣ በአመራርነት እና በጋራ እንቅስቃሴ ላይ ይሰራል።")}</p>
-      </header>
-      <div className="about2-work-list">
-        {WORK.map((item, index) => (
-          <article key={item.en}>
-            <span>{String(index + 1).padStart(2, "0")}</span>
-            <p>{language === "am" ? item.am : item.en}</p>
-            <Check aria-hidden="true" />
-          </article>
-        ))}
-      </div>
-    </section>
+  const copyMemberLink = async (member: BoardMember) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set("member", memberSlug(member.name));
+    try {
+      await navigator.clipboard.writeText(url.toString());
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    } catch {
+      const input = document.createElement("input");
+      input.value = url.toString();
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
-    <section className="about2-services">
-      <div className="about2-services-intro">
-        <p className="about2-eyebrow">{t("Our services", "አገልግሎቶቻችን")}</p>
-        <h2>{t("Practical support for a stronger profession.", "ለተጠናከረ ሙያ ተግባራዊ ድጋፍ።")}</h2>
-        <p>{t("Programs and services designed to build knowledge, capability, connection, and influence.", "እውቀትን፣ ብቃትን፣ ትስስርን እና ተፅዕኖን ለመገንባት የተነደፉ ፕሮግራሞች እና አገልግሎቶች።")}</p>
-        <Link to="/programs">{t("Explore our programs", "ፕሮግራሞቻችንን ይመልከቱ")} <ArrowUpRight /></Link>
-      </div>
-      <div className="about2-tag-cloud">
-        {SERVICES.map((item) => (
-          <span key={item.en}>{language === "am" ? item.am : item.en}</span>
-        ))}
-      </div>
-    </section>
+  if (selectedMember) {
+    const otherMembers = BOARD_MEMBERS.filter((m) => m.name !== selectedMember.name);
+    return (
+      <PageShell>
+        <div className="expert-detail-container">
+          <div className="expert-detail-top-nav">
+            <button
+              type="button"
+              className="expert-detail-back"
+              onClick={() => {
+                selectMember(null);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              <ArrowLeft />
+              <span>{t("Back to About EMWA", "ወደ ስለ ማህበሩ ተመለስ")}</span>
+            </button>
 
-    <BoardSection />
+            <div className="expert-detail-actions">
+              <button
+                type="button"
+                className={`expert-detail-action-btn${copiedLink ? " is-active" : ""}`}
+                onClick={() => void copyMemberLink(selectedMember)}
+                aria-label={copiedLink ? t("Link copied!", "ሊንኩ ተገልብጧል!") : t("Copy profile link", "የመገለጫ ሊንክ ቅዳ")}
+                title={copiedLink ? t("Link copied to clipboard!", "ሊንኩ ተገልብጧል!") : t("Copy profile link to share", "ሊንክ ገልብጥና አጋራ")}
+              >
+                {copiedLink ? <Check /> : <Share2 />}
+                <span>{copiedLink ? t("Link copied!", "ተገልብጧል!") : t("Share profile", "መገለጫ አጋራ")}</span>
+              </button>
+            </div>
+          </div>
 
-    <section className="about2-community">
-      <div>
-        <p className="about2-eyebrow">{t("Who we serve", "ማንን እንሰራለን")}</p>
-        <h2>{t("Our beneficiaries.", "ተጠቃሚዎቻችን።")}</h2>
-        <div className="about2-people-grid">
-          {BENEFICIARIES.map((item) => (
-            <span key={item.en}><Users />{language === "am" ? item.am : item.en}</span>
+          <div className="expert-detail-grid">
+            <aside className="expert-detail-sidebar">
+              <div className="expert-detail-media">
+                <div className="expert-detail-photo">
+                  <img
+                    src={selectedMember.image}
+                    alt={language === "am" ? selectedMember.nameAm : selectedMember.name}
+                    className="size-full object-cover object-top"
+                  />
+                </div>
+              </div>
+            </aside>
+
+            <main className="expert-detail-main">
+              <p className="expert-detail-eyebrow">
+                <BadgeCheck /> {t("EMWA Executive Board Member", "የEMWA ሥራ አስፈጻሚ ቦርድ አባል")}
+              </p>
+              <h1 className="expert-detail-title">{language === "am" ? selectedMember.nameAm : selectedMember.name}</h1>
+              <p className="expert-detail-field">{language === "am" ? selectedMember.roleAm : selectedMember.role}</p>
+              <p className="expert-detail-region">
+                <MapPin /> {t("Addis Ababa, Ethiopia", "አዲስ አበባ፣ ኢትዮጵያ")}
+              </p>
+              <div className="expert-detail-rule" />
+
+              <h2 className="expert-detail-section-title">{t("Leadership Biography", "የአመራር ታሪክ")}</h2>
+              <p className="expert-detail-bio">
+                {language === "am" && selectedMember.bioAm ? selectedMember.bioAm : selectedMember.bio}
+              </p>
+
+              <h2 className="expert-detail-section-title">{t("Strategic Focus & Oversight", "ስትራቴጂያዊ ትኩረት እና ቁጥጥር")}</h2>
+              <div className="expert-detail-tags">
+                <span>{language === "am" ? selectedMember.roleAm : selectedMember.role}</span>
+                <span>{t("Strategic Governance", "ስትራቴጂያዊ አስተዳደር")}</span>
+                <span>{t("Media & Advocacy Leadership", "የሚዲያና የተሟጋችነት አመራር")}</span>
+                <span>{t("Gender Equality Champion", "የፆታ እኩልነት ተሟጋች")}</span>
+                <span>{t("Institutional Oversight", "ተቋማዊ ቁጥጥር")}</span>
+              </div>
+            </main>
+          </div>
+
+          {otherMembers.length > 0 && (
+            <section className="expert-detail-related">
+              <div className="expert-detail-related-header">
+                <div>
+                  <p className="experts-eyebrow">{t("Executive Leadership", "የሥራ አስፈጻሚ አመራር")}</p>
+                  <h2>{t("Explore Other Board Members", "ሌሎች የቦርድ አባላትን ይመልከቱ")}</h2>
+                </div>
+                <button
+                  type="button"
+                  className="expert-detail-back"
+                  onClick={() => {
+                    selectMember(null);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                >
+                  {t("View All Leadership", "ሁሉንም አመራሮች ይመልከቱ")} <ArrowUpRight aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="expert-detail-related-grid">
+                {otherMembers.map((member) => (
+                  <article className="expert-card" key={member.name}>
+                    <button
+                      type="button"
+                      className="expert-card-image"
+                      onClick={() => {
+                        selectMember(member);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      aria-label={`View ${member.name}'s profile`}
+                    >
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        loading="lazy"
+                        className="absolute inset-0 size-full object-cover object-top"
+                      />
+                      <span className="expert-card-category">{language === "am" ? member.roleAm : member.role}</span>
+                      <span className="expert-card-open">
+                        <ArrowUpRight aria-hidden="true" />
+                      </span>
+                    </button>
+                    <div className="expert-card-copy">
+                      <p className="expert-card-verified">
+                        <BadgeCheck aria-hidden="true" /> {t("EMWA Board", "የEMWA ቦርድ")}
+                      </p>
+                      <h3>{language === "am" ? member.nameAm : member.name}</h3>
+                      <p className="expert-card-field">{language === "am" ? member.roleAm : member.role}</p>
+                      <p className="expert-card-region">
+                        <MapPin aria-hidden="true" /> {t("Addis Ababa, Ethiopia", "አዲስ አበባ፣ ኢትዮጵያ")}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectMember(member);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        {t("View profile", "መገለጫ ይመልከቱ")} <ArrowUpRight aria-hidden="true" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="expert-detail-cta-banner">
+            <div>
+              <p className="experts-eyebrow">{t("Governance & Association Leadership", "አስተዳደር እና የማህበሩ አመራር")}</p>
+              <h3>{t("Engage with Ethiopian Media Women Association", "ከኢትዮጵያ ሚዲያ ሴቶች ማህበር ጋር ይገናኙ")}</h3>
+              <p>{t("EMWA's Board provides strategic direction, governance, and oversight while championing the Association's commitment to women in media.", "የEMWA ቦርድ ስትራቴጂያዊ አቅጣጫን፣ አስተዳደርን እና ቁጥጥርን ይሰጣል፤ በሚዲያ ውስጥ ላሉ ሴቶች ያለውን ቁርጠኝነት ያጎላል።")}</p>
+            </div>
+            <button
+              type="button"
+              className="expert-detail-cta-btn"
+              onClick={() => {
+                selectMember(null);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              <span>{t("Explore Association Overview", "ስለ ማህበሩ ሙሉ መረጃ ይመልከቱ")}</span>
+              <ArrowUpRight />
+            </button>
+          </section>
+        </div>
+      </PageShell>
+    );
+  }
+
+  return (
+    <PageShell>
+      <PageHero
+        eyebrow={t("About the Association / Since 1998", "ስለ ማህበሩ / ከ1998 ጀምሮ")}
+        title={<>{t("Women shaping media.", "ሴቶች ሚዲያን ይቀርጻሉ።")}<br /><span className="text-primary">{t("Media shaping equality.", "ሚዲያ እኩልነትን ይገነባል።")}</span></>}
+        lede={t(
+          "The Ethiopian Media Women Association is a membership organization advancing gender equality, professional excellence, and inclusive practices across Ethiopia's media sector.",
+          "የኢትዮጵያ ሚዲያ ሴቶች ማህበር በኢትዮጵያ የሚዲያ ዘርፍ የፆታ እኩልነትን፣ የሙያ ልቀትንና አካታች አሠራሮችን የሚያራምድ የአባልነት ማህበር ነው።",
+        )}
+      />
+
+      <section className="about2-intro">
+        <div className="about2-image"><img src={globalImg} alt="Women media professionals working together" loading="eager" /><span>{t("Established / 1998", "ተመሠረተ / 1998 ዓ.ም")}</span></div>
+        <div className="about2-story">
+          <p className="about2-eyebrow">{t("Who we are", "እኛ ማን ነን")}</p>
+          <h2>{t("Built by women journalists.", "በሴት ጋዜጠኞች የተገነባ።")}<br />{t("Driven by lasting change.", "በዘላቂ ለውጥ የሚመራ።")}</h2>
+          <p>{t(
+            "The Ethiopian Media Women Association (EMWA), established in 1998, is a membership organization with members across all regions of Ethiopia. Guided by its bylaw, EMWA offers full membership to women media practitioners, while also welcoming associate members—individuals interested in media as well as male practitioners—who share our vision of advancing gender equality in the sector.",
+            "በ1998 የተመሠረተው የኢትዮጵያ ሚዲያ ሴቶች ማህበር (EMWA) በሁሉም የኢትዮጵያ ክልሎች አባላት ያሉት የአባልነት ድርጅት ነው። በመተዳደሪያ ደንቡ መሠረት ለሴት የሚዲያ ባለሙያዎች ሙሉ አባልነት ይሰጣል፤ በሚዲያ ፍላጎት ያላቸውን ግለሰቦችና ወንድ ባለሙያዎችንም በተባባሪ አባልነት ይቀበላል።",
+          )}</p>
+          <p>{t(
+            "EMWA's strategic priorities are anchored in capacity building, evidence-based research and advocacy, strategic partnerships, and resource mobilization. Through these pillars, we empower women media practitioners, support media institutions in creating enabling workplaces, and promote inclusive practices that reflect the full diversity of Ethiopian society.",
+            "የEMWA ስትራቴጂያዊ ቅድሚያዎች የአቅም ግንባታ፣ በማስረጃ የተመሠረተ ጥናትና ቅስቀሳ፣ ስትራቴጂያዊ አጋርነት እና የሀብት ማሰባሰብ ናቸው። በእነዚህ ምሰሶዎች ሴት የሚዲያ ባለሙያዎችን እናበረታታለን፣ የሚዲያ ተቋማት ምቹ የሥራ ቦታዎችን እንዲፈጥሩ እንደግፋለን።",
+          )}</p>
+          <p>{t(
+            "EMWA is working to position itself as a hub at the nexus of gender and media, serving as a platform for knowledge, collaboration, and transformation. By advancing professional excellence and advocating for women's rights, we aim to build a vibrant, equitable, and gender-responsive media landscape in Ethiopia.",
+            "EMWA በፆታና በሚዲያ መገናኛ ላይ የእውቀት፣ የትብብርና የለውጥ ማዕከል ለመሆን እየሠራ ነው። የሙያ ልቀትን በማሳደግና ለሴቶች መብት በመሟገት በኢትዮጵያ ንቁ፣ ፍትሐዊና ለፆታ ምላሽ ሰጪ የሚዲያ ምህዳር ለመገንባት እንጥራለን።",
+          )}</p>
+          <p>{t(
+            "Our work is guided by a commitment to innovation, accountability, and inclusivity—empowering women media practitioners, amplifying their voices, and advancing a gender-responsive media sector that reflects Ethiopia's diverse society.",
+            "ሥራችን በፈጠራ፣ በተጠያቂነትና በአካታችነት ቁርጠኝነት ይመራል፤ ሴት የሚዲያ ባለሙያዎችን እናበረታታለን፣ ድምፃቸውን እናጎላለን፣ የኢትዮጵያን ብዝሃነት የሚያንጸባርቅ ለፆታ ምላሽ ሰጪ የሚዲያ ዘርፍ እናራምዳለን።",
+          )}</p>
+          <blockquote><span>{t("Our motto", "መottoችን")}</span>“{t("Empowering Women in and Through the Media!", "በሚዲያ ውስጥ እና በሚዲያ አማካይነት ሴቶችን ማብቃት!")}”</blockquote>
+        </div>
+      </section>
+
+      <section className="about-vmr-section">
+        <div className="about-vmr-container"><div className="about-vmr-grid">
+          <article className="about-vmr-card"><p className="about-vmr-badge">{t("Vision", "ራዕይ")}</p><h2 className="about-vmr-heading">{t("A secure, inclusive and vibrant media sector.", "ደህንነቱ የተጠበቀ፣ አካታች እና ንቁ የሚዲያ ዘርፍ።")}</h2><p className="about-vmr-body">{t("To see a vibrant media profession and media sector that is secure, inclusive, and conducive for women media professionals.", "ደህንነቱ የተጠበቀ፣ አካታች እና ለሴት የሚዲያ ባለሙያዎች ምቹ የሆነ ንቁ የሚዲያ ሙያ እና ዘርፍ ማየት።")}</p></article>
+          <article className="about-vmr-card"><p className="about-vmr-badge">{t("Mission", "ተልዕኮ")}</p><h2 className="about-vmr-heading">{t("Capacity. Equality. Positive change.", "አቅም፤ እኩልነት፤ አዎንታዊ ለውጥ።")}</h2><p className="about-vmr-body">{t("To empower women media professionals through continuous capacity building, advocacy for gender equality and equity, and positive change that advances ethical, safe, and professional media development.", "በተ निरंतर የአቅም ግንባታ፣ ለፆታ እኩልነት ተሟጋችነት እና ሥነ-ምግባራዊ፣ ደህንነቱ የተጠበቀ እና ሙያዊ የሚዲያ ልማት አዎንታዊ ለውጥ በማምጣት ሴት የሚዲያ ባለሙያዎችን ማብቃት።")}</p></article>
+          <article className="about-vmr-card about-vmr-card--statement"><p className="about-vmr-badge">{t("Our mandate", "የእኛ ተልዕኮ")}</p><h2 className="about-vmr-heading">{t("In media and through media.", "በሚዲያ ውስጥ እና በሚዲያ አማካይነት።")}</h2><p className="about-vmr-body">{t("We connect professional empowerment with the wider transformation of how women are represented, heard, protected, and supported across the media sector.", "የሙያ ማብቃትን ሴቶች በሚዲያ ዘርፍ የሚወከሉበት፣ የሚሰሙበት፣ የሚጠበቁበት እና የሚደገፉበት ሰፊ ለውጥ ጋር እናገናኛለን።")}</p></article>
+        </div></div>
+      </section>
+
+      <section className="about-values-section" aria-labelledby="values-heading"><div className="about-values-container">
+        <header className="about-values-header"><div><p className="about-values-eyebrow">{t("Core values", "መሰረታዊ እሴቶች")}</p><h2 className="about-values-title" id="values-heading">{t("Principles that guide", "ሥራችንን የሚመሩ")} <span>{t("the work.", "መሰረታዊ መبادዎች።")}</span></h2></div><p className="about-values-intro">{t("Five commitments shape how EMWA governs, collaborates, advocates, and serves its community.", "አምስት ቁርጠኝነቶች EMWA የሚያስተዳድርበትን፣ የሚያበራውን፣ የሚሟገትበትን እና ማህበረሰቡን የሚያገለግልበትን መንገድ ይቀርፃሉ።")}</p></header>
+        <div className="about-values-manifesto">{VALUES.map((value, index) => <ValueStory value={value} index={index} key={value.en[0]} />)}</div>
+      </div></section>
+
+      <section className="about2-work">
+        <header>
+          <p className="about2-eyebrow">{t("What we do", "ምን እንሰራለን")}</p>
+          <h2>{t("Turning commitment", "ቁርጠኝነትን ወደ")} <br />{t("into sector-wide action.", "ዘርፍ አቀፍ ተግባር መለወጥ።")}</h2>
+          <p>{t("EMWA works across professional development, evidence, advocacy, safety, leadership, and collective action.", "EMWA በሙያ ማበልጸግ፣ በማስረጃ፣ በተሟጋችነት፣ በደህንነት፣ በአመራርነት እና በጋራ እንቅስቃሴ ላይ ይሰራል።")}</p>
+        </header>
+        <div className="about2-work-list">
+          {WORK.map((item, index) => (
+            <article key={item.en}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <p>{language === "am" ? item.am : item.en}</p>
+              <Check aria-hidden="true" />
+            </article>
           ))}
         </div>
-      </div>
-      <aside>
-        <p className="about2-eyebrow">{t("Key stakeholders", "ዋና ዋና ባለድርሻ አካላት")}</p>
-        <h2>{t("Accountability starts with relationship.", "ተጠያቂነት ከግንኙነት ይጀምራል።")}</h2>
-        <ul>
-          {STAKEHOLDERS.map((item) => (
-            <li key={item.en}>{language === "am" ? item.am : item.en}</li>
-          ))}
-        </ul>
-      </aside>
-    </section>
+      </section>
 
-  </PageShell>;
+      <section className="about2-services">
+        <div className="about2-services-intro">
+          <p className="about2-eyebrow">{t("Our services", "አገልግሎቶቻችን")}</p>
+          <h2>{t("Practical support for a stronger profession.", "ለተጠናከረ ሙያ ተግባራዊ ድጋፍ።")}</h2>
+          <p>{t("Programs and services designed to build knowledge, capability, connection, and influence.", "እውቀትን፣ ብቃትን፣ ትስስርን እና ተፅዕኖን ለመገንባት የተነደፉ ፕሮግራሞች እና አገልግሎቶች።")}</p>
+          <Link to="/programs">{t("Explore our programs", "ፕሮግራሞቻችንን ይመልከቱ")} <ArrowUpRight /></Link>
+        </div>
+        <div className="about2-tag-cloud">
+          {SERVICES.map((item) => (
+            <span key={item.en}>{language === "am" ? item.am : item.en}</span>
+          ))}
+        </div>
+      </section>
+
+      <BoardSection />
+
+      <section className="about2-community">
+        <div>
+          <p className="about2-eyebrow">{t("Who we serve", "ማንን እንሰራለን")}</p>
+          <h2>{t("Our beneficiaries.", "ተጠቃሚዎቻችን።")}</h2>
+          <div className="about2-people-grid">
+            {BENEFICIARIES.map((item) => (
+              <span key={item.en}><Users />{language === "am" ? item.am : item.en}</span>
+            ))}
+          </div>
+        </div>
+        <aside>
+          <p className="about2-eyebrow">{t("Key stakeholders", "ዋና ዋና ባለድርሻ አካላት")}</p>
+          <h2>{t("Accountability starts with relationship.", "ተጠያቂነት ከግንኙነት ይጀምራል።")}</h2>
+          <ul>
+            {STAKEHOLDERS.map((item) => (
+              <li key={item.en}>{language === "am" ? item.am : item.en}</li>
+            ))}
+          </ul>
+        </aside>
+      </section>
+
+    </PageShell>
+  );
 }

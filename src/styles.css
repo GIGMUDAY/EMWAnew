@@ -14373,71 +14373,123 @@ html[data-language="am"] .language-switcher {
 }
 
 .membership-phone-field {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: flex-end;
+  display: block;
+  width: 100%;
 }
 
-.membership-country-select-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
+.membership-phone-field input {
+  width: 100%;
   padding-bottom: 0.7rem;
   border-bottom: 1px solid #9f9a90;
-  cursor: pointer;
+  background: transparent;
+  font-family: inherit;
+  font-size: 1rem;
+  color: inherit;
 }
 
-.membership-country-flag {
-  display: inline-flex;
-  align-items: center;
-  font-size: 1.3rem;
-  line-height: 1;
-}
-
-.membership-country-arrow {
-  width: 0.85rem;
-  height: 0.85rem;
-  color: currentColor;
-  opacity: 0.6;
-  flex-shrink: 0;
-}
-
-.membership-country-select-wrapper select {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.membership-country-select-wrapper select option {
-  color: #211d1a;
-  background: #ffffff;
-}
-
-.dark .membership-country-select-wrapper select option {
-  color: #f9f7f2;
-  background: #24211e;
-}
-
-.dark .membership-country-select-wrapper {
+.dark .membership-phone-field input {
   border-bottom-color: #68645d;
 }
 
-@media (max-width: 620px) {
-  .membership-phone-field {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.6rem;
-  }
+.membership-additional-phones-wrap {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: -0.25rem;
+  padding: 0.25rem 0 0.5rem;
+}
 
-  .membership-phone-field input {
-    grid-column: auto;
+.membership-additional-phone-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: flex-end;
+  padding: 0.65rem 0.85rem;
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+}
+
+.dark .membership-additional-phone-row {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.membership-phone-type-select-wrap label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: inherit;
+}
+
+.membership-phone-type-select-wrap select {
+  width: 100%;
+  padding: 0.5rem 0.45rem;
+  font-size: 0.84rem;
+  font-family: inherit;
+  border: 1px solid #9f9a90;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+}
+
+@media (max-width: 768px) {
+  .membership-additional-phone-row {
+    grid-template-columns: 1fr auto;
   }
+  .membership-additional-phone-row > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+.membership-add-phone-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.2rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--color-primary, #8c2d3c);
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: fit-content;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.membership-add-phone-btn:hover {
+  opacity: 0.8;
+  transform: translateX(1px);
+}
+
+.membership-add-phone-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.membership-remove-phone-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: #888;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.membership-remove-phone-btn:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .membership-tier-options {
@@ -14486,6 +14538,78 @@ html[data-language="am"] .language-switcher {
   font-size: 7px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.membership-payment-proof {
+  margin-top: 1.25rem;
+  display: grid;
+  gap: 1rem;
+  border: 1px solid rgba(140, 45, 60, 0.24);
+  border-left: 4px solid #8c2d3c;
+  background: rgba(140, 45, 60, 0.055);
+  padding: 1.1rem;
+}
+
+.membership-payment-proof > div:first-child strong {
+  color: #8c2d3c;
+}
+
+.membership-payment-proof > div:first-child p {
+  margin-top: 0.45rem;
+  line-height: 1.65;
+}
+
+.membership-payment-upload {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.membership-payment-upload input {
+  width: 100%;
+  border: 1px dashed rgba(0, 0, 0, 0.25);
+  background: #fff;
+  padding: 0.9rem;
+}
+
+.membership-payment-upload small {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.membership-payment-preview {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+  padding: 0.65rem;
+}
+
+.membership-payment-preview img {
+  width: 72px;
+  height: 58px;
+  object-fit: cover;
+}
+
+.membership-payment-preview span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.membership-payment-preview button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #b42318;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.membership-payment-preview button svg {
+  width: 0.9rem;
 }
 
 .membership-review {

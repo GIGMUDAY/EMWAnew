@@ -720,13 +720,18 @@ function Experts() {
             <button onClick={() => setRegisterOpen(true)}>{t("Submit your profile", "መገለጫዎን ያስገቡ")}</button>
           </div>
         </div>
-        <a
+        <button
+          type="button"
           className="experts-hero-portrait"
-          href={featuredExpert ? `/experts?id=${encodeURIComponent(featuredExpert.id ?? featuredExpert.n)}` : undefined}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ cursor: featuredExpert ? "pointer" : undefined, textDecoration: "none" }}
-          aria-label={featuredExpert ? `View ${featuredExpert.n}'s profile in new tab` : undefined}
+          onClick={() => {
+            if (featuredExpert) {
+              selectExpert(featuredExpert);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+          }}
+          disabled={!featuredExpert}
+          style={{ cursor: featuredExpert ? "pointer" : "default", textAlign: "left", background: "none", border: "none", padding: 0 }}
+          aria-label={featuredExpert ? `View ${featuredExpert.n}'s profile` : undefined}
         >
           <span className="grid size-full place-items-center bg-muted font-display text-9xl text-primary/35">
             {featuredExpert
@@ -751,7 +756,7 @@ function Experts() {
           <span className="experts-hero-index" aria-hidden="true">
             E/01
           </span>
-        </a>
+        </button>
       </section>
 
       <section
@@ -847,9 +852,14 @@ function Experts() {
                   <a
                     className="expert-card-image"
                     href={`/experts?id=${encodeURIComponent(expert.id ?? expert.n)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`View ${expert.n}'s profile in new tab`}
+                    onClick={(e) => {
+                      if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) {
+                        e.preventDefault();
+                        selectExpert(expert);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    aria-label={`View ${expert.n}'s profile`}
                   >
                     <span className="grid size-full place-items-center bg-muted font-display text-7xl text-primary/35">
                       {expert.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
@@ -877,13 +887,15 @@ function Experts() {
                     <p className="expert-card-region">
                       <MapPin aria-hidden="true" /> {expert.r}
                     </p>
-                    <a
-                      href={`/experts?id=${encodeURIComponent(expert.id ?? expert.n)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        selectExpert(expert);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
                     >
                       {t("View expertise", "ሙያን ይመልከቱ")} <ArrowUpRight aria-hidden="true" />
-                    </a>
+                    </button>
                   </div>
                 </article>
             ))}
