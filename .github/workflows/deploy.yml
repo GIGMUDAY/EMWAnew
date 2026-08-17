@@ -26,7 +26,7 @@ jobs:
 
       - name: Build Frontend Application
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL || 'https://api.ethmwa.org/api/v1' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL || 'https://emwa.mudaymarketing.com/api/v1' }}
           VITE_GLOBAL_VOICES_API_URL: ${{ vars.VITE_GLOBAL_VOICES_API_URL || secrets.VITE_GLOBAL_VOICES_API_URL || '' }}
         run: npm run build
 

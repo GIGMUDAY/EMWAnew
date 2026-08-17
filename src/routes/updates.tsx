@@ -67,7 +67,7 @@ type PublicEvent = {
 };
 
 const normalizeApiBase = (rawUrl?: string) => {
-  const url = (rawUrl || "https://api.ethmwa.org/api/v1").trim().replace(/\/+$/, "");
+  const url = (rawUrl || "https://emwa.mudaymarketing.com/api/v1").trim().replace(/\/+$/, "");
   return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
 };
 
