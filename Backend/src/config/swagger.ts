@@ -2,7 +2,8 @@ import swaggerJSDoc from 'swagger-jsdoc';
 import { EXPERT_CATEGORIES } from '../constants/expert-categories.js';
 const operations:Record<string,string[]>= {
   '/auth/login':['post'],'/auth/refresh':['post'],'/auth/logout':['post'],'/auth/me':['get'],
-  '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],'/public/updates':['get'],'/public/updates/{slug}':['get'],'/public/events':['get'],'/public/events/{id}':['get'],
+  '/public/experts':['get'],'/public/expert-applications':['post'],'/public/membership-types':['get'],'/public/membership-applications':['post'],'/public/contact-messages':['post'],'/public/newsletter-subscriptions':['post'],'/public/resources':['get'],'/public/resources/{id}':['get'],'/public/updates':['get'],'/public/updates/{slug}':['get'],'/public/events':['get'],'/public/events/{id}':['get'],'/public/hero-slides':['get'],
+  '/admin/hero-slides':['get','post'],'/admin/hero-slides/{id}':['patch','delete'],
   '/admin/expert-applications':['get'],'/admin/expert-applications/{id}':['get','patch','delete'],'/admin/expert-applications/{id}/status':['patch'],
   '/admin/membership-applications':['get'],'/admin/membership-applications/{id}':['get','delete'],'/admin/membership-applications/{id}/status':['patch'],
   '/admin/membership-types':['post'],'/admin/membership-types/{id}':['patch','delete'],
@@ -489,6 +490,185 @@ paths['/admin/resources']!.post = {
   },
 };
 
+const heroSlideFormSchema = {
+  type: 'object',
+  required: ['text', 'textAm', 'role', 'roleAm'],
+  properties: {
+    title: { type: 'string', example: 'Empowering Women Journalists in Ethiopia' },
+    titleAm: { type: 'string', example: 'በኢትዮጵያ ውስጥ የሴት ጋዜጠኞችን ማብቃት' },
+    description: { type: 'string', example: 'Building capacity and amplifying women voices in media.' },
+    descriptionAm: { type: 'string', example: 'አቅምን መገንባት እና የሚዲያ የሴቶችን ድምፅ ማጉላት።' },
+    text: { type: 'string', example: 'Empowering female media professionals through leadership and skill development.' },
+    textAm: { type: 'string', example: 'የሴት ሚዲያ ባለሙያዎችን በአመራር እና ክህሎት ማሳደግ።' },
+    signoff: { type: 'string', example: 'EMWA Leadership' },
+    signoffAm: { type: 'string', example: 'የኢሴጋማ አመራር' },
+    author: { type: 'string', default: 'EMWA', example: 'EMWA' },
+    role: { type: 'string', example: 'Executive Director' },
+    roleAm: { type: 'string', example: 'ዋና ዳይሬክተር' },
+    displayOrder: { type: 'integer', default: 0, example: 1 },
+    isActive: { type: 'boolean', default: true },
+    image: { type: 'string', format: 'binary', description: 'Hero background image file (JPEG/PNG/WebP)' },
+    imageUrl: { type: 'string', description: 'Or provide an existing image URL string' },
+  },
+};
+
+const heroSlidePatchSchema = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    titleAm: { type: 'string' },
+    description: { type: 'string' },
+    descriptionAm: { type: 'string' },
+    text: { type: 'string' },
+    textAm: { type: 'string' },
+    signoff: { type: 'string' },
+    signoffAm: { type: 'string' },
+    author: { type: 'string' },
+    role: { type: 'string' },
+    roleAm: { type: 'string' },
+    displayOrder: { type: 'integer' },
+    isActive: { type: 'boolean' },
+    image: { type: 'string', format: 'binary' },
+    imageUrl: { type: 'string' },
+  },
+};
+
+paths['/public/hero-slides']!.get = {
+  tags: ['Public Content'],
+  summary: 'List active hero slides for the homepage carousel',
+  security: [],
+  responses: {
+    '200': {
+      description: 'Active hero slides',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+              data: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/HeroSlide' },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+paths['/admin/hero-slides']!.get = {
+  tags: ['Admin Content'],
+  summary: 'List all hero slides',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    '200': {
+      description: 'All hero slides',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+              data: {
+                type: 'array',
+                items: { $ref: '#/components/schemas/HeroSlide' },
+              },
+            },
+          },
+        },
+      },
+    },
+    '401': { description: 'Authentication required' },
+  },
+};
+
+paths['/admin/hero-slides']!.post = {
+  tags: ['Admin Content'],
+  summary: 'Create a new hero slide',
+  security: [{ bearerAuth: [] }],
+  requestBody: {
+    required: true,
+    content: {
+      'multipart/form-data': {
+        schema: heroSlideFormSchema,
+      },
+      'application/json': {
+        schema: heroSlideFormSchema,
+      },
+    },
+  },
+  responses: {
+    '201': {
+      description: 'Hero slide created',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+              data: { $ref: '#/components/schemas/HeroSlide' },
+            },
+          },
+        },
+      },
+    },
+    '400': { description: 'Validation error or missing image' },
+    '401': { description: 'Authentication required' },
+  },
+};
+
+paths['/admin/hero-slides/{id}']!.patch = {
+  tags: ['Admin Content'],
+  summary: 'Update a hero slide',
+  security: [{ bearerAuth: [] }],
+  parameters: [idParameter],
+  requestBody: {
+    required: true,
+    content: {
+      'multipart/form-data': {
+        schema: heroSlidePatchSchema,
+      },
+      'application/json': {
+        schema: heroSlidePatchSchema,
+      },
+    },
+  },
+  responses: {
+    '200': {
+      description: 'Hero slide updated',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+              data: { $ref: '#/components/schemas/HeroSlide' },
+            },
+          },
+        },
+      },
+    },
+    '400': { description: 'Validation error' },
+    '401': { description: 'Authentication required' },
+    '404': { description: 'Hero slide not found' },
+  },
+};
+
+paths['/admin/hero-slides/{id}']!.delete = {
+  tags: ['Admin Content'],
+  summary: 'Delete a hero slide',
+  security: [{ bearerAuth: [] }],
+  parameters: [idParameter],
+  responses: {
+    '204': { description: 'Hero slide deleted' },
+    '401': { description: 'Authentication required' },
+    '404': { description: 'Hero slide not found' },
+  },
+};
+
+
 export const swaggerSpec = swaggerJSDoc({
   definition: {
     openapi: '3.0.3',
@@ -711,6 +891,28 @@ export const swaggerSpec = swaggerJSDoc({
           properties: {
             status: { type: 'string', enum: ['APPROVED', 'REJECTED'] },
             reviewNote: { type: 'string', maxLength: 5000 },
+          },
+        },
+        HeroSlide: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid', example: '3fa85f64-5717-4562-b3fc-2c963f66afa6' },
+            imageUrl: { type: 'string', example: '/uploads/profiles/hero-123.jpg' },
+            title: { type: 'string', nullable: true, example: 'Empowering Women Journalists' },
+            titleAm: { type: 'string', nullable: true, example: 'በኢትዮጵያ ውስጥ የሴት ጋዜጠኞችን ማብቃት' },
+            description: { type: 'string', nullable: true, example: 'Building capacity in media.' },
+            descriptionAm: { type: 'string', nullable: true, example: 'አቅምን መገንባት።' },
+            text: { type: 'string', example: 'Empowering female media professionals through leadership.' },
+            textAm: { type: 'string', example: 'የሴት ሚዲያ ባለሙያዎችን በአመራር ማሳደግ።' },
+            signoff: { type: 'string', nullable: true, example: 'EMWA Leadership' },
+            signoffAm: { type: 'string', nullable: true, example: 'የኢሴጋማ አመራር' },
+            author: { type: 'string', example: 'EMWA' },
+            role: { type: 'string', example: 'Executive Director' },
+            roleAm: { type: 'string', example: 'ዋና ዳይሬክተር' },
+            displayOrder: { type: 'integer', example: 1 },
+            isActive: { type: 'boolean', example: true },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
           },
         },
         Error: {
