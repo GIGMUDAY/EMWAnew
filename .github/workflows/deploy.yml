@@ -9,7 +9,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Execute Remote SSH Deployment
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install dependencies and build TypeScript
+        working-directory: Backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload compiled files to Server via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "Backend/dist,Backend/src,Backend/passenger.cjs,Backend/package.json,Backend/package-lock.json"
+          target: "/home/${{ secrets.SSH_USERNAME }}/emwa.mudaymarketing.com/Backend"
+          strip_components: 1
+
+      - name: Restart Passenger Server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -18,21 +46,5 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            # Navigate directly into the Backend directory
-            cd /home/${{ secrets.SSH_USERNAME }}/emwa.mudaymarketing.com/Backend
-            
-            # Pull latest changes from GitHub
-            git pull origin main
-            
-            # Install dependencies (including devDependencies like typescript)
-            npm ci
-            
-            # Compile TypeScript into dist/
-            npm run build
-            
-            # (Optional) Prune devDependencies to keep server lean
-            npm prune --production
-            
-            # Restart Phusion Passenger process
-            mkdir -p tmp
-            touch tmp/restart.txt
+            mkdir -p /home/${{ secrets.SSH_USERNAME }}/emwa.mudaymarketing.com/Backend/tmp
+            touch /home/${{ secrets.SSH_USERNAME }}/emwa.mudaymarketing.com/Backend/tmp/restart.txt
