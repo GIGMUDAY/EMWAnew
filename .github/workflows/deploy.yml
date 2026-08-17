@@ -23,11 +23,14 @@ jobs:
             # Pull latest changes from GitHub
             git pull origin main
             
-            # Install production dependencies inside Backend/
-            npm ci --only=production
+            # Install dependencies (including devDependencies like typescript)
+            npm ci
             
-            # Build application if using TypeScript / NestJS
-            npm run build --if-present
+            # Compile TypeScript into dist/
+            npm run build
+            
+            # (Optional) Prune devDependencies to keep server lean
+            npm prune --production
             
             # Restart Phusion Passenger process
             mkdir -p tmp
