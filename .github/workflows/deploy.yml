@@ -1,34 +1,46 @@
-name: Build and Deploy React App via FTP
+name: Deploy EMWA Frontend to ethmwa.org via FTP
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
+    name: Build & Deploy to ethmwa.org
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
 
-      - name: Build Project
+      - name: Build Frontend Application
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.ethmwa.org/api/v1' }}
         run: npm run build
 
-      - name: Deploy Compiled Files via FTP
+      - name: Deploy to Server via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # TanStack Start / Nitro outputs static frontend build to .output/public/
+          port: ${{ secrets.FTP_PORT || 21 }}
+          protocol: ${{ secrets.FTP_PROTOCOL || 'ftp' }}
           local-dir: ./.output/public/
-          server-dir: /
+          server-dir: ${{ secrets.FTP_SERVER_DIR || 'public_html/' }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github*/**
+            node_modules/**

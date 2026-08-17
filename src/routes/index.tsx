@@ -34,7 +34,12 @@ const LANDING_IMAGES = {
   },
 } as const;
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "https://emwa.mudaymarketing.com/api/v1";
+const normalizeApiBase = (rawUrl?: string) => {
+  const url = (rawUrl || "https://api.ethmwa.org/api/v1").trim().replace(/\/+$/, "");
+  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
+};
+
+const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
 
 const FAQS = [
   [
