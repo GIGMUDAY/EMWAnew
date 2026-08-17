@@ -26,19 +26,20 @@ jobs:
 
       - name: Build Frontend Application
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api.ethmwa.org/api/v1' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL || 'https://api.ethmwa.org/api/v1' }}
+          VITE_GLOBAL_VOICES_API_URL: ${{ vars.VITE_GLOBAL_VOICES_API_URL || secrets.VITE_GLOBAL_VOICES_API_URL || '' }}
         run: npm run build
 
       - name: Deploy to Server via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
+          server: ${{ secrets.FTP_SERVER || vars.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME || vars.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          port: ${{ secrets.FTP_PORT || 21 }}
-          protocol: ${{ secrets.FTP_PROTOCOL || 'ftp' }}
+          port: ${{ vars.FTP_PORT || secrets.FTP_PORT || 21 }}
+          protocol: ${{ vars.FTP_PROTOCOL || secrets.FTP_PROTOCOL || 'ftp' }}
           local-dir: ./.output/public/
-          server-dir: ${{ secrets.FTP_SERVER_DIR || 'public_html/' }}
+          server-dir: ${{ vars.FTP_SERVER_DIR || secrets.FTP_SERVER_DIR || 'public_html/' }}
           exclude: |
             **/.git*
             **/.git*/**
