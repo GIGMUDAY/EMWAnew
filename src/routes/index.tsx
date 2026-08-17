@@ -123,8 +123,8 @@ function HomeHero({ t, language }: { t: (english: string, amharic: string) => st
   const [isExiting, setIsExiting] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
   const [loopKey, setLoopKey] = useState(0);
-  const INTERVAL_MS = 8000; // 8 seconds per slide
-  const EXIT_MS     = 400;  // fast crisp transition
+  const INTERVAL_MS = 4500; // 4.5 seconds per slide (faster auto-rotation)
+  const EXIT_MS     = 350;  // fast crisp transition
 
   useEffect(() => {
     const controller = new AbortController();

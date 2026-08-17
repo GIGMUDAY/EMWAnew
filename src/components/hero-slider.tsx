@@ -84,7 +84,7 @@ export default function HeroSlider() {
 
   useEffect(() => {
     if (!autoPlay || slides.length === 0) return;
-    const id = setInterval(() => setIndex((i) => (i + 1) % slides.length), 4000);
+    const id = setInterval(() => setIndex((i) => (i + 1) % slides.length), 3500);
     return () => clearInterval(id);
   }, [autoPlay, slides.length]);
 

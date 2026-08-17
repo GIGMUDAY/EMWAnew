@@ -3278,25 +3278,15 @@ function HeroSlidesPanel({
               </label>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="label-mono text-black/60">Display Order</span>
-                <input
-                  type="number"
-                  name="displayOrder"
-                  defaultValue={editing?.displayOrder ?? 1}
-                  className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2.5 font-[var(--font-body)] text-sm outline-none focus:border-[#8c2d3c]"
-                />
-              </label>
-
+            <div className="grid gap-4 md:grid-cols-1">
               <label className="block">
                 <span className="label-mono text-black/60">
-                  {editing ? "Replace Background Image" : "Upload Background Image"}
+                  {editing ? "Replace Background Image (Optional)" : "Upload Background Image"}
                 </span>
                 <input
                   type="file"
                   name="image"
-                  accept="image/jpeg,image/png"
+                  accept="image/jpeg,image/png,image/webp"
                   required={!editing}
                   className="mt-1.5 w-full border border-black/15 bg-white px-3 py-2 font-[var(--font-body)] text-sm"
                 />
