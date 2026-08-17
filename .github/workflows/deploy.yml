@@ -1,50 +1,34 @@
-name: Deploy Backend to Yegara Host
+name: Build and Deploy React App via FTP
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: 'npm'
-          cache-dependency-path: Backend/package-lock.json
+          node-version: 20
 
-      - name: Install dependencies and build TypeScript
-        working-directory: Backend
-        run: |
-          npm ci
-          npm run build
+      - name: Install Dependencies
+        run: npm ci
 
-      - name: Upload compiled files to Server via SCP
-        uses: appleboy/scp-action@v0.1.7
+      - name: Build Project
+        run: npm run build
+
+      - name: Deploy Compiled Files via FTP
+        uses: SamKirsch/ftp-deploy-action@v4.3.5
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          port: ${{ secrets.SSH_PORT }}
-          source: "Backend/dist,Backend/src,Backend/passenger.cjs,Backend/package.json,Backend/package-lock.json"
-          target: "/home/${{ secrets.SSH_USERNAME }}/emwa.mudaymarketing.com/Backend"
-          strip_components: 1
-
-      - name: Restart Passenger Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            mkdir -p /home/${{ secrets.SSH_USERNAME }}/emwa.mudaymarketing.com/Backend/tmp
-            touch /home/${{ secrets.SSH_USERNAME }}/emwa.mudaymarketing.com/Backend/tmp/restart.txt
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          # Path to the compiled build folder (Vite uses 'dist', CRA uses 'build')
+          local-dir: ./dist/
+          server-dir: /
