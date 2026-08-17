@@ -76,6 +76,14 @@ adminContent.post(
 
     try {
       const row = await tx(async (client) => {
+        let displayOrder = parsed.displayOrder;
+        if (displayOrder === undefined || displayOrder === null) {
+          const maxResult = await client.query(
+            'SELECT COALESCE(MAX(display_order), 0) + 1 AS "nextOrder" FROM hero_slides',
+          );
+          displayOrder = Number(maxResult.rows[0]?.nextOrder ?? 1);
+        }
+
         const { rows } = await client.query(
           `INSERT INTO hero_slides (
              image_url, title, title_am, description, description_am,
@@ -97,7 +105,7 @@ adminContent.post(
             parsed.author,
             parsed.role,
             parsed.roleAm,
-            parsed.displayOrder ?? 0,
+            displayOrder,
             parsed.isActive ?? true,
           ],
         );
