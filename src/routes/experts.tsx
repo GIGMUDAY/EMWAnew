@@ -132,15 +132,20 @@ const resolveExpertImage = (value?: string | null) => {
   if (!str) return undefined;
   if (str.startsWith("data:") || str.startsWith("blob:")) return str;
   try {
-    const apiOrigin = new URL(API_BASE).origin;
+    const origin =
+      typeof window !== "undefined" && !/^https?:\/\//i.test(API_BASE)
+        ? window.location.origin
+        : /^https?:\/\//i.test(API_BASE)
+          ? new URL(API_BASE).origin
+          : "";
     if (str.startsWith("http://") || str.startsWith("https://")) {
       const parsed = new URL(str);
       const uploadMatch = parsed.pathname.match(/(?:\/api\/v1)?(\/uploads\/.+)$/);
-      if (uploadMatch) return `${apiOrigin}${uploadMatch[1]}`;
+      if (uploadMatch && origin) return `${origin}${uploadMatch[1]}`;
       return str;
     }
     const cleanPath = str.startsWith("/") ? str : `/${str}`;
-    return `${apiOrigin}${cleanPath}`;
+    return origin ? `${origin}${cleanPath}` : cleanPath;
   } catch {
     return str;
   }
@@ -523,14 +528,17 @@ function Experts() {
             <aside className="expert-detail-sidebar">
               <div className="expert-detail-media">
                 <div className="expert-detail-photo">
-                  <span className="grid size-full place-items-center bg-muted font-display text-8xl text-primary/35">
+                  <span className="grid size-full place-items-center bg-muted font-display text-8xl text-primary/35 select-none">
                     {selected.n.split(" ").slice(0, 2).map((part) => part[0]).join("")}
                   </span>
                   {selected.img && (
                     <img
                       src={selected.img}
                       alt={selected.n}
-                      onError={(event) => event.currentTarget.remove()}
+                      className="absolute inset-0 size-full object-cover object-top z-[1]"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
                     />
                   )}
                 </div>
@@ -636,8 +644,10 @@ function Experts() {
                           src={exp.img}
                           alt={exp.n}
                           loading="lazy"
-                          className="absolute inset-0 size-full object-contain"
-                          onError={(event) => event.currentTarget.remove()}
+                          className="absolute inset-0 size-full object-cover object-top"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
                         />
                       )}
                       <span className="expert-card-category">{language === "am" ? CATEGORY_MAP_AM[exp.c] ?? exp.c : exp.c}</span>
@@ -742,7 +752,10 @@ function Experts() {
             <img
               src={featuredExpert.img}
               alt={`${featuredExpert.n}, ${featuredExpert.f}`}
-              onError={(event) => event.currentTarget.remove()}
+              className="absolute inset-0 size-full object-cover object-top"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
             />
           )}
           <div className="experts-hero-portrait-shade" aria-hidden="true" />
@@ -869,8 +882,10 @@ function Experts() {
                         src={expert.img}
                         alt={expert.n}
                         loading="lazy"
-                        className="absolute inset-0 size-full object-contain"
-                        onError={(event) => event.currentTarget.remove()}
+                        className="absolute inset-0 size-full object-cover object-top"
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
                       />
                     )}
                     <span className="expert-card-category">{language === "am" ? CATEGORY_MAP_AM[expert.c] ?? expert.c : expert.c}</span>

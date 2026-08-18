@@ -9,12 +9,7 @@ import {
   useState,
 } from "react";
 
-const normalizeApiBase = (rawUrl?: string) => {
-  const url = (rawUrl || "https://emwa.mudaymarketing.com/api/v1").trim().replace(/\/+$/, "");
-  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
-};
-
-const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
+import { API_BASE } from "@/lib/admin-api";
 
 export type SiteLanguage = "en" | "am";
 

@@ -34,12 +34,7 @@ const LANDING_IMAGES = {
   },
 } as const;
 
-const normalizeApiBase = (rawUrl?: string) => {
-  const url = (rawUrl || "https://emwa.mudaymarketing.com/api/v1").trim().replace(/\/+$/, "");
-  return url.endsWith("/api/v1") ? url : `${url}/api/v1`;
-};
-
-const API_BASE = normalizeApiBase(import.meta.env.VITE_API_URL);
+import { API_BASE } from "@/lib/admin-api";
 
 const FAQS = [
   [
@@ -695,7 +690,13 @@ function Home() {
           {updates.length > 0 ? (
             <div className="grid md:grid-cols-3 gap-px bg-border">
               {updates.map((n) => (
-                <Link key={n.slug} to="/updates" hash="stories" className="block no-underline">
+                <a
+                  key={n.slug}
+                  href={`/updates?story=${encodeURIComponent(n.slug)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block no-underline"
+                >
                   <article className="h-full bg-background p-8 hover:bg-muted/50 transition-colors cursor-pointer">
                     <div className="flex justify-between label-mono text-muted-foreground mb-6">
                       <span>{n.date}</span>
@@ -703,12 +704,12 @@ function Home() {
                     </div>
                     <h3 className="font-display text-2xl leading-tight mb-4">{n.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{n.excerpt}</p>
-                    <div className="mt-6 label-mono inline-flex items-center gap-1 group">
+                    <div className="mt-6 label-mono inline-flex items-center gap-1 group text-primary font-bold">
                       {t("Read", "ያንብቡ")}{" "}
                       <ArrowUpRight className="size-3 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </article>
-                </Link>
+                </a>
               ))}
             </div>
           ) : (

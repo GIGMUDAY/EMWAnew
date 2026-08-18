@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Plus,
   ShieldCheck,
   Sparkles,
@@ -320,12 +322,46 @@ const getMembershipSubmissionError = (payload: unknown, status: number) => {
   return error?.message || "Unable to submit the application. Please try again.";
 };
 
+const regionNames =
+  typeof Intl !== "undefined" && "DisplayNames" in Intl
+    ? new Intl.DisplayNames(["en"], { type: "region" })
+    : null;
+
+const ALL_COUNTRIES = (() => {
+  try {
+    const list = getCountries().map((code) => {
+      let callingCode = "";
+      try {
+        callingCode = getCountryCallingCode(code);
+      } catch {
+        callingCode = "";
+      }
+      const name = regionNames?.of(code) || code;
+      return {
+        code,
+        name,
+        callingCode,
+      };
+    });
+    return list.sort((a, b) => {
+      if (a.code === "ET") return -1;
+      if (b.code === "ET") return 1;
+      return a.code.localeCompare(b.code);
+    });
+  } catch {
+    return [{ code: "ET" as CountryCode, name: "Ethiopia", callingCode: "251" }];
+  }
+})();
+
 function InternationalPhoneField({
+  country = "ET",
+  onCountryChange,
   value,
   onChange,
   required,
   label,
   placeholder = "+251 9... / 09... / 011...",
+  hideCountry = false,
 }: {
   country?: CountryCode;
   value: string;
@@ -336,11 +372,30 @@ function InternationalPhoneField({
   label?: string;
   helperText?: string;
   placeholder?: string;
+  hideCountry?: boolean;
 }) {
+  const showCountry = !hideCountry && Boolean(onCountryChange);
+
   return (
     <label className="membership-phone-field-label">
       {label ? <span>{label}</span> : null}
-      <div className="membership-phone-field">
+      <div className={`membership-phone-field ${showCountry ? "has-country" : ""}`}>
+        {showCountry && onCountryChange && (
+          <div className="membership-phone-country-picker">
+            <select
+              value={country}
+              onChange={(e) => onCountryChange(e.target.value as CountryCode)}
+              aria-label="Country calling code"
+              className="membership-phone-country-select"
+            >
+              {ALL_COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.code} (+{c.callingCode})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <input
           required={required}
           type="tel"
@@ -410,6 +465,15 @@ function Membership() {
       ...current,
       additionalPhones: current.additionalPhones.filter((p) => p.id !== id),
     }));
+  };
+
+  const tierScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollTiers = (direction: "left" | "right") => {
+    if (!tierScrollRef.current) return;
+    const scrollAmount = Math.min(380, window.innerWidth * 0.85);
+    const offset = direction === "left" ? -scrollAmount : scrollAmount;
+    tierScrollRef.current.scrollBy({ left: offset, behavior: "smooth" });
   };
 
   const chooseTier = (tier: string) => {
@@ -557,6 +621,8 @@ function Membership() {
           outletOrInstitution: form.outlet,
           currentRole: form.role,
           regionOrChapter: form.citySubCity,
+          paymentScreenshotUrl: paymentConfirmation?.dataUrl,
+          paymentConfirmation: requiresPayment ? paymentConfirmation : undefined,
           additionalInformation: {
             dateOfBirth: form.dateOfBirth,
             citySubCity: form.citySubCity,
@@ -580,6 +646,7 @@ function Membership() {
             department: form.department,
             educationLevel: form.educationLevel,
             fieldOfStudy: form.fieldOfStudy,
+            paymentScreenshotUrl: paymentConfirmation?.dataUrl,
             paymentConfirmation: requiresPayment ? paymentConfirmation : undefined,
           },
         }),
@@ -600,14 +667,53 @@ function Membership() {
     }
   };
 
-  const applicationTiers = membershipTypes.map((type) => ({
-    name: type.name,
-    eligibility: type.requirements || type.description || "EMWA membership category",
-    fee:
-      type.price_amount && Number(type.price_amount) > 0
-        ? `${type.currency ?? "ETB"} ${Number(type.price_amount).toLocaleString()}`
-        : "Free",
-  }));
+  const applicationTiers = useMemo(
+    () =>
+      membershipTypes.map((type) => {
+        const numPrice = Number(type.price_amount) || 0;
+        return {
+          id: type.id,
+          name: type.name,
+          eligibility: type.requirements || type.description || "EMWA membership category",
+          fee:
+            numPrice > 0
+              ? `${type.currency ?? "ETB"} ${numPrice.toLocaleString()}`
+              : "Free",
+        };
+      }),
+    [membershipTypes],
+  );
+
+  const displayTiers = useMemo(() => {
+    if (membershipTypes.length > 0) {
+      return membershipTypes.map((type, idx) => {
+        const numPrice = Number(type.price_amount) || 0;
+        const feeText = numPrice > 0 ? `${type.currency || "ETB"} ${numPrice.toLocaleString()}` : "Free";
+        const staticMatch = TIERS.find(
+          (t) => t.name.toLowerCase().trim() === type.name.toLowerCase().trim(),
+        );
+        return {
+          id: type.id,
+          name: type.name,
+          fee: feeText,
+          cadence: numPrice > 0 ? "/ year" : "",
+          note: staticMatch?.note || (numPrice > 0 ? "Membership category" : "Free membership"),
+          featured: staticMatch?.featured ?? (idx === 1),
+          eligibility:
+            type.requirements ||
+            type.description ||
+            staticMatch?.eligibility ||
+            "EMWA professional membership category",
+          perks: staticMatch?.perks || [
+            "Access to the EMWA members network",
+            "Association updates and opportunities",
+            "Invitations to regional events and workshops",
+          ],
+        };
+      });
+    }
+    return TIERS;
+  }, [membershipTypes]);
 
   return (
     <PageShell>
@@ -663,7 +769,7 @@ function Membership() {
       </section>
 
       <section className="membership-categories" id="categories" aria-labelledby="categories-title">
-        <header>
+        <header className="membership-categories-header">
           <div>
             <p className="membership-kicker membership-kicker-light">
               <span /> Membership paths
@@ -674,36 +780,61 @@ function Membership() {
               you belong.
             </h2>
           </div>
-          <p>
-            Every path connects you to the same mission. Choose the category matching where you are
-            today.
-          </p>
-        </header>
-        <div className="membership-tier-grid">
-          {TIERS.map((tier) => (
-            <article key={tier.name} className={tier.featured ? "is-featured" : ""}>
-              <div className="membership-tier-top">
-                <span>{tier.note}</span>
-                {tier.featured && <b>Recommended</b>}
-              </div>
-              <h3>{tier.name}</h3>
-              <p className="membership-tier-price">
-                {tier.fee} <small>{tier.cadence}</small>
-              </p>
-              <p className="membership-tier-eligibility">{tier.eligibility}</p>
-              <ul>
-                {tier.perks.map((perk) => (
-                  <li key={perk}>
-                    <Check aria-hidden="true" />
-                    {perk}
-                  </li>
-                ))}
-              </ul>
-              <button type="button" onClick={() => chooseTier(tier.name)}>
-                Choose {tier.name} <ArrowRight aria-hidden="true" />
+          <div className="membership-categories-header-right">
+            <p>
+              Every path connects you to the same mission. Choose the category matching where you are
+              today.
+            </p>
+            <div className="membership-carousel-nav" aria-label="Scroll membership categories">
+              <button
+                type="button"
+                onClick={() => scrollTiers("left")}
+                aria-label="Previous category"
+                className="membership-nav-btn"
+                title="Scroll left"
+              >
+                <ChevronLeft aria-hidden="true" />
               </button>
-            </article>
-          ))}
+              <button
+                type="button"
+                onClick={() => scrollTiers("right")}
+                aria-label="Next category"
+                className="membership-nav-btn"
+                title="Scroll right"
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <div className="membership-tier-scroll-wrapper">
+          <div className="membership-tier-grid membership-tier-scrollable" ref={tierScrollRef}>
+            {displayTiers.map((tier) => (
+              <article key={tier.name} className={tier.featured ? "is-featured" : ""}>
+                <div className="membership-tier-top">
+                  <span>{tier.note}</span>
+                  {tier.featured && <b>Recommended</b>}
+                </div>
+                <h3>{tier.name}</h3>
+                <p className="membership-tier-price">
+                  {tier.fee} {tier.cadence ? <small>{tier.cadence}</small> : null}
+                </p>
+                <p className="membership-tier-eligibility">{tier.eligibility}</p>
+                <ul>
+                  {tier.perks.map((perk) => (
+                    <li key={perk}>
+                      <Check aria-hidden="true" />
+                      {perk}
+                    </li>
+                  ))}
+                </ul>
+                <button type="button" onClick={() => chooseTier(tier.name)}>
+                  Choose {tier.name} <ArrowRight aria-hidden="true" />
+                </button>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -868,6 +999,7 @@ function Membership() {
                               </label>
                             </div>
                             <InternationalPhoneField
+                              hideCountry={true}
                               value={item.number}
                               onChange={(v) => updateAdditionalPhone(item.id, { number: v })}
                               placeholder="+251 9... / 09... / 011..."
@@ -1081,9 +1213,14 @@ function Membership() {
                         <div>
                           <strong>{t("Payment confirmation required", "የክፍያ ማረጋገጫ ያስፈልጋል")}</strong>
                           <p>
-                            Thank you for the form. Please also attach a screenshot of the bank
-                            payment confirmation for the payment made to Ethiopian Media Women
-                            Association, account number <b>1000002275973</b>.
+                            Thank you for completing the form. Please attach a screenshot of the bank
+                            payment confirmation of{" "}
+                            <b>
+                              {selectedMembershipType.currency ?? "ETB"}{" "}
+                              {Number(selectedMembershipType.price_amount).toLocaleString()}
+                            </b>{" "}
+                            for the payment made to Ethiopian Media Women Association, Commercial Bank of
+                            Ethiopia (CBE) account number <b>1000002275973</b>.
                           </p>
                         </div>
                         <label className="membership-payment-upload">
