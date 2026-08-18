@@ -509,60 +509,172 @@ function Membership() {
     return () => controller.abort();
   }, []);
 
+  const validateDateOfBirth = (dob: string) => {
+    if (!dob || !dob.trim()) {
+      return t("Date of birth is required.", "የትውልድ ቀን ማስገባት ግዴታ ነው።");
+    }
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob.trim());
+    if (!match) {
+      return t(
+        "Please enter a valid date of birth (YYYY-MM-DD).",
+        "እባክዎን ትክክለኛ የትውልድ ቀን ያስገቡ (ዓ.ም-ወር-ቀን)።",
+      );
+    }
+
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+
+    if (year < 1920) {
+      return t(
+        "Please enter a valid birth year (after 1920).",
+        "እባክዎን ትክክለኛ የትውልድ ዓመት ያስገቡ (ከ1920 በኋላ)።",
+      );
+    }
+
+    const birthDate = new Date(year, month - 1, day);
+    if (
+      birthDate.getFullYear() !== year ||
+      birthDate.getMonth() !== month - 1 ||
+      birthDate.getDate() !== day
+    ) {
+      return t("Please enter a valid calendar date.", "እባክዎን ትክክለኛ የቀን መረጃ ያስገቡ።");
+    }
+
+    const now = new Date();
+    if (birthDate >= now) {
+      return t(
+        "Date of birth cannot be today or a future date.",
+        "የትውልድ ቀን የወደፊት ወይም የዛሬ ቀን መሆን አይችልም።",
+      );
+    }
+
+    let age = now.getFullYear() - year;
+    const monthDiff = now.getMonth() - (month - 1);
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < day)) {
+      age--;
+    }
+
+    if (age < 16) {
+      return t(
+        "Applicant must be at least 16 years old to apply for membership.",
+        "የአባልነት ምዝገባ ለማከናወን ቢያንስ 16 ዓመት ሊሞላዎት ይገባል።",
+      );
+    }
+
+    if (age > 105) {
+      return t("Please enter a valid date of birth.", "እባክዎን ትክክለኛ የትውልድ ቀን ያስገቡ።");
+    }
+
+    return "";
+  };
+
   const validateStep = (targetStep: number) => {
     if (targetStep === 0) {
-      if (!form.name.trim()) return "Full name is required.";
-      if (form.name.trim().length < 2) return "Full name must contain at least 2 characters.";
-      if (!form.dateOfBirth) return "Date of birth is required.";
-      if (!form.email.trim()) return "Email address is required.";
-      if (!/^\S+@\S+\.\S+$/.test(form.email)) return "Please enter a valid email address.";
-      if (!form.phone.trim()) return "Phone number is required.";
+      if (!form.name.trim()) return t("Full name is required.", "ሙሉ ስም ማስገባት ግዴታ ነው።");
+      if (form.name.trim().length < 2)
+        return t(
+          "Full name must contain at least 2 characters.",
+          "ሙሉ ስም ቢያንስ 2 ፊደላት መሆን አለበት።",
+        );
+      const dobError = validateDateOfBirth(form.dateOfBirth);
+      if (dobError) return dobError;
+      if (!form.email.trim())
+        return t("Email address is required.", "የኢሜይል አድራሻ ማስገባት ግዴታ ነው።");
+      if (!/^\S+@\S+\.\S+$/.test(form.email))
+        return t("Please enter a valid email address.", "እባክዎን ትክክለኛ የኢሜይል አድራሻ ያስገቡ።");
+      if (!form.phone.trim())
+        return t("Phone number is required.", "የስልክ ቁጥር ማስገባት ግዴታ ነው።");
       if (!isValidPhoneNumber(form.phone, form.phoneCountry))
-        return "Please enter a valid phone number (mobile, home, or office).";
+        return t(
+          "Please enter a valid phone number (mobile, home, or office).",
+          "እባክዎን ትክክለኛ የስልክ ቁጥር ያስገቡ።",
+        );
       for (const p of form.additionalPhones) {
         if (p.number.trim() && !isValidPhoneNumber(p.number, p.country)) {
           const typeLabel = PHONE_TYPE_LABELS[p.type]?.en || "additional phone";
-          return `Please enter a valid phone number for ${typeLabel.toLowerCase()}.`;
+          return t(
+            `Please enter a valid phone number for ${typeLabel.toLowerCase()}.`,
+            `እባክዎን ለተጨማሪ ስልክ ትክክለኛ ቁጥር ያስገቡ።`,
+          );
         }
       }
-      if (!form.citySubCity.trim()) return "City or sub-city is required.";
-      if (form.citySubCity.trim().length < 2) return "Please enter a valid city or sub-city.";
-      if (!form.emergencyContact1Name.trim()) return "First emergency contact name is required.";
+      if (!form.citySubCity.trim())
+        return t("City or sub-city is required.", "ከተማ ወይም ክፍለ ከተማ ማስገባት ግዴታ ነው።");
+      if (form.citySubCity.trim().length < 2)
+        return t("Please enter a valid city or sub-city.", "እባክዎን ትክክለኛ ከተማ ወይም ክፍለ ከተማ ያስገቡ።");
+      if (!form.emergencyContact1Name.trim())
+        return t(
+          "First emergency contact name is required.",
+          "የመጀመሪያው የአደጋ ጊዜ ተጠሪ ስም ማስገባት ግዴታ ነው።",
+        );
       if (form.emergencyContact1Name.trim().length < 2)
-        return "First emergency contact name must contain at least 2 characters.";
-      if (!form.emergencyContact1Phone.trim()) return "First emergency contact phone is required.";
+        return t(
+          "First emergency contact name must contain at least 2 characters.",
+          "የአደጋ ጊዜ ተጠሪ ስም ቢያንስ 2 ፊደላት መሆን አለበት።",
+        );
+      if (!form.emergencyContact1Phone.trim())
+        return t(
+          "First emergency contact phone is required.",
+          "የአደጋ ጊዜ ተጠሪ ስልክ ቁጥር ማስገባት ግዴታ ነው።",
+        );
       if (!isValidPhoneNumber(form.emergencyContact1Phone, form.emergencyContact1Country))
-        return "Please enter a valid phone number for your first emergency contact.";
+        return t(
+          "Please enter a valid phone number for your first emergency contact.",
+          "እባክዎን ለአደጋ ጊዜ ተጠሪዎ ትክክለኛ የስልክ ቁጥር ያስገቡ።",
+        );
       if (
         form.emergencyContact2Phone &&
         !isValidPhoneNumber(form.emergencyContact2Phone, form.emergencyContact2Country)
       )
-        return "Please enter a valid phone number for your second emergency contact.";
+        return t(
+          "Please enter a valid phone number for your second emergency contact.",
+          "እባክዎን ለሁለተኛው የአደጋ ጊዜ ተጠሪ ትክክለኛ የስልክ ቁጥር ያስገቡ።",
+        );
     }
     if (targetStep === 1) {
-      if (!form.outlet.trim()) return "Organization is required.";
-      if (form.outlet.trim().length < 2) return "Organization must contain at least 2 characters.";
+      if (!form.outlet.trim())
+        return t("Organization is required.", "የሚሰሩበት ተቋም ማስገባት ግዴታ ነው።");
+      if (form.outlet.trim().length < 2)
+        return t("Organization must contain at least 2 characters.", "የተቋሙ ስም ቢያንስ 2 ፊደላት መሆን አለበት።");
       if (
         form.companyPhone &&
         !isValidPhoneNumber(form.companyPhone, form.companyPhoneCountry)
       )
-        return "Please enter a valid company or office phone number.";
-      if (!form.yearsOfExperience) return "Years of experience is required.";
+        return t(
+          "Please enter a valid company or office phone number.",
+          "እባክዎን ትክክለኛ የተቋም ወይም የቢሮ ስልክ ቁጥር ያስገቡ።",
+        );
+      if (!form.yearsOfExperience)
+        return t("Years of experience is required.", "የስራ ልምድ ዓመታት ማስገባት ግዴታ ነው።");
       if (!/^\d+$/.test(form.yearsOfExperience) || Number(form.yearsOfExperience) > 80)
-        return "Years of experience must be a whole number between 0 and 80.";
-      if (!form.role.trim()) return "Current role is required.";
-      if (form.role.trim().length < 2) return "Current role must contain at least 2 characters.";
-      if (!form.educationLevel.trim()) return "Level of education is required.";
-      if (form.educationLevel.trim().length < 2) return "Please enter a valid level of education.";
-      if (!form.fieldOfStudy.trim()) return "Field of study is required.";
-      if (form.fieldOfStudy.trim().length < 2) return "Please enter a valid field of study.";
+        return t(
+          "Years of experience must be a whole number between 0 and 80.",
+          "የስራ ልምድ ዓመታት ከ0 እስከ 80 ባለው ቁጥር መሆን አለበት።",
+        );
+      if (!form.role.trim())
+        return t("Current role is required.", "የአሁን የስራ መደብ ማስገባት ግዴታ ነው።");
+      if (form.role.trim().length < 2)
+        return t("Current role must contain at least 2 characters.", "የስራ መደቡ ቢያንስ 2 ፊደላት መሆን አለበት።");
+      if (!form.educationLevel.trim())
+        return t("Level of education is required.", "የትምህርት ደረጃ ማስገባት ግዴታ ነው።");
+      if (form.educationLevel.trim().length < 2)
+        return t("Please enter a valid level of education.", "እባክዎን ትክክለኛ የትምህርት ደረጃ ያስገቡ።");
+      if (!form.fieldOfStudy.trim())
+        return t("Field of study is required.", "የትምህርት መስክ ማስገባት ግዴታ ነው።");
+      if (form.fieldOfStudy.trim().length < 2)
+        return t("Please enter a valid field of study.", "እባክዎን ትክክለኛ የትምህርት መስክ ያስገቡ።");
     }
     if (targetStep === 2) {
       if (!membershipTypes.some((item) => item.name === form.tier)) {
-        return "Please select an active membership type.";
+        return t("Please select an active membership type.", "እባክዎን የአባልነት ዓይነት ይምረጡ።");
       }
       if (requiresPayment && !paymentConfirmation) {
-        return "Please attach a screenshot of your bank payment confirmation.";
+        return t(
+          "Please attach a screenshot of your bank payment confirmation.",
+          "እባክዎን የክፍያ ማረጋገጫ ደረሰኝ (ስክሪንሾት) ያያይዙ።",
+        );
       }
     }
     return "";
@@ -952,6 +1064,8 @@ function Membership() {
                           required
                           type="date"
                           value={form.dateOfBirth}
+                          min="1920-01-01"
+                          max={new Date().toISOString().split("T")[0]}
                           onChange={(e) => update("dateOfBirth", e.target.value)}
                           autoComplete="bday"
                         />

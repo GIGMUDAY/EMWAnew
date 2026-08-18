@@ -128,9 +128,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:title", content: "EMWA — Ethiopian Media Women Association" },
       { name: "twitter:description", content: "The Ethiopian Media Women Association (EMWA) empowers women in Ethiopian media through advocacy, professional development, and a nationwide network of journalists, editors, and communicators." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c476bdbc-d005-4269-a9c3-6add5845e731" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c476bdbc-d005-4269-a9c3-6add5845e731" },
     ],
     links: [
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", type: "image/png", href: logoUrl },
+      { rel: "apple-touch-icon", href: logoUrl },
+      { rel: "shortcut icon", href: logoUrl },
       {
         rel: "preconnect",
         href: "https://fonts.googleapis.com",
@@ -157,6 +160,10 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" href="/emwa-logo-new.png" />
+        <link rel="apple-touch-icon" href="/emwa-logo-new.png" />
+        <link rel="shortcut icon" href="/emwa-logo-new.png" />
         <HeadContent />
       </head>
       <body>
