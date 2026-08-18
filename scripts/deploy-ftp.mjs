@@ -8,7 +8,6 @@ async function main() {
   const password = process.env.FTP_PASSWORD?.trim();
   const port = parseInt(process.env.FTP_PORT?.trim() || "21", 10);
   const secure = process.env.FTP_PROTOCOL?.trim() === "ftps";
-  let targetDir = process.env.FTP_SERVER_DIR?.trim() || "public_html/";
   const localDir = path.resolve(process.cwd(), ".output/public");
 
   if (!host || !user || !password) {
@@ -36,27 +35,49 @@ async function main() {
     });
 
     const initialPwd = await client.pwd();
-    console.log(`📍 Current FTP remote working directory: ${initialPwd}`);
+    console.log(`📍 Initial FTP working directory: ${initialPwd}`);
 
     const rootListing = await client.list();
-    console.log("📂 Current directory contents:", rootListing.map((i) => `${i.isDirectory ? "[DIR]" : "[FILE]"} ${i.name}`).join(", "));
+    console.log("📂 Directory listing:", rootListing.map((i) => `${i.isDirectory ? "[DIR]" : "[FILE]"} ${i.name}`).join(", "));
 
-    const hasPublicHtml = rootListing.some((item) => item.name.toLowerCase() === "public_html" && item.isDirectory);
-
-    if (hasPublicHtml) {
-      targetDir = "public_html/";
-    } else if (rootListing.some((item) => item.name.toLowerCase() === "index.html" || item.name.toLowerCase() === "assets")) {
+    // Determine correct target directory:
+    // 1. If FTP user is already inside /public_html or home root is public_html
+    // 2. If FTP user is at /home/user and public_html is a child folder
+    let targetDir = "./";
+    if (process.env.FTP_SERVER_DIR?.trim()) {
+      targetDir = process.env.FTP_SERVER_DIR.trim();
+    } else if (initialPwd.includes("public_html")) {
       targetDir = "./";
+    } else if (rootListing.some((i) => i.name === "public_html" && i.isDirectory)) {
+      // Check if this public_html is the real document root or a nested one
+      if (rootListing.some((i) => i.name === "mail" || i.name === "etc" || i.name === "logs" || i.name === "ssl")) {
+        targetDir = "public_html/";
+      } else {
+        targetDir = "./";
+      }
     }
 
-    console.log(`📂 Ensuring and navigating to target directory: ${targetDir}`);
+    console.log(`🎯 Target deployment directory: ${targetDir}`);
     await client.ensureDir(targetDir);
 
-    console.log(`🚀 Uploading build files from ${localDir} -> ${targetDir}...`);
+    // Remove any leftover default placeholder files if present
+    const targetListing = await client.list();
+    for (const item of targetListing) {
+      if (item.name.toLowerCase() === "default.html" || item.name.toLowerCase() === "index.htm") {
+        try {
+          console.log(`🗑️ Removing legacy placeholder file: ${item.name}`);
+          await client.remove(item.name);
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    console.log(`🚀 Uploading all build files from ${localDir} -> ${targetDir}...`);
     await client.uploadFromDir(localDir);
 
-    const postUploadListing = await client.list();
-    console.log("📋 Uploaded directory contents:", postUploadListing.map((i) => `${i.isDirectory ? "[DIR]" : "[FILE]"} ${i.name}`).join(", "));
+    const postListing = await client.list();
+    console.log("📋 Verified deployed files in target directory:", postListing.map((i) => `${i.isDirectory ? "[DIR]" : "[FILE]"} ${i.name}`).join(", "));
 
     console.log("✅ Frontend deployed successfully to ethmwa.org!");
   } catch (err) {
