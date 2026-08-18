@@ -6,7 +6,7 @@
   "scripts": {
     "install-deps": "npm install",
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender-static.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "deploy:ftp": "node scripts/deploy-ftp.mjs",
