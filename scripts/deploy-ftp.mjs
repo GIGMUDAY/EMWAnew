@@ -8,7 +8,8 @@ async function main() {
   const password = process.env.FTP_PASSWORD?.trim();
   const port = parseInt(process.env.FTP_PORT?.trim() || "21", 10);
   const secure = process.env.FTP_PROTOCOL?.trim() === "ftps";
-  const localDir = path.resolve(process.cwd(), ".output/public");
+  const distDir = path.resolve(process.cwd(), "dist");
+  const localDir = fs.existsSync(distDir) ? distDir : path.resolve(process.cwd(), ".output/public");
 
   if (!host || !user || !password) {
     console.error("❌ Missing required FTP credentials: FTP_SERVER, FTP_USERNAME, or FTP_PASSWORD.");
