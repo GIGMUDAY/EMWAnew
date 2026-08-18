@@ -59,6 +59,12 @@ async function main() {
     }
   }
 
+  const htaccessSrc = path.resolve(process.cwd(), "public/.htaccess");
+  if (fs.existsSync(htaccessSrc)) {
+    fs.copyFileSync(htaccessSrc, path.join(publicDir, ".htaccess"));
+    console.log("  ✓ .htaccess copied to .output/public/.htaccess");
+  }
+
   console.log("✅ Static pre-rendering completed successfully!");
 }
 
