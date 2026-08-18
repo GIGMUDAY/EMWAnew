@@ -8,7 +8,7 @@ async function main() {
   const password = process.env.FTP_PASSWORD?.trim();
   const port = parseInt(process.env.FTP_PORT?.trim() || "21", 10);
   const secure = process.env.FTP_PROTOCOL?.trim() === "ftps";
-  const remoteDir = process.env.FTP_SERVER_DIR?.trim() || "public_html/";
+  let targetDir = process.env.FTP_SERVER_DIR?.trim() || "public_html/";
   const localDir = path.resolve(process.cwd(), ".output/public");
 
   if (!host || !user || !password) {
@@ -21,7 +21,7 @@ async function main() {
     process.exit(1);
   }
 
-  const client = new ftp.Client(30000); // 30s timeout
+  const client = new ftp.Client(60000);
   client.ftp.verbose = true;
 
   try {
@@ -35,11 +35,28 @@ async function main() {
       secureOptions: { rejectUnauthorized: false },
     });
 
-    console.log(`📂 Ensuring remote directory: ${remoteDir}`);
-    await client.ensureDir(remoteDir);
+    const initialPwd = await client.pwd();
+    console.log(`📍 Current FTP remote working directory: ${initialPwd}`);
 
-    console.log(`🚀 Uploading build files from ${localDir} -> ${remoteDir}...`);
+    const rootListing = await client.list();
+    console.log("📂 Current directory contents:", rootListing.map((i) => `${i.isDirectory ? "[DIR]" : "[FILE]"} ${i.name}`).join(", "));
+
+    const hasPublicHtml = rootListing.some((item) => item.name.toLowerCase() === "public_html" && item.isDirectory);
+
+    if (hasPublicHtml) {
+      targetDir = "public_html/";
+    } else if (rootListing.some((item) => item.name.toLowerCase() === "index.html" || item.name.toLowerCase() === "assets")) {
+      targetDir = "./";
+    }
+
+    console.log(`📂 Ensuring and navigating to target directory: ${targetDir}`);
+    await client.ensureDir(targetDir);
+
+    console.log(`🚀 Uploading build files from ${localDir} -> ${targetDir}...`);
     await client.uploadFromDir(localDir);
+
+    const postUploadListing = await client.list();
+    console.log("📋 Uploaded directory contents:", postUploadListing.map((i) => `${i.isDirectory ? "[DIR]" : "[FILE]"} ${i.name}`).join(", "));
 
     console.log("✅ Frontend deployed successfully to ethmwa.org!");
   } catch (err) {
